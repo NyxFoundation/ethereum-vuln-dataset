@@ -1,0 +1,70 @@
+{
+  "domain": "ethereum",
+  "n_rows": 19046,
+  "schema": [
+    "id",
+    "source_platform",
+    "contest",
+    "issue_id",
+    "severity",
+    "title",
+    "description",
+    "source_url",
+    "introduced_in_commit",
+    "domain",
+    "scraped_at",
+    "stride",
+    "cwe_top25",
+    "security_score",
+    "confidence"
+  ],
+  "build": {
+    "raw_rows": 33744,
+    "t1_boilerplate_dropped": 99,
+    "t1_dropped_by_source": {
+      "nimbus": 96,
+      "geth": 3
+    },
+    "after_t1": 33645,
+    "security_rows": 19046,
+    "low_signal_dropped": 14599,
+    "by_confidence": {
+      "medium": 16426,
+      "low": 1743,
+      "high": 877
+    },
+    "by_source": {
+      "geth": 3496,
+      "lodestar": 2738,
+      "nimbus": 2324,
+      "prysm": 2288,
+      "teku": 1750,
+      "besu": 1616,
+      "lighthouse": 1279,
+      "erigon": 1211,
+      "ethereum_specs": 789,
+      "nethermind": 698,
+      "reth": 641,
+      "grandine": 214,
+      "consensus-specs": 2
+    },
+    "by_severity": {
+      "Info": 12583,
+      "Unrated": 4663,
+      "Medium": 1056,
+      "Low": 475,
+      "High": 254,
+      "Critical": 15
+    },
+    "by_score": {
+      "0.0": 13643,
+      "0.3": 1535,
+      "0.5": 2427,
+      "0.8": 564,
+      "0.9": 345,
+      "1.0": 532
+    },
+    "residual_boilerplate_fp": 0
+  },
+  "source": "11 Ethereum execution + consensus clients (past security fixes)"
+}

@@ -1,0 +1,32 @@
+name: build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: pip install -e ".[dev]"
+      - name: Rebuild curated dataset (must be deterministic)
+        run: |
+          python pipeline/build_security_dataset.py \
+            --in data/raw/train.classified.parquet \
+            --out /tmp/rebuilt.parquet
+          python - <<'PY'
+          import pandas as pd
+          a = pd.read_parquet("data/ethereum_vulns.parquet")
+          b = pd.read_parquet("/tmp/rebuilt.parquet")
+          assert len(a) == len(b), f"row count drift: committed {len(a)} vs rebuilt {len(b)}"
+          assert set(a["id"]) == set(b["id"]), "id set drift — commit the rebuilt parquet"
+          print(f"deterministic: {len(a)} rows")
+          PY
+      - name: Test
+        run: pytest -q
