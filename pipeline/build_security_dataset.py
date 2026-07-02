@@ -342,6 +342,11 @@ def build(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
     df["security_relevant"] = has_id | has_sev | has_kw | has_stride | has_cwe | has_fiximpact
 
     sec = df[df["security_relevant"]].copy()
+    # fix_commit (issue #89 field, method-2 backlink): the fixing commit SHA is
+    # already in the source URL for /commit/ rows; /pull/ rows need a merge-commit
+    # lookup (left blank here — a network step, not part of this offline stage).
+    sec["fix_commit"] = sec["source_url"].fillna("").str.extract(
+        r"/commit/([0-9a-f]{7,40})", flags=re.IGNORECASE)[0].fillna("")
     sec["confidence"] = sec.apply(confidence_tier, axis=1)
     sec["n_signals"] = sec.apply(count_signals, axis=1)
     sec["authority_tier"] = sec.apply(authority_tier, axis=1)

@@ -63,11 +63,25 @@ rows → termination condition met for deterministic signals.
    technique** (iter 5): recovers *known* silent fixes from advisories with the
    exact fixed commit/version. High precision, bounded reach (CVE/GHSA-covered).
 
+| 7 | `fix_commit` field (method-2 backlink, issue #89) | 1367 | 1878 | 173 / 3 | Deterministic: extract fixing commit SHA from /commit/ source URLs — 321 populated. /pull/ rows (967) need a merge-commit lookup (network; deferred). Fills an issue-#89 provenance field. |
+
 **Meta-lesson (the value of this loop):** rigorous evaluation = spot-check the
 *applied* ranking, not just CV metrics. Two "0.97 AUC" models were caught being
 useless in deployment. Only ship a signal that survives application spot-check.
 The iter 3–4 keyword/path signals are NOT from silent-fix research and are
 retained only as coarse tiering hints, subordinate to method 2.
+
+## Loop saturation (reached 2026-07-02)
+Techniques available *without LLM or ML-embedding infra* are exhausted:
+- deterministic signals (advisories, CVE cleanup, keyword/path/fix-impact): done
+- silent-fix method 1 (learned classifier): not deployable here (needs corpus +
+  CodeBERT) — validated-negative
+- silent-fix method 2 (patch backlinking): shipped (OSV fixed-version, fix_commit)
+**The one remaining high-impact lever is the deferred LLM STRIDE/CWE
+classification** — it admits the ~16k unrated stealth fixes the keyword gate
+drops and is the real path to *comprehensive* recall. User deferred it
+("ひとまずskip"); re-enabling is a user decision, so the autonomous loop pauses
+here rather than flip it unilaterally.
 
 **Remaining levers require a technique switch (heavier / user-gated):**
 - [A1] cherry-pick/backport via local clones — the one untapped *new-source*

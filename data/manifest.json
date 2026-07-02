@@ -17,6 +17,7 @@
     "cwe_top25",
     "evidence",
     "security_score",
+    "fix_commit",
     "confidence",
     "n_signals",
     "authority_tier"
