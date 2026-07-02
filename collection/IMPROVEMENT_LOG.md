@@ -35,6 +35,18 @@ Recall was flat across all 4 iterations (corpus already ~complete at 18,475 raw
 CI/docs/dep-bump noise. Two consecutive iterations (3,4) added <10 new corpus
 rows → termination condition met for deterministic signals.
 
+| 5 | silent-fix detection research (diff-classifier + patch-backlinking) | 1367 | 1878 | 173 / 3 | Two branches implemented. **(a) Code-diff feature classifier** (VulFixMiner/GraphSPD-style, `detect_silent_fixes.py`): **validated negative** — no discrimination (broad guards invert the ranking; tight guards collapse to ≈0), reproducing why the research needs code embeddings not regex. NOT wired into the gate. **(b) Patch backlinking** (VCMatch/PatchScout branch, `crawl_osv.py`): extract OSV `fixed` commit/version — 21 advisories now carry deterministic fix backlinks (curated impact ~1 due to cross-ref dedup). |
+
+**Silent-fix research — what worked vs didn't (2026-07-02):**
+- ❌ Regex/metadata approximation of code-change classifiers (VulFixMiner,
+  GraphSPD): surface patterns don't separate security fixes from ordinary code.
+  Needs learned embeddings (CodeBERT / CPG) — infra out of scope here.
+- ✅ Patch backlinking (advisory → fixed commit/version via OSV structured
+  ranges): deterministic, high-precision, fills fix-provenance. Limited reach
+  (only CVE/GHSA-covered advisories) and dedup-collapsed in curation.
+- Takeaway: without a trained model, silent-fix *detection* (of unknown fixes)
+  is not reliably solvable by regex; silent-fix *recovery* (of known ones) is.
+
 **Remaining levers require a technique switch (heavier / user-gated):**
 - [A1] cherry-pick/backport via local clones — the one untapped *new-source*
   (geth silently backports fixes to release branches). Uncertain yield, ~1 GB

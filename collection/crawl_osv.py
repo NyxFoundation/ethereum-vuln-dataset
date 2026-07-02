@@ -231,6 +231,32 @@ def _source_url(issue_id: str, vuln: dict) -> str:
     return f"https://osv.dev/vulnerability/{issue_id}"
 
 
+def _extract_fix(vuln: dict) -> tuple[str, str]:
+    """Deterministic patch backlink from OSV's structured ranges.
+
+    OSV records the fix as a machine-readable event: a GIT range yields the
+    exact ``introduced`` / ``fixed`` commit SHAs; a SEMVER range yields the
+    fixed version. This is the working, high-precision branch of silent-fix
+    recovery (cf. VCMatch / PatchScout) — the advisory confirms the vuln and
+    points at the commit that silently fixed it.
+
+    Returns ``(introduced_commit, fix_ref)`` where fix_ref is a commit SHA
+    (GIT) or a version string (SEMVER); either may be empty.
+    """
+    introduced, fix = "", ""
+    for a in vuln.get("affected", []):
+        for rng in a.get("ranges", []):
+            git = rng.get("type") == "GIT"
+            for ev in rng.get("events", []):
+                iv = ev.get("introduced")
+                if git and iv and iv not in ("0",) and not introduced:
+                    introduced = iv
+                fv = ev.get("fixed")
+                if fv and not fix:
+                    fix = fv
+    return introduced, fix
+
+
 def osv_vuln_to_row(vuln: dict, client_slug: str, ecosystem: str) -> dict | None:
     """Project one OSV vulnerability record onto the canonical CSV schema.
 
@@ -251,6 +277,12 @@ def osv_vuln_to_row(vuln: dict, client_slug: str, ecosystem: str) -> dict | None
     if severity not in ALLOWED_SEVERITIES:
         severity = "Unrated"
 
+    introduced, fix = _extract_fix(vuln)
+    if fix:
+        # Record the backlink in-schema (no shared-schema column churn).
+        tag = "fix_commit" if len(fix) >= 7 and all(c in "0123456789abcdef" for c in fix.lower()) else "fixed_version"
+        description = f"{description}\n\n[{tag}: {fix}]"[:600]
+
     return {
         "source": client_slug,
         "contest": f"osv_{ecosystem.lower()}",
@@ -259,7 +291,7 @@ def osv_vuln_to_row(vuln: dict, client_slug: str, ecosystem: str) -> dict | None
         "title": summary or issue_id,
         "description": description,
         "source_url": _source_url(issue_id, vuln),
-        "introduced_in_commit": "",
+        "introduced_in_commit": introduced,
     }
 
 
