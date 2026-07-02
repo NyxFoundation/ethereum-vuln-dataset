@@ -125,6 +125,34 @@ def extract_description(cve_item: dict) -> str:
     return ""
 
 
+# NVD keywordSearch matches the client name as a *substring* ("geth" in
+# "gethostbyaddr" / "GetHost", "Gether Technology", Linux "usb: g…" gadgets),
+# returning unrelated CVEs (glibc, X.Org, Samba). A returned CVE is only kept
+# when its description actually names the client via a distinctive identifier.
+import re as _re
+
+CLIENT_IDENT: dict[str, str] = {
+    "geth":       r"go.?ethereum",
+    "besu":       r"\bbesu\b",
+    "nethermind": r"\bnethermind\b",
+    "erigon":     r"\berigon\b",
+    "reth":       r"paradigm|\brevm\b|reth\b.{0,30}(?:ethereum|execution)",
+    "lighthouse": r"\bsigp\b|lighthouse.{0,30}(?:ethereum|beacon|consensus|validator)",
+    "lodestar":   r"chainsafe|lodestar.{0,30}(?:ethereum|beacon|consensus)",
+    "nimbus":     r"nimbus.?eth|status.?im",
+    "prysm":      r"\bprysm\b",
+    "teku":       r"\bteku\b|consensys",
+    "grandine":   r"\bgrandine\b",
+}
+
+
+def _names_client(description: str, client_slug: str) -> bool:
+    pat = CLIENT_IDENT.get(client_slug)
+    if not pat:
+        return True
+    return _re.search(pat, description, _re.IGNORECASE) is not None
+
+
 def cve_to_row(vuln: dict, client_slug: str) -> dict | None:
     cve_item = vuln.get("cve") or {}
     cve_id = cve_item.get("id", "").strip()
@@ -132,6 +160,9 @@ def cve_to_row(vuln: dict, client_slug: str) -> dict | None:
         return None
     description = extract_description(cve_item)
     if not description:
+        return None
+    # Reject NVD substring-match false positives (see CLIENT_IDENT note above).
+    if not _names_client(description, client_slug):
         return None
     return {
         "source": client_slug,

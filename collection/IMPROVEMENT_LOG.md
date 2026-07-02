@@ -23,6 +23,7 @@ fuzzer report, [A1] cherry-pick/backport. Architecture: **multi-signal scoring**
 |---|---|---|---|---|---|
 | 0 | baseline | 173 | 2096 | 173 / 0 | pre-loop |
 | 1 | [A] GHSA spine + [A2] sensitive-path + T2 de-noise + authority_tier | **934** | 1926 | 173 / **3** | +25 GHSA (deduped into PR refs), 170 CI/docs/dep-bump FPs removed from curated (1417 from raw); new cols n_signals, authority_tier. Essential slice now selectable & 5.4× larger. |
+| 2 | [C] T2b NVD substring-match FP filter (+ source fix in crawl_cve.py) | 885 | 1877 | 173 / 3 | **Authoritative tier was 17% garbage** — "geth" matched as substring in gethostbyaddr/GetHost/"Gether Technology"/Linux usb. Dropped 49 unrelated CVEs (glibc/X.Org/Samba/kernel); 6 real client CVEs kept. Precision iteration: A-tier now clean. |
 
 ### Next iterations (API-heavy hidden-fix signals — recall expansion)
 - **iter 2** [C5] linked-issue / fuzzer-report signal: `gh pr view --json closingIssuesReferences`, score issue body for crash/panic/fuzz + reporter (oss-fuzz/Guido Vranken).

@@ -1,6 +1,6 @@
 {
   "domain": "ethereum",
-  "n_rows": 1926,
+  "n_rows": 1877,
   "schema": [
     "id",
     "source_platform",
@@ -29,27 +29,28 @@
       "geth": 3
     },
     "t2_noise_dropped": 1417,
-    "after_t1": 17047,
-    "security_rows": 1926,
+    "t2b_nvd_fp_dropped": 49,
+    "after_t1": 16998,
+    "security_rows": 1877,
     "low_signal_dropped": 15121,
     "by_confidence": {
       "medium": 1544,
-      "high": 382
+      "high": 333
     },
     "by_authority_tier": {
       "C_candidate": 992,
       "B_corroborated": 652,
-      "A_authoritative": 282
+      "A_authoritative": 233
     },
     "by_n_signals": {
-      "1": 1039,
-      "2": 687,
-      "3": 150,
-      "4": 47,
-      "5": 3
+      "1": 1037,
+      "2": 676,
+      "3": 117,
+      "4": 45,
+      "5": 2
     },
     "by_source": {
-      "geth": 423,
+      "geth": 374,
       "erigon": 358,
       "nimbus": 198,
       "lodestar": 194,
@@ -64,10 +65,10 @@
     },
     "by_severity": {
       "Unrated": 963,
-      "Info": 790,
-      "High": 85,
-      "Medium": 63,
-      "Low": 22,
+      "Info": 773,
+      "High": 63,
+      "Medium": 54,
+      "Low": 21,
       "Critical": 3
     },
     "by_score": {
@@ -76,7 +77,7 @@
       "0.5": 1208,
       "0.8": 298,
       "0.9": 172,
-      "1.0": 210
+      "1.0": 161
     },
     "residual_boilerplate_fp": 0
   },

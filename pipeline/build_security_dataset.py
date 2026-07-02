@@ -86,6 +86,37 @@ NOISE_TITLE_RE = re.compile(
     re.IGNORECASE,
 )
 
+# --- T2b: NVD keyword-match false positives --------------------------------
+# crawl_cve.py searches NVD by client name and matches it as a *substring*
+# ("geth" in "gethostbyaddr" / "GetHost", "Gether Technology"; "usb: g…" Linux
+# gadget CVEs), dumping unrelated advisories (glibc, X.Org, Samba, Linux USB)
+# straight into the authoritative tier. Such a row has a *bare* CVE-id title.
+# It is kept only when its description actually names the client.
+BARE_CVE_TITLE_RE = re.compile(r"^\s*CVE-\d{4}-\d{3,7}\s*$", re.IGNORECASE)
+CLIENT_CVE_IDENT: dict[str, str] = {
+    "geth":       r"go.?ethereum",
+    "besu":       r"\bbesu\b",
+    "nethermind": r"\bnethermind\b",
+    "erigon":     r"\berigon\b",
+    "reth":       r"paradigm|\brevm\b|reth\b.{0,30}(?:ethereum|execution)",
+    "lighthouse": r"\bsigp\b|lighthouse.{0,30}(?:ethereum|beacon|consensus|validator)",
+    "lodestar":   r"chainsafe|lodestar.{0,30}(?:ethereum|beacon|consensus)",
+    "nimbus":     r"nimbus.?eth|status.?im",
+    "prysm":      r"\bprysm\b",
+    "teku":       r"\bteku\b|consensys",
+    "grandine":   r"\bgrandine\b",
+}
+
+
+def _nvd_false_positive(title: str, description: str, platform: str) -> bool:
+    """True when a bare-CVE-title row's description does NOT name its client."""
+    if not BARE_CVE_TITLE_RE.match(title or ""):
+        return False
+    pat = CLIENT_CVE_IDENT.get(platform)
+    if not pat:
+        return True
+    return re.search(pat, description or "", re.IGNORECASE) is None
+
 # Strong: words that almost always mean a security defect. Includes the
 # protocol-specific failure modes that generic CWE wordlists miss.
 STRONG_RE = re.compile(
@@ -249,6 +280,21 @@ def build(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
     t2_dropped = df[t2_mask]
     df = df[~t2_mask].copy()
 
+    # T2b — drop NVD substring-match false positives (unrelated CVEs)
+    t2b_mask = pd.Series(
+        [
+            _nvd_false_positive(t, d, p)
+            for t, d, p in zip(
+                df["title"].fillna(""),
+                df["description"].fillna(""),
+                df["source_platform"].fillna(""),
+            )
+        ],
+        index=df.index,
+    )
+    t2b_dropped = df[t2b_mask]
+    df = df[~t2b_mask].copy()
+
     # T7
     df["security_score"] = [
         score_row(t, d, s)
@@ -274,6 +320,7 @@ def build(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
         "t1_boilerplate_dropped": int(len(t1_dropped)),
         "t1_dropped_by_source": {k: int(v) for k, v in t1_dropped["source_platform"].value_counts().items()},
         "t2_noise_dropped": int(len(t2_dropped)),
+        "t2b_nvd_fp_dropped": int(len(t2b_dropped)),
         "after_t1": int(len(df)),
         "security_rows": int(len(sec)),
         "low_signal_dropped": int(len(df) - len(sec)),

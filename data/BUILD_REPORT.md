@@ -23,6 +23,11 @@ curated security-only set derived offline by `pipeline/build_security_dataset.py
 - **T2** dropped **1,417** CI/docs/dep-bump meta-work rows (title-anchored;
   rows citing a CVE/GHSA/RustSec id, strong vuln language, or a rated severity
   are protected)
+- **T2b** dropped **49** NVD substring-match false positives — `crawl_cve.py`
+  matched the client name inside unrelated strings (`gethostbyaddr`, `GetHost`,
+  "Gether Technology", Linux `usb: g…`), dumping glibc/X.Org/Samba/kernel CVEs
+  into the authoritative tier. Kept only rows whose description names the client
+  (6 real: Besu ×4, go-ethereum, Nethermind Juno). Source also fixed in the crawler.
 - **T7 + GATE** kept the security-relevant remainder
 - New provenance columns: **`authority_tier`** (A_authoritative / B_corroborated
   / C_candidate) and **`n_signals`** (count of independent security signals).
@@ -36,11 +41,12 @@ Critical** (geth, besu, teku). Severities preserved through the canonical path.
 
 ## After (curated)
 
-- rows: **1,926**
+- rows: **1,877**
 - residual boilerplate FP: **0**  ✅
-- **essential slice (A+B): 934** (was 173 rated-only) — 5.4× larger high-precision core
-- by authority_tier: {'C_candidate': 992, 'B_corroborated': 652, 'A_authoritative': 282}
-- by severity: {'Unrated': 963, 'Info': 790, 'High': 85, 'Medium': 63, 'Low': 22, 'Critical': 3}
+- **essential slice (A+B): 885** (was 173 rated-only) — clean high-precision core
+- by authority_tier: {'C_candidate': 992, 'B_corroborated': 652, 'A_authoritative': 233}
+- by severity: {'Unrated': 963, 'Info': 773, 'High': 63, 'Medium': 54, 'Low': 21, 'Critical': 3}
+  (High/Medium dropped vs iter-1 because T2b removed 49 unrelated CVEs' bogus CVSS severities)
 - by source:
   - geth: 438
   - erigon: 371
