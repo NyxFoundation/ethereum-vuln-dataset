@@ -75,6 +75,68 @@ the bug was fixed in Lighthouse (Rust) or Prysm (Go).
 Three axes — **WHERE** (code range), **WHY** (root cause), **WHAT** (code) —
 added as columns to the curated row.
 
+### The `label` column — the controlled vocabulary ⭐
+
+`label` answers **"which area of the protocol is this bug in?"** — one value per
+row (primary area). Grounded in the spec repos' own section names so it is
+stable and language-agnostic. Interpreted together with `layer`
+(execution / consensus, known from the client).
+
+**Fork is deliberately NOT a separate column.** But some areas only exist from a
+certain fork on (blobs, PeerDAS, ePBS). We handle that *by giving the feature
+its own label* — so the label itself already tells you the fork range, without a
+`fork` column. The "since" column below is informational.
+
+#### Consensus labels — from `specs/<fork>/<doc>.md`
+| `label` | area (spec doc) | since fork |
+|---|---|---|
+| `beacon-chain` | state transition: block/epoch processing, attestations, slashings, deposits, withdrawals | phase0 |
+| `fork-choice` | LMD-GHOST / fork choice, `on_block`, proposer-boost | phase0 |
+| `p2p-interface` | gossipsub topics, req/resp, encoding | phase0 |
+| `validator` | proposer / attester / sync-committee duties | phase0 |
+| `weak-subjectivity` | WS checkpoints / periods | phase0 |
+| `deposit-contract` | deposit contract logic | phase0 |
+| `bls` | BLS signature verification / aggregation | altair |
+| `light-client` | light-client sync protocol | altair |
+| `kzg-commitments` | blob KZG (polynomial-commitments), EIP-4844 sidecars | **deneb** |
+| `data-availability-sampling` | PeerDAS: `das-core`, sampling, `partial-columns`, EIP-7594 | **fulu** |
+| `builder` | ePBS / builder flow | **gloas** |
+| `fork-transition` | `fork.py` upgrade / state-upgrade logic | altair |
+
+#### Execution labels — from `src/ethereum/forks/<fork>/…` + client subsystems
+| `label` | area | since fork (if gated) |
+|---|---|---|
+| `evm` | interpreter core / execution loop | — |
+| `opcodes` | instruction semantics (`vm/instructions/`) | — |
+| `precompiles` | precompiled contracts (`vm/precompiled_contracts/`) | — |
+| `gas` | gas accounting, EIP-1559 fee market | — |
+| `transactions` | tx types, validation, signatures (`transactions.py`) | — |
+| `txpool` | mempool / tx pool (client-side) | — |
+| `block-processing` | header/block validation, `state_transition` (`blocks.py`, `fork.py`) | — |
+| `state-trie` | state, storage, Merkle-Patricia trie | — |
+| `rlp` | RLP encode/decode | — |
+| `p2p` | devp2p, `eth` wire, `snap` protocol | — |
+| `sync` | snap-sync / downloader | — |
+| `engine-api` | EL↔CL payload / engine API | paris |
+| `blobs` | EIP-4844 blob txs / blob pool | **cancun** |
+| `eof` | EVM Object Format | **osaka** |
+| `rpc` | JSON-RPC surface | — |
+
+#### Cross-cutting (either layer)
+| `label` | area |
+|---|---|
+| `crypto` | hashing, secp256k1, BLS/KZG math, signature libs |
+| `serialization` | SSZ / RLP (de)serialization bugs not tied to one area |
+| `database` | storage / DB layer |
+| `other` | none of the above (keep rare; forces review) |
+
+**Assignment** (same deterministic-first rule): map the changed file paths +
+title/description keywords → `label` (e.g. `vm/precompiled_contracts/` →
+`precompiles`; `fork_choice`/`on_block` → `fork-choice`; `das`/`data_column`/
+`peerdas` → `data-availability-sampling`), with the `llm_classify_fixes.py` model
+as the fallback / tie-breaker. Multi-area fixes: keep `label` = primary area,
+optionally add a `labels` list later.
+
 ### WHERE — code range & spec anchor
 | field | type | example | source |
 |---|---|---|---|
