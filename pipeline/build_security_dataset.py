@@ -148,6 +148,24 @@ MODERATE_RE = re.compile(
 HIGH_SEV = frozenset({"critical", "high"})
 RATED_SEV = frozenset({"critical", "high", "medium", "low"})
 
+# --- C5': fix-verb × impact co-occurrence ----------------------------------
+# A linked-issue API crawl was a dead end (client PRs almost never use formal
+# `Closes #N`, so closingIssuesReferences is empty). But the impact the terse
+# issue would describe is usually stated in the fix itself: "fix panic on …",
+# "prevent race condition in …". A fix verb *adjacent to* a crash-class impact
+# word is a strong, independent defect signal — far more specific than the bare
+# keyword — and it is computable offline on data already in hand.
+FIX_IMPACT_RE = re.compile(
+    r"\b(?:fix|fixes|fixed|prevent|avoid|guard|handle|resolve|correct|patch)\w*"
+    r"\b[^.\n]{0,40}\b(?:crash|panic|segfault|deadlock|hang|freeze|oom"
+    r"|out.of.memory|overflow|underflow|data race|race condition|reorg"
+    r"|non.?determin|infinite loop|use.after.free|null (?:pointer|deref))\b"
+    r"|\b(?:crash|panic|segfault|deadlock|hang|oom|overflow|underflow|reorg"
+    r"|race condition)\b[^.\n]{0,25}"
+    r"\b(?:fix|fixed|prevent|avoid|guard against|resolved|patch)\w*\b",
+    re.IGNORECASE,
+)
+
 # --- A2: security-sensitive code areas -------------------------------------
 # A keyword hit *inside* one of these subsystems is a second, independent
 # signal — a "fix panic in fork_choice" stacks kw(panic)+path(fork_choice) and
@@ -218,6 +236,8 @@ def count_signals(row) -> int:
         n += 1                                   # moderate bug-class keyword
     if SENSITIVE_PATH_RE.search(combined):
         n += 1                                   # security-sensitive subsystem (A2)
+    if FIX_IMPACT_RE.search(combined):
+        n += 1                                   # fix-verb × crash-class impact (C5')
     if str(row.get("stride", "Other")) not in ("Other", "", "nan"):
         n += 1                                   # LLM STRIDE (if classified)
     if str(row.get("cwe_top25", "N/A")) not in ("N/A", "", "nan"):

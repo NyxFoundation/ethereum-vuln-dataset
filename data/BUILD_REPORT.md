@@ -43,8 +43,9 @@ Critical** (geth, besu, teku). Severities preserved through the canonical path.
 
 - rows: **1,877**
 - residual boilerplate FP: **0**  ✅
-- **essential slice (A+B): 885** (was 173 rated-only) — clean high-precision core
-- by authority_tier: {'C_candidate': 992, 'B_corroborated': 652, 'A_authoritative': 233}
+- **essential slice (A+B): 1,367** (was 173 rated-only) — 7.9× larger clean high-precision core
+- by authority_tier: {'B_corroborated': 1134, 'C_candidate': 510, 'A_authoritative': 233}
+- by n_signals: {1: 555, 2: 907, 3: 345, 4: 65, 5: 5} — 60% of rows now carry ≥2 independent signals
 - by severity: {'Unrated': 963, 'Info': 773, 'High': 63, 'Medium': 54, 'Low': 21, 'Critical': 3}
   (High/Medium dropped vs iter-1 because T2b removed 49 unrelated CVEs' bogus CVSS severities)
 - by source:

@@ -38,16 +38,16 @@
       "high": 333
     },
     "by_authority_tier": {
-      "C_candidate": 992,
-      "B_corroborated": 652,
+      "B_corroborated": 1134,
+      "C_candidate": 510,
       "A_authoritative": 233
     },
     "by_n_signals": {
-      "1": 1037,
-      "2": 676,
-      "3": 117,
-      "4": 45,
-      "5": 2
+      "1": 555,
+      "2": 907,
+      "3": 345,
+      "4": 65,
+      "5": 5
     },
     "by_source": {
       "geth": 374,
