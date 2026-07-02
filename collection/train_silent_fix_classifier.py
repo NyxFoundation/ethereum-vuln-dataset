@@ -19,6 +19,25 @@ Pipeline:
   5. Persist model + metrics. Only worth wiring into curation if AUC beats the
      tier baseline (regex ≈ 0.5, i.e. no better than chance).
 
+    ⚠ VALIDATED NEGATIVE FOR DEPLOYMENT (2026-07-02). Cross-validated ROC-AUC is
+    high (0.97) but *misleading*, and the model is NOT wired into curation:
+      1. First model: 47% of the advisory/CVE positives were dependency bumps
+         (36% manifest-only diffs). The classifier learned "lockfile/manifest
+         diff → security fix"; top-scored rows were `/docs` npm dep-bumps.
+      2. Rebuilt with both classes required to touch source code (no dep-bumps):
+         CV-AUC stayed 0.97, but on the real application distribution the ranking
+         COLLAPSED — feature/CI/interop PRs ("Run geth merge interop in CI",
+         "Implement Kiln spec") scored highest, real fixes ("Fix race condition
+         in VC block proposal") lowest. With only ~44 positives, TF-IDF learns
+         *topic vocabulary* (geth/merge/spec), not fix-vs-non-fix semantics, so
+         it ranks by topical similarity and does not generalize.
+    Lesson: CV-AUC ≠ deployment behavior; always spot-check the applied ranking.
+    A working learned detector needs a LARGE labelled corpus + SEMANTIC code
+    embeddings (CodeBERT/CPG) — exactly what VulFixMiner/GraphSPD use and what a
+    torch-free TF-IDF proxy on a small in-domain label set cannot replace. Kept
+    as a reproducible harness; the only shipped silent-fix technique is method 2
+    (patch backlinking, crawl_osv.py).
+
 Usage:
     uv run python collection/train_silent_fix_classifier.py \
         --in data/ethereum_vulns.parquet --raw data/raw/train.classified.parquet \
@@ -89,20 +108,51 @@ def _diff_to_doc(diff: str) -> str:
     return "\n".join(out)[:20000]
 
 
+SRC_EXT_RE = re.compile(r"\.(go|rs|java|nim|ts|js|py|c|cpp|h|sol)\b")
+MANIFEST_RE = re.compile(
+    r"package\.json|yarn\.lock|package-lock|Cargo\.(lock|toml)|go\.(mod|sum)"
+    r"|requirements[\w.-]*\.txt|Gemfile|\.ya?ml|\.md\b", re.IGNORECASE)
+
+
+def _touches_source(diff: str) -> bool:
+    """True iff the diff changes real source code (not just manifests/docs).
+
+    Removes the dep-bump / lockfile confound that let an earlier model 'detect'
+    security fixes by spotting dependency-manifest diffs (47% of naive
+    positives were dep-bumps; 36% manifest-only). Both classes are now required
+    to touch source so the classifier must learn fix-vs-non-fix code patterns.
+    """
+    return bool(SRC_EXT_RE.search(diff))
+
+
+DEPBUMP_RE = re.compile(r"\bbump\b|chore\(deps|dependabot|renovate", re.I)
+# Non-security *source-code* changes — the honest negative class (features,
+# refactors, perf). NOT dep-bumps/docs (those are manifest/markdown confounds).
+NONFIX_TITLE_RE = re.compile(
+    r"\b(?:feat|feature|refactor|perf|rename|cleanup|clean up|implement"
+    r"|add support|introduce|improve|optimi[sz]e|simplify|migrate|upgrade api"
+    r"|reorganize|restructure|style|move)\b", re.IGNORECASE)
+
+
 def build_labels(cur: pd.DataFrame, raw: pd.DataFrame, per_class: int):
     rated = {"critical", "high", "medium", "low"}
     idrx = re.compile(r"CVE-\d{4}-\d{4,7}|GHSA-", re.I)
     blob = cur["title"].fillna("") + " " + cur["description"].fillna("")
+    # Positives: advisory/CVE/rated fixes that are NOT dep-bumps (real code fix).
     pos = cur[(cur["severity"].str.lower().isin(rated) | blob.str.contains(idrx))
-              & cur["source_url"].str.contains(r"/pull/|/commit/", na=False)]
-    rblob = raw["title"].fillna("")
-    neg = raw[rblob.str.contains(NOISE_TITLE_RE)
+              & cur["source_url"].str.contains(r"/pull/|/commit/", na=False)
+              & ~cur["title"].fillna("").str.contains(DEPBUMP_RE)]
+    # Negatives: non-security source-code changes (feature/refactor/perf),
+    # excluding dep-bumps, docs, and anything citing an advisory id.
+    rblob = raw["title"].fillna("") + " " + raw["description"].fillna("")
+    neg = raw[raw["title"].fillna("").str.contains(NONFIX_TITLE_RE)
+              & ~raw["title"].fillna("").str.contains(DEPBUMP_RE)
               & raw["source_url"].str.contains(r"/pull/|/commit/", na=False)
-              & ~(raw["title"].fillna("") + " " + raw["description"].fillna("")).str.contains(idrx)]
-    pos = pos.head(per_class)
-    neg = neg.head(per_class)
-    items = [(r, 1) for _, r in pos.iterrows()] + [(r, 0) for _, r in neg.iterrows()]
-    return items
+              & ~rblob.str.contains(idrx)]
+    # Oversample so the source-code filter (applied later, needs the diff) still
+    # leaves ~per_class usable items per class.
+    return ([(r, 1) for _, r in pos.head(per_class * 3).iterrows()]
+            + [(r, 0) for _, r in neg.head(per_class * 3).iterrows()])
 
 
 def main() -> int:
@@ -140,7 +190,9 @@ def main() -> int:
                 diff = _fetch_diff(repo, *ident) if (ident and repo) else None
                 cache[url] = diff or ""
                 time.sleep(a.sleep)
-            if not diff:
+            # Only score real source-code changes; a dep-bump/manifest diff is
+            # not a silent code fix and is out of the model's training domain.
+            if not diff or not _touches_source(diff):
                 continue
             prob = float(model.predict_proba([_diff_to_doc(diff)])[0, 1])
             rows.append((url, prob, row["title"][:70]))
@@ -169,8 +221,11 @@ def main() -> int:
     if a.cache.exists():
         cache = json.loads(a.cache.read_text())
     docs, ys = [], []
+    n_pos = n_neg = 0
     fetched = 0
     for row, y in items:
+        if (y and n_pos >= a.per_class) or (not y and n_neg >= a.per_class):
+            continue
         url = str(row["source_url"])
         if url in cache:
             diff = cache[url]
@@ -185,11 +240,16 @@ def main() -> int:
                 a.cache.parent.mkdir(parents=True, exist_ok=True)
                 a.cache.write_text(json.dumps(cache))
             time.sleep(a.sleep)
-        if diff:
+        # both classes must touch source code — removes the manifest confound
+        if diff and _touches_source(diff):
             docs.append(_diff_to_doc(diff)); ys.append(y)
+            if y:
+                n_pos += 1
+            else:
+                n_neg += 1
     a.cache.parent.mkdir(parents=True, exist_ok=True)
     a.cache.write_text(json.dumps(cache))
-    print(f"[train] usable diffs: {len(docs)} "
+    print(f"[train] usable source-code diffs: {len(docs)} "
           f"({sum(ys)} pos / {len(ys)-sum(ys)} neg)", file=sys.stderr)
 
     from sklearn.feature_extraction.text import TfidfVectorizer

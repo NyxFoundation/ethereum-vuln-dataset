@@ -49,15 +49,25 @@ rows → termination condition met for deterministic signals.
 
 | 6 | **Learned silent-fix classifier (method 1, done right)** | 1367 | 1878 | 173 / 3 | User course-correction: drop ad-hoc heuristics, narrow to the research's methods. Built a Sabetta&Bezzi-style patch-as-document classifier (TF-IDF diff tokens + LogReg, torch-free). **ROC-AUC 0.971 / PR-AUC 0.975** (5-fold CV) — vs the regex proxy's 0.50. The *same* data regex couldn't split is highly separable by a *learned* model, exactly as the research predicts. `train_silent_fix_classifier.py`; model saved. Next: apply to C_candidate, wire as `silent_fix_signal`. |
 
+| 6b | apply learned classifier + **honest deployment validation** | 1367 | 1878 | 173 / 3 | Applied the model and **spot-checked the ranking** — twice caught it failing: (1) top rows were `/docs` dep-bumps → 47% of positives were dep-bumps / 36% manifest-only diffs (confound); (2) after forcing source-code-only labels, CV-AUC stayed 0.97 but feature/CI PRs ranked highest, real fixes lowest (TF-IDF learns topic vocab, not fix semantics, on ~44 positives). **Not shipped**; dataset restored to validated-signals-only. `silent_fix_prob` column removed. |
+
 **Focus (per user): silent-fix research reduces to 2 methods —**
 1. **Learned code-change classifier** (Sabetta&Bezzi'18 → VulFixMiner'21 →
-   GraphSPD'23). ✅ Implemented torch-free; **AUC 0.971**. The one method that
-   detects *unknown* silent fixes. Regex proxy (iter 5) was validated-negative;
-   the learned version works.
-2. **Patch backlinking** (VCMatch/PatchScout/OSV). ✅ iter 5; recovers *known*
-   silent fixes from advisories. High precision, limited reach.
+   GraphSPD'23). ❌ **Not deployable here.** Torch-free TF-IDF + small in-domain
+   labels gives a *misleading* CV-AUC (0.97) that collapses on the real
+   application distribution — it learns topic vocabulary, not fix-vs-non-fix.
+   The research works because it uses a LARGE labelled corpus + SEMANTIC code
+   embeddings (CodeBERT/CPG); neither is available torch-free here. Harness kept
+   (`train_silent_fix_classifier.py`) for when embeddings/labels exist.
+2. **Patch backlinking** (VCMatch/PatchScout/OSV). ✅ **The one shipped silent-fix
+   technique** (iter 5): recovers *known* silent fixes from advisories with the
+   exact fixed commit/version. High precision, bounded reach (CVE/GHSA-covered).
+
+**Meta-lesson (the value of this loop):** rigorous evaluation = spot-check the
+*applied* ranking, not just CV metrics. Two "0.97 AUC" models were caught being
+useless in deployment. Only ship a signal that survives application spot-check.
 The iter 3–4 keyword/path signals are NOT from silent-fix research and are
-retained only as coarse tiering hints, subordinate to methods 1–2.
+retained only as coarse tiering hints, subordinate to method 2.
 
 **Remaining levers require a technique switch (heavier / user-gated):**
 - [A1] cherry-pick/backport via local clones — the one untapped *new-source*
