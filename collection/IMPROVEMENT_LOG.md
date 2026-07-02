@@ -115,6 +115,23 @@ model validates this one.
 applied to C_candidate — unlike the TF-IDF model, this survived the
 applied-ranking spot-check. Cost: ~1 `claude -p` call per row.
 
+### Off-Claude engines (same 80-item eval)
+Pluggable backend in `llm_classify_fixes.py`: `--engine {claude,ollama,openai}`.
+The env's `hermes-agent` provides an OpenAI-compatible route to **Ollama Cloud**
+(`https://ollama.com/v1`, key in `~/.hermes/.env`), so classification can run
+off Claude:
+
+| engine / model | precision | recall | F1 |
+|---|---|---|---|
+| claude (opus) | 0.931 | 0.675 | 0.783 |
+| openai · qwen3-coder:480b (Ollama Cloud) | 0.871 | 0.675 | 0.761 |
+
+Open code-model is ~0.06 precision behind Claude, same recall — usable. (This is
+Ollama *Cloud*, hosted, not local hardware; a truly local model via `--engine
+ollama` on :11434 would need `ollama serve` + a pulled model, untested here.)
+`local_diffs.py` feeds diffs rate-limit-free; the two together make a full
+off-Claude, cache-resumable classification run practical.
+
 **Remaining levers require a technique switch (heavier / user-gated):**
 - [A1] cherry-pick/backport via local clones — the one untapped *new-source*
   (geth silently backports fixes to release branches). Uncertain yield, ~1 GB

@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -35,14 +36,37 @@ from pathlib import Path
 import pandas as pd
 
 # --- LLM engine (set from CLI in main) -------------------------------------
-# Two backends: Anthropic `claude -p` (default) or a local Ollama model. Ollama
-# keeps the heavy classification phase fully local / free once diffs are cached.
-ENGINE = {"engine": "claude", "model": "", "host": "http://localhost:11434"}
+# Backends: Anthropic `claude -p` (default); a native local Ollama model; or any
+# OpenAI-compatible /v1/chat/completions endpoint (Ollama Cloud, vLLM, LM Studio,
+# local ollama's /v1). The last keeps the heavy classification phase off Claude.
+ENGINE = {"engine": "claude", "model": "", "host": "http://localhost:11434",
+          "base_url": "", "api_key": ""}
+
+# urllib ignores the system CA store in this env -> HTTPS calls fail with
+# CERTIFICATE_VERIFY_FAILED. Point it at the system bundle if not already set.
+if not os.environ.get("SSL_CERT_FILE"):
+    for _ca in ("/etc/ssl/certs/ca-certificates.crt", "/etc/pki/tls/certs/ca-bundle.crt"):
+        if os.path.exists(_ca):
+            os.environ["SSL_CERT_FILE"] = _ca
+            break
 
 
 def _call_llm(prompt: str) -> str:
     """Return the raw model text for a prompt via the configured engine."""
-    if ENGINE["engine"] == "ollama":
+    eng = ENGINE["engine"]
+    if eng == "openai":  # OpenAI-compatible /v1/chat/completions
+        body = json.dumps({
+            "model": ENGINE["model"], "temperature": 0,
+            "messages": [{"role": "user", "content": prompt}],
+        }).encode()
+        headers = {"Content-Type": "application/json"}
+        if ENGINE["api_key"]:
+            headers["Authorization"] = f"Bearer {ENGINE['api_key']}"
+        req = urllib.request.Request(ENGINE["base_url"].rstrip("/") + "/chat/completions",
+                                     data=body, headers=headers)
+        with urllib.request.urlopen(req, timeout=300) as r:
+            return json.loads(r.read())["choices"][0]["message"]["content"]
+    if eng == "ollama":  # native local Ollama
         body = json.dumps({
             "model": ENGINE["model"] or "qwen2.5-coder:7b",
             "prompt": prompt, "stream": False, "format": "json",
@@ -241,13 +265,16 @@ def main() -> int:
     ap.add_argument("--per-class", type=int, default=25)
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--seed", type=int, default=0)
-    ap.add_argument("--engine", choices=["claude", "ollama"], default="claude",
+    ap.add_argument("--engine", choices=["claude", "ollama", "openai"], default="claude",
                     help="LLM backend for classification")
     ap.add_argument("--model", default="",
-                    help="model id (ollama: e.g. qwen2.5-coder:7b; claude: optional override)")
+                    help="model id (e.g. qwen3-coder:480b for openai/ollama-cloud)")
     ap.add_argument("--ollama-host", default="http://localhost:11434")
+    ap.add_argument("--base-url", default="", help="OpenAI-compatible base url (openai engine)")
+    ap.add_argument("--api-key-env", default="", help="env var holding the API key (openai engine)")
     a = ap.parse_args()
-    ENGINE.update(engine=a.engine, model=a.model, host=a.ollama_host)
+    ENGINE.update(engine=a.engine, model=a.model, host=a.ollama_host,
+                  base_url=a.base_url, api_key=os.environ.get(a.api_key_env, "") if a.api_key_env else "")
     if a.engine == "ollama" and a.workers > 2:
         a.workers = 2  # a single local model serializes; avoid thrashing
 
