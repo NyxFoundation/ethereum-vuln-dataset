@@ -28,10 +28,35 @@ import json
 import re
 import subprocess
 import sys
+import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pandas as pd
+
+# --- LLM engine (set from CLI in main) -------------------------------------
+# Two backends: Anthropic `claude -p` (default) or a local Ollama model. Ollama
+# keeps the heavy classification phase fully local / free once diffs are cached.
+ENGINE = {"engine": "claude", "model": "", "host": "http://localhost:11434"}
+
+
+def _call_llm(prompt: str) -> str:
+    """Return the raw model text for a prompt via the configured engine."""
+    if ENGINE["engine"] == "ollama":
+        body = json.dumps({
+            "model": ENGINE["model"] or "qwen2.5-coder:7b",
+            "prompt": prompt, "stream": False, "format": "json",
+            "options": {"temperature": 0},
+        }).encode()
+        req = urllib.request.Request(f"{ENGINE['host']}/api/generate", data=body,
+                                     headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=300) as r:
+            return json.loads(r.read()).get("response", "")
+    # default: claude CLI
+    cmd = ["claude", "-p"] + (["--model", ENGINE["model"]] if ENGINE["model"] else []) + [prompt]
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=180,
+                       encoding="utf-8", errors="replace")
+    return r.stdout.strip()
 
 DEPBUMP_RE = re.compile(r"\bbump\b|chore\(deps|dependabot|renovate", re.I)
 NONFIX_TITLE_RE = re.compile(
@@ -167,10 +192,8 @@ description: {it['desc']}
 def classify(it: dict) -> dict:
     prompt = build_prompt(it)
     try:
-        r = subprocess.run(["claude", "-p", prompt], capture_output=True, text=True,
-                           timeout=120, encoding="utf-8", errors="replace")
-        out = r.stdout.strip()
-        m = re.search(r"\{[^{}]*\"is_security_fix\"[^{}]*\}", out)
+        out = _call_llm(prompt)
+        m = re.search(r"\{[^{}]*\"is_security_fix\"[^{}]*\}", out, re.S)
         obj = json.loads(m.group(0)) if m else {}
     except Exception as e:
         obj = {"error": str(e)}
@@ -218,7 +241,15 @@ def main() -> int:
     ap.add_argument("--per-class", type=int, default=25)
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--engine", choices=["claude", "ollama"], default="claude",
+                    help="LLM backend for classification")
+    ap.add_argument("--model", default="",
+                    help="model id (ollama: e.g. qwen2.5-coder:7b; claude: optional override)")
+    ap.add_argument("--ollama-host", default="http://localhost:11434")
     a = ap.parse_args()
+    ENGINE.update(engine=a.engine, model=a.model, host=a.ollama_host)
+    if a.engine == "ollama" and a.workers > 2:
+        a.workers = 2  # a single local model serializes; avoid thrashing
 
     if a.build_eval:
         cache = json.loads(a.cache.read_text())
