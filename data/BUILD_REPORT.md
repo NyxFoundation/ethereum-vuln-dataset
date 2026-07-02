@@ -1,38 +1,63 @@
 # Build report
 
-Deterministic build of the curated security-only set from the raw snapshot.
+Fresh crawl + deterministic curation. Raw snapshot re-collected from all 11
+clients (+ consensus-specs) via `collection/run_pipeline.sh` (uncapped), then the
+curated security-only set derived offline by `pipeline/build_security_dataset.py`.
+
+> **Note:** LLM STRIDE/CWE classification was **skipped** for this build, so
+> `stride=Other` / `cwe_top25=N/A` for every row. The GATE therefore keeps a row
+> only on an *independent non-LLM* signal: a CVE/GHSA id, a rated severity
+> (Critical/High/Medium/Low), or a security-keyword match (`security_score ≥ 0.5`).
+> This yields a smaller, higher-precision set than a classified build — the
+> ~16k rows dropped below are the unrated "stealth" fixes that only an LLM
+> STRIDE label would have admitted.
 
 ## Before (raw crawl)
 
-- rows: **33,744**
-- no security signal at all (CWE=N/A & STRIDE=Other & unrated): **14,745** (43.7%)
-- release-note / urgency boilerplate (T1 targets): **96** rows, of which 87 were mislabeled `Critical`
-- `Critical` severity total: 102 (mostly the boilerplate FP above)
+- rows (build_derived): **20,915**
+- after cross-reference dedup: **18,475**
 
 ## Pipeline stages
 
-- **T1** dropped 99 boilerplate rows {'nimbus': 96, 'geth': 3}
-- **T7 + GATE** kept 19,046 of 33,645 (dropped 14,599 low-signal)
+- **T1** dropped 11 release-note boilerplate rows {'nimbus': 8, 'geth': 3}
+- **T2** dropped **1,417** CI/docs/dep-bump meta-work rows (title-anchored;
+  rows citing a CVE/GHSA/RustSec id, strong vuln language, or a rated severity
+  are protected)
+- **T7 + GATE** kept the security-relevant remainder
+- New provenance columns: **`authority_tier`** (A_authoritative / B_corroborated
+  / C_candidate) and **`n_signals`** (count of independent security signals).
+  The **essential slice** = `authority_tier in {A,B}`.
+
+## Authoritative spine
+
+Per-repo GitHub Security Advisories crawled via `crawl_ghsa_advisories.py`:
+25 advisories (geth 17, besu 3, lodestar 3, lighthouse 1, teku 1), incl. **3
+Critical** (geth, besu, teku). Severities preserved through the canonical path.
 
 ## After (curated)
 
-- rows: **19,046**
+- rows: **1,926**
 - residual boilerplate FP: **0**  ✅
-- `Critical` severity total: **15** (phantom Nimbus criticals removed)
-- by confidence: {'medium': 16426, 'low': 1743, 'high': 877}
-- by severity: {'Info': 12583, 'Unrated': 4663, 'Medium': 1056, 'Low': 475, 'High': 254, 'Critical': 15}
+- **essential slice (A+B): 934** (was 173 rated-only) — 5.4× larger high-precision core
+- by authority_tier: {'C_candidate': 992, 'B_corroborated': 652, 'A_authoritative': 282}
+- by severity: {'Unrated': 963, 'Info': 790, 'High': 85, 'Medium': 63, 'Low': 22, 'Critical': 3}
 - by source:
-  - geth: 3,496
-  - lodestar: 2,738
-  - nimbus: 2,324
-  - prysm: 2,288
-  - teku: 1,750
-  - besu: 1,616
-  - lighthouse: 1,279
-  - erigon: 1,211
-  - ethereum_specs: 789
-  - nethermind: 698
-  - reth: 641
-  - grandine: 214
+  - geth: 438
+  - erigon: 371
+  - lodestar: 276
+  - nimbus: 232
+  - lighthouse: 178
+  - reth: 172
+  - prysm: 116
+  - nethermind: 108
+  - besu: 94
+  - teku: 93
+  - grandine: 16
   - consensus-specs: 2
-- security_score distribution: {'0.0': 13643, '0.3': 1535, '0.5': 2427, '0.8': 564, '0.9': 345, '1.0': 532}
+- security_score distribution: {'0.0': 34, '0.3': 4, '0.5': 1253, '0.8': 423, '0.9': 172, '1.0': 210}
+
+## Validation checkpoints (issue #89)
+
+- c-kzg-4844 / blst: present (kzg×12, 4844×13, blst×13 in curated)
+- Lodestar: 276 · Nimbus: 232 · Prysm: 116 — all present
+- `ethereum_specs` source: **0** (spec-divergence crawler returned no matches this run; the 11 clients + consensus-specs are covered)

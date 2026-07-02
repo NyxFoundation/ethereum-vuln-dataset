@@ -64,6 +64,27 @@ BOILERPLATE_RE = re.compile(
 # --- T7: weighted security keywords ---------------------------------------
 # Identifiers are decisive on their own.
 CVE_RE = re.compile(r"CVE-\d{4}-\d{4,7}|GHSA-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{4}", re.IGNORECASE)
+# Advisory ids that also confer authority (superset of CVE_RE + RustSec).
+ADVISORY_ID_RE = re.compile(
+    r"CVE-\d{4}-\d{4,7}|GHSA-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{4}|RUSTSEC-\d{4}-\d{4}",
+    re.IGNORECASE,
+)
+
+# --- T2: non-vulnerability meta-work (CI / docs / dep-bump) ----------------
+# Title-anchored so a real "Fix <bug>" whose *description* happens to mention
+# CI or deps is never dropped. A matching row is removed from the security set
+# UNLESS it carries an advisory id or strong vuln language in the title
+# (e.g. "Bump h2 for RUSTSEC-2024-0332", "...Handle u64 overflow").
+NOISE_TITLE_RE = re.compile(
+    r"(?:^|\b)(?:"
+    r"bump |chore\(deps|dependabot|renovate"
+    r"|pin github actions|github actions|codeql|add .*security scan|security scanning"
+    r"|security policy|security\.md|code of conduct|\breadme\b|update copyright"
+    r"|update license|documentation update|update docs|docs:|changelog"
+    r"|typo in|fix typo|add default security|create security policy"
+    r")",
+    re.IGNORECASE,
+)
 
 # Strong: words that almost always mean a security defect. Includes the
 # protocol-specific failure modes that generic CWE wordlists miss.
@@ -95,6 +116,21 @@ MODERATE_RE = re.compile(
 
 HIGH_SEV = frozenset({"critical", "high"})
 RATED_SEV = frozenset({"critical", "high", "medium", "low"})
+
+# --- A2: security-sensitive code areas -------------------------------------
+# A keyword hit *inside* one of these subsystems is a second, independent
+# signal — a "fix panic in fork_choice" stacks kw(panic)+path(fork_choice) and
+# is promoted out of the noisy single-keyword tier. Word-boundary matched so
+# dep-bumps like "path-to-regexp" don't false-match "p2p"/"trie".
+SENSITIVE_PATH_RE = re.compile(
+    r"\b(?:"
+    r"fork.?choice|state.?transition|epoch.?process|consensus|finality|reorg"
+    r"|slashing|attestation|sync.?committee|blob|kzg|c-kzg|4844|bls|blst|discv5"
+    r"|gossipsub|req.?resp|p2p|devp2p|rlpx|evm|opcode|precompile|trie|tx.?pool"
+    r"|mempool|signature|merkle|ssz|rlp|secp256|ecrecover|snap.?sync"
+    r")\b",
+    re.IGNORECASE,
+)
 
 
 def score_row(title: str, description: str, severity: str) -> float:
@@ -128,6 +164,63 @@ def confidence_tier(row) -> str:
     return "low"
 
 
+def count_signals(row) -> int:
+    """Number of *independent* security signals firing on a row.
+
+    Multi-signal scoring is the loop's precision lever: dep-bump / CI / docs
+    noise fires at most one weak keyword, whereas a real fix stacks several
+    (id + severity + strong keyword + sensitive path + linked crash issue …).
+    Signals added by later iterations (diff size, review-comment language,
+    backport) plug in here via their own columns when present.
+    """
+    t, d = str(row["title"] or ""), str(row["description"] or "")
+    combined = t + " " + d
+    s = str(row["severity"] or "").lower()
+    n = 0
+    if CVE_RE.search(combined):
+        n += 1                                   # authoritative id
+    if s in RATED_SEV:
+        n += 1                                   # rated severity
+    if STRONG_RE.search(combined):
+        n += 1                                   # strong security keyword
+    if MODERATE_RE.search(combined):
+        n += 1                                   # moderate bug-class keyword
+    if SENSITIVE_PATH_RE.search(combined):
+        n += 1                                   # security-sensitive subsystem (A2)
+    if str(row.get("stride", "Other")) not in ("Other", "", "nan"):
+        n += 1                                   # LLM STRIDE (if classified)
+    if str(row.get("cwe_top25", "N/A")) not in ("N/A", "", "nan"):
+        n += 1                                   # LLM CWE-Top-25
+    # Enrichment signals from later loop iterations (absent -> skipped):
+    if str(row.get("comment_signal", "")).strip():
+        n += 1                                   # review-comment language (B4)
+    if str(row.get("linked_issue_signal", "")).strip():
+        n += 1                                   # linked crash/fuzzer issue (C5)
+    if str(row.get("backport_signal", "")).strip():
+        n += 1                                   # cherry-pick / backport (A1)
+    return n
+
+
+def authority_tier(row) -> str:
+    """Coarse provenance class so a consumer can take the *essential* slice.
+
+    A_authoritative — an advisory/CVE/GHSA id or an advisory-rated severity: a
+                      confirmed vulnerability. Near-zero false positives.
+    B_corroborated  — no id, but >=2 independent signals stack (e.g. strong
+                      keyword + sensitive path + linked crash issue).
+    C_candidate     — a single heuristic keyword only; broad-recall, noisier.
+    """
+    t, d = str(row["title"] or ""), str(row["description"] or "")
+    s = str(row["severity"] or "").lower()
+    contest = str(row.get("contest", "")).lower()
+    if (CVE_RE.search(t + " " + d) or s in RATED_SEV
+            or "advisory" in contest or "cve" in contest):
+        return "A_authoritative"
+    if count_signals(row) >= 2:
+        return "B_corroborated"
+    return "C_candidate"
+
+
 def build(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
     n_raw = len(df)
     for col in ("title", "description", "severity", "stride", "cwe_top25", "source_platform"):
@@ -139,6 +232,22 @@ def build(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
     t1_mask = blob.str.contains(BOILERPLATE_RE)
     t1_dropped = df[t1_mask]
     df = df[~t1_mask].copy()
+
+    # T2 — drop CI/docs/dep-bump meta-work (title-anchored, with protections).
+    # A row is protected (kept, possibly low-tier) if it cites an advisory id
+    # anywhere (a dep-bump "for CVE-… / rustsec vuln" is still a security fix),
+    # uses strong vuln language in the title, or carries a rated severity.
+    title = df["title"].fillna("").astype(str)
+    t2_blob = title + " " + df["description"].fillna("").astype(str)
+    noise_mask = title.str.contains(NOISE_TITLE_RE)
+    protect = (
+        t2_blob.str.contains(ADVISORY_ID_RE)
+        | title.str.contains(STRONG_RE)
+        | df["severity"].fillna("").str.lower().isin(RATED_SEV)
+    )
+    t2_mask = noise_mask & ~protect
+    t2_dropped = df[t2_mask]
+    df = df[~t2_mask].copy()
 
     # T7
     df["security_score"] = [
@@ -156,16 +265,21 @@ def build(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
 
     sec = df[df["security_relevant"]].copy()
     sec["confidence"] = sec.apply(confidence_tier, axis=1)
+    sec["n_signals"] = sec.apply(count_signals, axis=1)
+    sec["authority_tier"] = sec.apply(authority_tier, axis=1)
     sec = sec.drop(columns=["security_relevant"])
 
     report = {
         "raw_rows": int(n_raw),
         "t1_boilerplate_dropped": int(len(t1_dropped)),
         "t1_dropped_by_source": {k: int(v) for k, v in t1_dropped["source_platform"].value_counts().items()},
+        "t2_noise_dropped": int(len(t2_dropped)),
         "after_t1": int(len(df)),
         "security_rows": int(len(sec)),
         "low_signal_dropped": int(len(df) - len(sec)),
         "by_confidence": {k: int(v) for k, v in sec["confidence"].value_counts().items()},
+        "by_authority_tier": {k: int(v) for k, v in sec["authority_tier"].value_counts().items()},
+        "by_n_signals": {str(k): int(v) for k, v in sec["n_signals"].value_counts().sort_index().items()},
         "by_source": {k: int(v) for k, v in sec["source_platform"].value_counts().items()},
         "by_severity": {k: int(v) for k, v in sec["severity"].value_counts().items()},
         "by_score": {str(k): int(v) for k, v in sec["security_score"].round(1).value_counts().sort_index().items()},

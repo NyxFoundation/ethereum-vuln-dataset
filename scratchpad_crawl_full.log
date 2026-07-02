@@ -1,0 +1,51 @@
+=== MODE=full  CAP=0  PAGES=0  RUN_HEAVY=1  WORK=/home/gohan/workspace/ethereum-vuln-dataset/scratchpad_crawl ===
+>>> [canonical] PY collection/crawl_eth_past_fixes.py --client all --out-dir /home/gohan/workspace/ethereum-vuln-dataset/scratchpad_crawl/canonical --max-records 0
+    [canonical] ok
+>>> [commits] per-client: PY collection/grep_eth_commits.py --client @CLIENT --out-dir /home/gohan/workspace/ethereum-vuln-dataset/scratchpad_crawl/supp --max-records 0
+    [commits] done (ok=11 fail=0)
+>>> [releases] PY collection/mine_eth_releases.py --client all --out-dir /home/gohan/workspace/ethereum-vuln-dataset/scratchpad_crawl/supp --max-records 0
+    [releases] ok
+>>> [changelog] PY collection/parse_eth_changelogs.py --client all --out-dir /home/gohan/workspace/ethereum-vuln-dataset/scratchpad_crawl/supp --max-records 0
+    [changelog] ok
+>>> [osv] PY collection/crawl_osv.py --client all --out-dir /home/gohan/workspace/ethereum-vuln-dataset/scratchpad_crawl/supp
+    [osv] ok
+>>> [rustsec] PY collection/crawl_rustsec.py --client all --out-dir /home/gohan/workspace/ethereum-vuln-dataset/scratchpad_crawl/supp
+    [rustsec] ok
+>>> [govuln] PY collection/crawl_govulncheck.py --client all --out-dir /home/gohan/workspace/ethereum-vuln-dataset/scratchpad_crawl/supp
+    [govuln] ok
+>>> [tekujira] PY collection/crawl_teku_jira_refs.py --out-dir /home/gohan/workspace/ethereum-vuln-dataset/scratchpad_crawl/supp --max-results 0
+    [tekujira] ok
+>>> [nimbusurg] PY collection/extract_nimbus_urgency.py --out-dir /home/gohan/workspace/ethereum-vuln-dataset/scratchpad_crawl/supp --apply-to /home/gohan/workspace/ethereum-vuln-dataset/scratchpad_crawl/supp/nimbus.releases.csv --apply-out /home/gohan/workspace/ethereum-vuln-dataset/scratchpad_crawl/supp/nimbus.releases.patched.csv
+    [nimbusurg] ok
+>>> [stealth] per-client: PY collection/mine_stealth_prs.py --client @CLIENT --out-dir /home/gohan/workspace/ethereum-vuln-dataset/scratchpad_crawl/supp --max-per-client 0
+    [stealth] done (ok=11 fail=0)
+>>> [direct] per-client: PY collection/mine_direct_pulls.py --client @CLIENT --out-dir /home/gohan/workspace/ethereum-vuln-dataset/scratchpad_crawl/supp --max-pages 0
+    [direct:geth] FAILED
+    [direct:nethermind] FAILED
+    [direct:erigon] FAILED
+    [direct:reth] FAILED
+    [direct:lighthouse] FAILED
+    [direct:lodestar] FAILED
+    [direct:nimbus] FAILED
+    [direct:prysm] FAILED
+    [direct:grandine] FAILED
+    [direct] done (ok=2 fail=9)
+>>> [cross] PY collection/crawl_cross_client.py --out-dir /home/gohan/workspace/ethereum-vuln-dataset/scratchpad_crawl/supp
+    [cross] ok
+>>> [specs] PY collection/crawl_specs_divergence.py --out-dir /home/gohan/workspace/ethereum-vuln-dataset/scratchpad_crawl/supp --max-per-term 0
+    [specs] ok
+>>> [cve] PY collection/crawl_cve.py --client all --out-dir /home/gohan/workspace/ethereum-vuln-dataset/scratchpad_crawl/cve
+    [cve] ok
+>>> [build_derived] PY collection/build_derived.py --domain ethereum --filter-platforms  --out-dir /home/gohan/workspace/ethereum-vuln-dataset/scratchpad_crawl/derived --source /home/gohan/workspace/ethereum-vuln-dataset/scratchpad_crawl/canonical/besu.csv --source /home/gohan/workspace/ethereum-vuln-dataset/scratchpad_crawl/canonical/erigon.csv --source /home/gohan/workspace/ethereum-vuln-dataset/scratchpad_crawl/canonical/geth.csv --source /home/gohan/workspace/ethereum-vuln-dataset/scratchpad_crawl/canonical/grandine.csv --source /home/gohan/workspace/ethereum-vuln-dataset/scratchpad_crawl/canonical/lighthouse.csv --source /home/gohan/workspace/ethereum-vuln-dataset/scratchpad_crawl/canonical/lodestar.csv --source /home/gohan/workspace/ethereum-vuln-dataset/scratchpad_crawl/canonical/nethermind.csv --source /home/gohan/workspace/ethereum-vuln-dataset/scratchpad_crawl/canonical/nimbus.csv --source /home/gohan/workspace/ethereum-vuln-dataset/scratchpad_crawl/canonical/prysm.csv --source /home/gohan/workspace/ethereum-vuln-dataset/scratchpad_crawl/canonical/reth.csv --source /home/gohan/workspace/ethereum-vuln-dataset/scratchpad_crawl/canonical/teku.csv
+    [build_derived] ok
+>>> [merge_supp] PY collection/merge_crawl_csvs.py --src-dirs /home/gohan/workspace/ethereum-vuln-dataset/scratchpad_crawl/supp --parquet /home/gohan/workspace/ethereum-vuln-dataset/scratchpad_crawl/derived/ethereum/train.parquet --out /home/gohan/workspace/ethereum-vuln-dataset/scratchpad_crawl/derived/ethereum/train.parquet
+    [merge_supp] ok
+>>> [merge_cve] PY collection/merge_cve.py --cve-dir /home/gohan/workspace/ethereum-vuln-dataset/scratchpad_crawl/cve --parquet /home/gohan/workspace/ethereum-vuln-dataset/scratchpad_crawl/derived/ethereum/train.parquet --out /home/gohan/workspace/ethereum-vuln-dataset/scratchpad_crawl/derived/ethereum/train.parquet
+    [merge_cve] ok
+>>> [cross_ref] PY collection/cross_reference.py --in /home/gohan/workspace/ethereum-vuln-dataset/scratchpad_crawl/derived/ethereum/train.parquet --out /home/gohan/workspace/ethereum-vuln-dataset/scratchpad_crawl/derived/ethereum/train.crossref.parquet --quiet
+    [cross_ref] ok
+>>> [normalize] PY - /home/gohan/workspace/ethereum-vuln-dataset/scratchpad_crawl/derived/ethereum/train.crossref.parquet data/raw/train.classified.parquet
+    [normalize] ok
+>>> [curate] PY pipeline/build_security_dataset.py --in data/raw/train.classified.parquet --out data/ethereum_vulns.parquet --manifest data/manifest.json
+    [curate] ok
+=== DONE. Curated -> data/ethereum_vulns.parquet ===

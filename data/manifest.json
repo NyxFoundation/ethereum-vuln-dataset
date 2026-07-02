@@ -1,6 +1,6 @@
 {
   "domain": "ethereum",
-  "n_rows": 19046,
+  "n_rows": 1926,
   "schema": [
     "id",
     "source_platform",
@@ -15,54 +15,68 @@
     "scraped_at",
     "stride",
     "cwe_top25",
+    "evidence",
     "security_score",
-    "confidence"
+    "confidence",
+    "n_signals",
+    "authority_tier"
   ],
   "build": {
-    "raw_rows": 33744,
-    "t1_boilerplate_dropped": 99,
+    "raw_rows": 18475,
+    "t1_boilerplate_dropped": 11,
     "t1_dropped_by_source": {
-      "nimbus": 96,
+      "nimbus": 8,
       "geth": 3
     },
-    "after_t1": 33645,
-    "security_rows": 19046,
-    "low_signal_dropped": 14599,
+    "t2_noise_dropped": 1417,
+    "after_t1": 17047,
+    "security_rows": 1926,
+    "low_signal_dropped": 15121,
     "by_confidence": {
-      "medium": 16426,
-      "low": 1743,
-      "high": 877
+      "medium": 1544,
+      "high": 382
+    },
+    "by_authority_tier": {
+      "C_candidate": 992,
+      "B_corroborated": 652,
+      "A_authoritative": 282
+    },
+    "by_n_signals": {
+      "1": 1039,
+      "2": 687,
+      "3": 150,
+      "4": 47,
+      "5": 3
     },
     "by_source": {
-      "geth": 3496,
-      "lodestar": 2738,
-      "nimbus": 2324,
-      "prysm": 2288,
-      "teku": 1750,
-      "besu": 1616,
-      "lighthouse": 1279,
-      "erigon": 1211,
-      "ethereum_specs": 789,
-      "nethermind": 698,
-      "reth": 641,
-      "grandine": 214,
+      "geth": 423,
+      "erigon": 358,
+      "nimbus": 198,
+      "lodestar": 194,
+      "lighthouse": 177,
+      "reth": 161,
+      "prysm": 114,
+      "nethermind": 104,
+      "teku": 90,
+      "besu": 89,
+      "grandine": 16,
       "consensus-specs": 2
     },
     "by_severity": {
-      "Info": 12583,
-      "Unrated": 4663,
-      "Medium": 1056,
-      "Low": 475,
-      "High": 254,
-      "Critical": 15
+      "Unrated": 963,
+      "Info": 790,
+      "High": 85,
+      "Medium": 63,
+      "Low": 22,
+      "Critical": 3
     },
     "by_score": {
-      "0.0": 13643,
-      "0.3": 1535,
-      "0.5": 2427,
-      "0.8": 564,
-      "0.9": 345,
-      "1.0": 532
+      "0.0": 34,
+      "0.3": 4,
+      "0.5": 1208,
+      "0.8": 298,
+      "0.9": 172,
+      "1.0": 210
     },
     "residual_boilerplate_fp": 0
   },
