@@ -1,108 +1,163 @@
-# Dataset analysis
+# A quantitative analysis of the ethereum-vuln-dataset
 
-What this corpus says — read through the lens of the vulnerability-dataset
-literature (CVEfixes, BigVul, Devign, CrossVul, DiverseVul, PrimeVul, and Croft
-et al.'s data-quality framework). Numbers are for the current snapshot
-(n = 2,225 curated rows).
+*Read as a short technical report. Every figure is regenerated from
+`data/ethereum_vulns.parquet` by `scripts/make_figures.py`; n = 2,225 curated
+security fixes across the eleven production Ethereum clients.*
 
-## Snapshot
+> **Summary.** The corpus is dominated by *silently patched* fixes (≈94% ship
+> with no advisory), its vulnerability profile is **availability- and
+> consensus-centric** rather than the memory-corruption profile of generic C/C++
+> datasets, its fixes are **localized** (43% single-file), and it spans **six
+> languages implementing one protocol** — a diversity axis absent from prior
+> vulnerability datasets. We interpret each finding against the
+> vulnerability-dataset literature (CVEfixes, BigVul, Devign, CrossVul,
+> DiverseVul, PrimeVul, and Croft et al.'s data-quality framework).
 
-| dimension | value |
-|---|---|
-| rows | 2,225 (A_authoritative 235 · B_corroborated 1,573 · C_candidate 417) |
-| layers | execution 1,259 · consensus 966 |
-| languages | Go 945 · Rust 419 · Nim 269 · Java 235 · TypeScript 225 · C# 130 |
-| rated severity | **6.4%** · carries a CVE/GHSA id **4.9%** |
-| top root causes | missing_input_validation 522 · resource_exhaustion 340 · race_condition 217 · unhandled_error/nil 208 · integer_overflow 185 · consensus_divergence 174 |
-| top attack paths | malformed_input 926 · crafted_state 415 · malicious_p2p_message 241 · malicious_attestation 174 |
-| fix size | median **45 LOC**, 41% ≤30 LOC · median **2 files**, **43% single-file** |
+## 1. Data and method
 
-## 1. The silent-fix majority is the point (not a bug)
+Each row is one historical vulnerability fix — a merged PR, commit, advisory, or
+CVE — from a client's own public repository, normalized to one schema, tiered by
+evidence strength (`authority_tier`), and labelled with a protocol `area`,
+`root_cause`, `attack_path`, and inline pre-/post-fix code. Distributions below
+are computed directly over the curated table; fix-size uses the inlined
+post-fix hunks. Method and coverage caveats are in
+[`limitations.md`](./limitations.md).
 
-**Only 6.4% of curated fixes carry a rated severity and 4.9% carry a CVE/GHSA
-id.** So **~94% shipped silently** — no advisory, often a vague message. This
-quantifies, for Ethereum clients specifically, the phenomenon VulFixMiner and
-Sawadogo et al. describe generally.
+## 2. Finding 1 — the silent-fix majority
 
-*Implication vs prior datasets.* CVE-anchored corpora (**CVEfixes**, **BigVul**)
-start from an advisory and walk to the fix, so by construction they can only see
-the ~5–6% advisory-linked slice. This corpus is built the other way — surface the
-silent majority via multi-signal mining — so it is complementary to, not a subset
-of, CVE-anchored datasets.
+![Figure 1](figures/fig1_silent_prevalence.png)
 
-## 2. The vulnerability profile is availability-first, and protocol-specific
+**Only 4.9% of curated fixes carry a CVE/GHSA identifier and 6.4% carry any
+rated severity; ≈93.6% are silent** — no advisory, frequently an uninformative
+commit message. This quantifies, for Ethereum clients specifically, the
+silent-patching behaviour that VulFixMiner [Zhou et al., ASE'21] and Sawadogo et
+al. describe qualitatively.
 
-Root causes are dominated by **input-validation gaps, resource exhaustion,
-races, nil/unhandled errors, integer overflow, and consensus divergence**;
-attack paths are dominated by **malformed input, crafted state, and malicious
-p2p / attestation messages**. The modal bug is *"untrusted network input crashes
-or diverges the node"* — an **availability / consensus** class.
+*Implication.* CVE-anchored datasets — **CVEfixes** [Bhandari et al., 2021] and
+**BigVul** [Fan et al., 2020] — begin from an advisory and walk to the patch, so
+by construction they can only observe the ~5% advisory-linked slice. This corpus
+is built in the opposite direction (mine the silent majority, then corroborate),
+making it **complementary to, not a subset of**, CVE-anchored resources. A model
+trained solely on CVE-linked fixes never sees the 94% of Ethereum-client fixes
+that never received a CVE.
 
-*Implication.* This differs sharply from the memory-corruption / injection profile
-that dominates C/C++ datasets (BigVul, Devign are largely CWE-119/787/476). Two
-classes here are essentially **absent from generic datasets**: `consensus_divergence`
-(chain split / invalid-block acceptance) and DoS-via-p2p. A detector trained only
-on generic CWE data would be blind to the highest-severity Ethereum-specific
-class. This argues for domain-specific corpora, echoing CrossVul/DiverseVul's
-finding that distribution shift across domains degrades transfer.
+## 3. Finding 2 — an availability-first, protocol-specific threat profile
 
-## 3. Fixes are surgical — which supports the counterfactual use-case
+![Figure 2](figures/fig2_rootcause_attack.png)
 
-**43% touch a single file, 41% change ≤30 LOC, median 45 LOC.** Security fixes
-being small and localized is exactly the prior that VulFixMiner / GraphSPD exploit,
-and it matters for this corpus's stated purpose — *"given the pre-fix state, would
-the tool have caught it?"*: a tightly-scoped diff + `introduced_in_commit` gives a
-clean counterfactual boundary. (The mean of 298 LOC is skewed by a few large
-refactor-bundled fixes — median is the honest centre.)
+Root causes are led by **missing input validation (522)**, **resource exhaustion
+(340)**, **race conditions (217)**, **unhandled error/nil (208)**, **integer
+overflow (185)**, and **consensus divergence (174)**; triggers are led by
+**malformed input (926)**, **crafted state (415)**, and **malicious p2p /
+attestation messages**. The modal defect is *"untrusted network input crashes or
+diverges a node"* — an **availability / consensus** class.
 
-## 4. Rare axis: one spec, eleven implementations, six languages
+*Implication.* This is a different distribution from the memory-corruption and
+injection classes (CWE-119/787/476/89) that dominate C/C++ corpora such as
+**Devign** [Zhou et al., 2019] and **BigVul**. Two of the highest-severity
+classes here — `consensus_divergence` (chain split / invalid-block acceptance)
+and DoS-via-p2p — are effectively **absent from generic datasets**. A detector
+trained on generic CWE data would be structurally blind to the class that matters
+most for a blockchain client. This is direct evidence for the domain-shift
+concern raised by **CrossVul** [Nikitopoulos et al., 2021] and **DiverseVul**
+[Chen et al., 2023]: cross-domain transfer degrades when the vulnerability
+distribution differs.
 
-Most vuln datasets are single-language (usually C/C++) and single-project or
-project-agnostic. This corpus is **multi-language (6) × multi-implementation (11)
-of one protocol**. Because all clients implement the *same* consensus/execution
-spec, the **same logical vulnerability can recur across languages** (and the
-`label` area is the language-agnostic join key). That enables studies generic
-datasets can't support: cross-implementation recurrence, language-specific bug
-proneness for an identical spec, and transfer across implementations. This is the
-diversity dimension **DiverseVul** and **CrossVul** argue reduces overfitting —
-here obtained within a single, well-specified domain.
+## 4. Finding 3 — where the bugs live
 
-## 5. Data quality, by Croft et al.'s dimensions
+![Figure 3](figures/fig3_area.png)
 
-- **Accuracy (label correctness).** Multi-signal gate + `authority_tier` + an
-  LLM classifier validated at ~0.90 precision; labels are *not* human-verified
-  (see [`limitations.md`](./limitations.md)). The tiering makes the
-  accuracy/coverage trade-off explicit rather than hidden in a single noisy label
-  — the direction **PrimeVul** advocates after showing BigVul/Devign labels are
-  substantially noisy.
-- **Uniqueness.** De-duplicated by `fix_commit` within a client (108 removed);
-  only 2 commits are shared across clients (fork-inherited). Duplication is the
-  #1 metric-inflation risk **PrimeVul** and **Croft et al.** flag; it is handled.
-- **Consistency.** One schema across 11 heterogeneous sources (advisory / stealth
+Fixes concentrate in **state/trie**, **p2p networking**, **RPC**, **sync**, and
+the consensus **state-transition** (`beacon-chain:*`, esp. attestation and
+fork-choice). The `label` vocabulary is grounded in the upstream spec repos'
+section names, so it is **language-agnostic**: the same subsystem label applies
+whether the fix landed in Rust (Lighthouse) or Go (Prysm).
+
+*Implication.* Attack surface is dominated by the components that parse
+**untrusted, adversary-controlled data** — the network stack (p2p, RPC, sync) and
+the consensus objects (attestations, blocks). This aligns the empirical bug
+distribution with the threat model and gives auditors a prioritization signal
+that a flat CWE list does not.
+
+## 5. Finding 4 — fixes are localized
+
+![Figure 4](figures/fig4_fixsize.png)
+
+**43% of fixes touch a single file and the median fix changes 45 lines**, though
+a long tail of refactor-bundled fixes pulls the mean to ~300 LOC. Localized
+security patches are exactly the prior that VulFixMiner and **GraphSPD** [Wang et
+al., S&P'23] exploit.
+
+*Implication for the intended use-case.* The corpus is built to answer *"given
+the pre-fix code state, would a tool have caught this?"* A tightly-scoped diff,
+paired with `introduced_in_commit` (the parent commit = last vulnerable state),
+gives a **clean counterfactual boundary** for that evaluation — the localization
+is what makes the pre-/post-fix framing tractable.
+
+## 6. Finding 5 — one protocol, eleven implementations, six languages
+
+![Figure 5](figures/fig5_diversity.png)
+
+The corpus spans **Go, Rust, Nim, Java, TypeScript, and C#** across 11 clients
+and both layers (execution 1,259 / consensus 966). Crucially, all clients
+implement the **same** consensus/execution specification.
+
+*Implication.* Most vulnerability datasets are single-language (predominantly
+C/C++) and either single-project or project-agnostic. Here, because the
+specification is fixed and the implementations differ, the **same logical
+vulnerability can recur across languages**, joined by the `label` area. This
+enables studies that generic datasets cannot support — cross-implementation
+recurrence, language-specific bug-proneness under an identical spec, and transfer
+across implementations. It is the diversity dimension DiverseVul and CrossVul
+argue reduces overfitting, obtained here **within a single well-specified
+domain**.
+
+## 7. Data quality and coverage
+
+![Figure 6](figures/fig6_coverage.png)
+
+Assessed along **Croft et al.**'s [2023] data-quality dimensions:
+
+- **Accuracy.** Labels come from spec-grounded rules plus an LLM classifier
+  validated at ~0.90 precision; they are *not* human-verified. The
+  `authority_tier` / `n_signals` columns expose the accuracy/coverage trade-off
+  explicitly, rather than hiding it in a single noisy label — the direction
+  **PrimeVul** [Ding et al., 2024] advocates after demonstrating substantial
+  label noise in BigVul/Devign.
+- **Uniqueness.** De-duplicated by `fix_commit` within a client (108 rows
+  removed); only two commits are shared across clients (fork-inherited).
+  Duplication is the leading metric-inflation risk flagged by PrimeVul and Croft
+  et al.; it is handled.
+- **Consistency.** One schema over 11 heterogeneous sources (advisory / stealth
   PR / commit / release / CVE / OSV / RustSec).
 - **Currentness.** Freshly crawled (2026), including the newest forks
-  (deneb→fulu/gloas, cancun→osaka) — where most datasets lag years behind.
+  (deneb→fulu/gloas, cancun→osaka), where public datasets typically lag years.
 
-## 6. Selection under a <1% base rate
+The low bars — `severity` (6.4%) and `silent_fix_prob` (40%) — are structural,
+not defects: unrated severity *is* the silent-fix signal (§2), and full-commit
+LLM classification was deliberately bounded (§8).
 
-Security fixes are a fraction of a percent of commits (the "needle in a haystack"
-of VulFixMiner). The pipeline responds with a **cheap high-recall pre-filter →
-gate → LLM classifier** cascade rather than a blind full-commit scan (measured at
-~18 h with precision collapse). The `authority_tier` / `n_signals` columns let a
-consumer pick their point on the recall/precision curve — treating selection as a
-first-class, tunable step instead of a fixed threshold.
+## 8. Implications for use
 
-## 7. It is a *corpus*, not a ready-made benchmark
+1. **Selection under a <1% base rate.** Security fixes are a fraction of a
+   percent of commits — VulFixMiner's "needle in a haystack." The pipeline
+   answers with a cheap high-recall pre-filter → gate → LLM cascade rather than a
+   blind full-commit scan (measured at ~18 h with precision collapse). Treat
+   `authority_tier` as a tunable operating point, not a fixed threshold.
+2. **This is a corpus, not a benchmark.** PrimeVul's central lesson is that naive
+   splits leak: near-duplicate and temporally-entangled samples inflate reported
+   performance. No train/test split is shipped. A consumer **must** add a
+   temporal and/or by-client split — and treat fork-shared commits and recurring
+   cross-implementation fixes as leakage risks — to obtain an honest
+   generalization estimate.
 
-**PrimeVul**'s central lesson is that naive splits leak: near-duplicate and
-temporally-entangled samples inflate reported model performance. This dataset is a
-*corpus* — no train/test split is shipped. A consumer building a benchmark from it
-**must** add a temporal and/or by-client split (and treat the fork-shared commits
-and the recurring cross-implementation fixes as leakage risks) to get an honest
-generalization estimate.
+## References
 
----
-
-*Reproduce these numbers from `data/ethereum_vulns.parquet`; see
-[`BUILD_REPORT.md`](./BUILD_REPORT.md) for coverage and [`limitations.md`](./limitations.md)
-for caveats.*
+- Bhandari, Naseer, Moonen. *CVEfixes*. PROMISE 2021.
+- Fan, Li, Wang, Nguyen. *A C/C++ Code Vulnerability Dataset (BigVul)*. MSR 2020.
+- Zhou, Liu, Siow, Du, Liu. *Devign*. NeurIPS 2019.
+- Nikitopoulos et al. *CrossVul*. ESEC/FSE 2021.
+- Chen et al. *DiverseVul*. RAID 2023.
+- Ding et al. *PrimeVul / Vulnerability Detection with Code LMs*. 2024.
+- Croft, Babar, Kholoosi. *Data Quality for ML-based Vulnerability Detection*. ICSE 2023.
+- Zhou et al. *VulFixMiner*. ASE 2021.  ·  Wang et al. *GraphSPD*. IEEE S&P 2023.
