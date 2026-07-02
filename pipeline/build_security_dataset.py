@@ -344,7 +344,16 @@ def build(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
     # match also fires on release notes that merely *list* a "fix crash". T2
     # already dropped dep-bump/CI titles upstream.
     has_fiximpact = df["title"].fillna("").str.contains(FIX_IMPACT_RE)
-    df["security_relevant"] = has_id | has_sev | has_kw | has_stride | has_cwe | has_fiximpact
+    # Recall expansion via the learned classifier: a row the LLM confidently
+    # calls a silent fix (silent_fix_prob >= 0.70) is admitted even if the
+    # deterministic keyword gate missed it. Only fires where a classification
+    # exists (column present); absent -> no effect.
+    if "silent_fix_prob" in df.columns:
+        has_silentfix = pd.to_numeric(df["silent_fix_prob"], errors="coerce").fillna(0) >= 0.70
+    else:
+        has_silentfix = pd.Series(False, index=df.index)
+    df["security_relevant"] = (has_id | has_sev | has_kw | has_stride | has_cwe
+                               | has_fiximpact | has_silentfix)
 
     sec = df[df["security_relevant"]].copy()
     # fix_commit (issue #89 field, method-2 backlink): the fixing commit SHA is

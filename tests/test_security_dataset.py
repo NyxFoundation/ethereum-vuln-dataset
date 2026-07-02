@@ -58,7 +58,12 @@ def test_every_row_has_a_security_signal(df):
         r"|race condition)\b[^.\n]{0,25}"
         r"\b(?:fix|fixed|prevent|avoid|guard against|resolved|patch)\w*\b", re.I)
     has_fiximpact = df["title"].fillna("").str.contains(fiximpact)
-    assert bool((has_sev | has_kw | has_stride | has_cwe | has_id | has_fiximpact).all())
+    if "silent_fix_prob" in df.columns:
+        has_silentfix = pd.to_numeric(df["silent_fix_prob"], errors="coerce").fillna(0) >= 0.70
+    else:
+        has_silentfix = pd.Series(False, index=df.index)
+    assert bool((has_sev | has_kw | has_stride | has_cwe | has_id | has_fiximpact
+                 | has_silentfix).all())
 
 
 def test_confidence_values(df):

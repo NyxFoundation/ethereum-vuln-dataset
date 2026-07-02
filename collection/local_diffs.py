@@ -76,13 +76,35 @@ def get_commit_diff(client: str, sha: str) -> str | None:
     return r.stdout if r.returncode == 0 and r.stdout.strip() else None
 
 
+def warm_prs(client: str) -> None:
+    """Bulk-fetch every PR head ref so all PR diffs are served locally/instantly.
+    One fetch per repo (~+120 MB blobless for geth) instead of a network call per
+    PR — turns the 17k-row classification into an LLM-bound-only job."""
+    p = ensure_clone(client)
+    r = _run(["git", "-C", str(p), "fetch", "--filter=blob:none", "--quiet",
+              "origin", "+refs/pull/*/head:refs/pull/*/head"], timeout=1200)
+    n = _run(["git", "-C", str(p), "for-each-ref", "refs/pull/", "--format=x"]).stdout.count("x")
+    print(f"[local_diffs] {client}: {n} PR refs local"
+          + ("" if r.returncode == 0 else " (some conflicts skipped)"), file=sys.stderr)
+
+
+def _resolve_pr_ref(p: Path, n: str) -> str | None:
+    """PR head ref, tolerating both layouts (refs/pull/N/head and refs/pull/N)."""
+    for ref in (f"refs/pull/{n}/head", f"refs/pull/{n}"):
+        if _run(["git", "-C", str(p), "rev-parse", "--verify", "--quiet", ref]).returncode == 0:
+            return ref
+    return None
+
+
 def get_pr_diff(client: str, n: str) -> str | None:
     p = ensure_clone(client)
-    ref = f"refs/pull/{n}/head"
-    if _run(["git", "-C", str(p), "rev-parse", "--verify", "--quiet", ref]).returncode != 0:
-        f = _run(["git", "-C", str(p), "fetch", "--quiet", "origin", f"{ref}:{ref}"], timeout=300)
-        if f.returncode != 0:
+    ref = _resolve_pr_ref(p, n)
+    if ref is None:
+        target = f"refs/pull/{n}/head"
+        if _run(["git", "-C", str(p), "fetch", "--quiet", "origin",
+                 f"{target}:{target}"], timeout=300).returncode != 0:
             return None
+        ref = target
     head = _run(["git", "-C", str(p), "rev-parse", ref]).stdout.strip()
     if not head:
         return None
@@ -153,6 +175,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
     w = sub.add_parser("warm"); w.add_argument("--client", required=True)
+    wp = sub.add_parser("warm-prs"); wp.add_argument("--client", required=True)
     rf = sub.add_parser("refresh"); rf.add_argument("--client", required=True)
     d = sub.add_parser("diff")
     d.add_argument("--client", required=True); d.add_argument("--url", required=True)
@@ -162,6 +185,10 @@ def main() -> int:
         for c in clients:
             ensure_clone(c)
             print(f"[local_diffs] {c} ready at {repo_path(c)}")
+        return 0
+    if a.cmd == "warm-prs":
+        for c in clients:
+            warm_prs(c)
         return 0
     if a.cmd == "refresh":
         for c in clients:
