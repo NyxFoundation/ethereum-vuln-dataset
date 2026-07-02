@@ -114,9 +114,52 @@ def main() -> int:
     ap.add_argument("--per-class", type=int, default=150)
     ap.add_argument("--sleep", type=float, default=0.35)
     ap.add_argument("--model-out", type=Path)
+    ap.add_argument("--apply-tier", help="score rows of this authority_tier and exit")
+    ap.add_argument("--apply-out", type=Path)
+    ap.add_argument("--apply-limit", type=int, default=250)
     a = ap.parse_args()
 
     cur = pd.read_parquet(a.inp)
+
+    # ---- apply mode: score rows with a previously saved model ----------------
+    if a.apply_tier:
+        import csv
+        import pickle
+        model = pickle.loads(Path(a.model_out or "scratchpad_crawl/silent_fix_model.pkl").read_bytes())
+        cache = json.loads(a.cache.read_text()) if a.cache.exists() else {}
+        tier_mask = (cur["authority_tier"].notna() if a.apply_tier == "all"
+                     else cur["authority_tier"] == a.apply_tier)
+        sub = cur[tier_mask
+                  & cur["source_url"].str.contains(r"/pull/|/commit/", na=False)].head(a.apply_limit)
+        rows = []
+        for _, row in sub.iterrows():
+            url = str(row["source_url"])
+            diff = cache.get(url)
+            if diff is None:
+                ident = _ident(row); repo = CLIENT_REPOS.get(row["source_platform"])
+                diff = _fetch_diff(repo, *ident) if (ident and repo) else None
+                cache[url] = diff or ""
+                time.sleep(a.sleep)
+            if not diff:
+                continue
+            prob = float(model.predict_proba([_diff_to_doc(diff)])[0, 1])
+            rows.append((url, prob, row["title"][:70]))
+        a.cache.write_text(json.dumps(cache))
+        rows.sort(key=lambda x: -x[1])
+        if a.apply_out:
+            with a.apply_out.open("w", newline="", encoding="utf-8") as fh:
+                w = csv.writer(fh); w.writerow(["source_url", "silent_fix_prob"])
+                for u, p, _ in rows:
+                    w.writerow([u, f"{p:.3f}"])
+        hi = sum(1 for _, p, _ in rows if p >= 0.5)
+        print(f"[apply] scored {len(rows)} {a.apply_tier} rows; {hi} at prob>=0.5")
+        print("\n-- highest silent-fix prob --")
+        for u, p, t in rows[:12]:
+            print(f"  {p:.2f}  {t}")
+        print("\n-- lowest silent-fix prob --")
+        for u, p, t in rows[-8:]:
+            print(f"  {p:.2f}  {t}")
+        return 0
     raw = pd.read_parquet(a.raw)
     items = build_labels(cur, raw, a.per_class)
     print(f"[train] labeled items: {sum(y for _,y in items)} pos / "

@@ -243,6 +243,11 @@ def count_signals(row) -> int:
     if str(row.get("cwe_top25", "N/A")) not in ("N/A", "", "nan"):
         n += 1                                   # LLM CWE-Top-25
     # Enrichment signals from later loop iterations (absent -> skipped):
+    try:
+        if float(row.get("silent_fix_prob") or 0) >= 0.70:
+            n += 1                               # learned silent-fix classifier (method 1)
+    except (TypeError, ValueError):
+        pass
     if str(row.get("comment_signal", "")).strip():
         n += 1                                   # review-comment language (B4)
     if str(row.get("linked_issue_signal", "")).strip():
@@ -370,10 +375,20 @@ def main() -> int:
     ap.add_argument("--out", dest="out", type=Path)
     ap.add_argument("--manifest", type=Path)
     ap.add_argument("--report", type=Path)
+    ap.add_argument("--silent-fix-csv", type=Path,
+                    help="optional source_url->silent_fix_prob CSV from the "
+                         "learned classifier; joined as a scoring signal")
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
 
     df = pd.read_parquet(a.inp)
+    # Optional: join the learned silent-fix probability (method 1) as a signal.
+    if a.silent_fix_csv and a.silent_fix_csv.exists():
+        probs = pd.read_csv(a.silent_fix_csv)
+        probs = probs.dropna(subset=["source_url"]).drop_duplicates("source_url")
+        df = df.merge(probs[["source_url", "silent_fix_prob"]], on="source_url", how="left")
+        print(f"[silent-fix] joined {probs['silent_fix_prob'].notna().sum()} "
+              f"classifier scores", file=sys.stderr)
     sec, report = build(df)
 
     print(json.dumps(report, indent=2, ensure_ascii=False))
