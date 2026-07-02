@@ -78,6 +78,23 @@ def _advisories(client):
     return _ADV[client]
 
 
+def resolve_inline_ref(client, text):
+    """A fix commit/PR the changelog/release text explicitly links (high
+    precision — the author wrote the reference). commit hash > PR number."""
+    rp = str(ld.repo_path(client))
+    mc = re.search(r"/commit/([0-9a-f]{7,40})", text)
+    if mc and ld._run(["git", "-C", rp, "cat-file", "-e", mc.group(1)]).returncode == 0:
+        return mc.group(1)
+    mp = re.search(r"/pull/(\d+)|\(#(\d+)\)|\[#?(\d{2,})\]|(?:^|\s)#(\d{2,})\b", text)
+    if mp:
+        pr = next(g for g in mp.groups() if g)
+        ref = ld._resolve_pr_ref(ld.repo_path(client), pr)
+        if ref:
+            sha = ld._run(["git", "-C", rp, "rev-parse", ref]).stdout.strip()
+            return sha or None
+    return None
+
+
 def resolve_advisory(client, ghsa, summary):
     """Fix commit for a GHSA advisory row, only when the patched version is a
     small dedicated security patch release (range ≤ 6 non-release commits)."""
@@ -361,8 +378,10 @@ def main() -> int:
                 diff = ld.get_diff_cached(url, client, dcache)
             elif ma:  # GHSA advisory page -> resolve the patch-release fix commit
                 fix_sha = resolve_advisory(client, ma.group(1), str(r.get("title") or "")) or ""
-                if fix_sha:
-                    diff = ld._run(["git", "-C", rp, "show", "--format=", "--unified=3", fix_sha]).stdout or None
+            if not fix_sha and repo:  # changelog/release row -> explicit inline #PR / commit ref
+                fix_sha = resolve_inline_ref(client, str(r.get("title") or "") + " " + str(r.get("description") or "")) or ""
+            if fix_sha and diff is None:
+                diff = ld._run(["git", "-C", rp, "show", "--format=", "--unified=3", fix_sha]).stdout or None
             if fix_sha:
                 par = ld._run(["git", "-C", rp, "rev-parse", f"{fix_sha}^"])
                 introduced = par.stdout.strip() if par.returncode == 0 else ""

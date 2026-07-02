@@ -1,6 +1,6 @@
 source_platform,label,root_cause,attack_path,severity,authority_tier,title,source_url
 besu,gas,incorrect_gas_accounting,crafted_state,Critical,A_authoritative,Gas allocation error in CALL operations in Besu EVM [GHSA-4456-w38r-m5,https://github.com/besu-eth/besu/security/advisories/GHSA-4456-w38r-m53x
-besu,transactions,missing_input_validation,malformed_input,High,A_authoritative,"SHL, SHR, and SAR operations trigger native exception at key values",https://github.com/besu-eth/besu/security/advisories/GHSA-7pg2-p5vj-xp5h
+besu,evm,missing_input_validation,malformed_input,High,A_authoritative,"SHL, SHR, and SAR operations trigger native exception at key values",https://github.com/besu-eth/besu/security/advisories/GHSA-7pg2-p5vj-xp5h
 besu,rpc,resource_exhaustion,malformed_input,Low,A_authoritative,Potential DoS in Besu HTTP JSON-RPC API,https://github.com/besu-eth/besu/security/advisories/GHSA-qgfj-mjpc-7w3q
 besu,rpc,missing_input_validation,crafted_state,Unrated,B_corroborated,Fix IndexOutOfBoundsException race condition in TransactionBroadcaster,https://github.com/besu-eth/besu/pull/10482
 besu,other,other,internal_only,Unrated,A_authoritative,Update assertj for CVE-2026-24400,https://github.com/besu-eth/besu/pull/9710
@@ -209,11 +209,11 @@ erigon,transactions,consensus_divergence,malformed_input,Unrated,B_corroborated,
 erigon,sync,race_condition,peer,Unrated,B_corroborated,Fix race condition in ProcessHeadersPOS,https://github.com/erigontech/erigon/pull/4151
 geth,crypto,resource_exhaustion,malicious_p2p_message,High,A_authoritative,DoS via malicious p2p message,https://github.com/ethereum/go-ethereum/security/advisories/GHSA-2gjw-fg97-vg3r
 geth,state-trie,consensus_divergence,crafted_state,Medium,A_authoritative,DoS via malicious snap/1 request,https://github.com/ethereum/go-ethereum/security/advisories/GHSA-59hh-656j-3p7v
-geth,evm,consensus_divergence,malicious_tx,High,A_authoritative,RETURNDATA corruption via datacopy,https://github.com/ethereum/go-ethereum/security/advisories/GHSA-9856-9gg9-qcmq
+geth,opcodes,consensus_divergence,malicious_tx,High,A_authoritative,RETURNDATA corruption via datacopy,https://github.com/ethereum/go-ethereum/security/advisories/GHSA-9856-9gg9-qcmq
 geth,transactions,consensus_divergence,crafted_state,High,A_authoritative,Consensus flaw during block processing,https://github.com/ethereum/go-ethereum/security/advisories/GHSA-xw37-57qp-9mm4
 geth,sync,missing_input_validation,malicious_p2p_message,Medium,A_authoritative,LES Server DoS via GetProofsV2,https://github.com/ethereum/go-ethereum/security/advisories/GHSA-r33q-22hv-j29q
 geth,rpc,unhandled_error_or_nil,malformed_input,Critical,A_authoritative,Denial of service due to Go CVE-2020-28362 [GHSA-m6gx-rhvj-fh52 CVE-20,https://github.com/ethereum/go-ethereum/security/advisories/GHSA-m6gx-rhvj-fh52
-geth,opcodes,integer_overflow_underflow,malicious_tx,High,A_authoritative,Denial of service via `MulMod`,https://github.com/ethereum/go-ethereum/security/advisories/GHSA-jm5c-rv3w-w83m
+geth,opcodes,integer_overflow_underflow,malformed_input,High,A_authoritative,Denial of service via `MulMod`,https://github.com/ethereum/go-ethereum/security/advisories/GHSA-jm5c-rv3w-w83m
 geth,precompiles,consensus_divergence,malformed_input,High,A_authoritative,Shallow copy in the 0x4 precompile could lead to EVM memory corruption,https://github.com/ethereum/go-ethereum/security/advisories/GHSA-69v6-xc2j-r2jf
 geth,block-processing,other,malicious_block,Medium,A_authoritative,Ethash DAG generation bug can cause miners to create invalid PoW,https://github.com/ethereum/go-ethereum/security/advisories/GHSA-v592-xf75-856p
 geth,rpc,missing_input_validation,malformed_input,Unrated,C_candidate,fundamentals/security: discourage public exposure of API,https://github.com/ethereum/go-ethereum/pull/28068
@@ -393,7 +393,7 @@ lighthouse,p2p-interface,missing_bounds_check,malformed_input,Info,A_authoritati
 lighthouse,other,other,peer,Unrated,B_corroborated,docker image vulnerabilites,https://github.com/sigp/lighthouse/issues/2778
 lighthouse,p2p-interface,other,malicious_p2p_message,Unrated,B_corroborated,Vulnerability with `prost` (a libp2p dependency),https://github.com/sigp/lighthouse/issues/2443
 lighthouse,other,other,internal_only,Unrated,B_corroborated,Resolve RUSTSEC-2020-0091,https://github.com/sigp/lighthouse/issues/2086
-lighthouse,fork-choice,other,malicious_block,Unrated,B_corroborated,Fork choice timing attack,https://github.com/sigp/lighthouse/issues/1773
+lighthouse,p2p-interface,consensus_divergence,malicious_p2p_message,Unrated,B_corroborated,Fork choice timing attack,https://github.com/sigp/lighthouse/issues/1773
 lighthouse,beacon-chain:exit-consolidation,missing_input_validation,large_input,Unrated,C_candidate,Parasitic voluntary exits,https://github.com/sigp/lighthouse/issues/1709
 lighthouse,database,other,internal_only,Unrated,C_candidate,Cargo audit failing on rusqlite,https://github.com/sigp/lighthouse/issues/1194
 lighthouse,beacon-chain:justification-and-finality,consensus_divergence,crafted_state,Unrated,B_corroborated,Prune forks from the database,https://github.com/sigp/lighthouse/issues/891
@@ -902,7 +902,7 @@ prysm,other,other,internal_only,Unrated,C_candidate,Resolve Minor Security Issue
 prysm,beacon-chain:slashing,integer_overflow_underflow,malformed_input,Unrated,B_corroborated,Recommend Use `path.Clean` for Sanitizing File Paths,https://github.com/OffchainLabs/prysm/issues/9333
 prysm,beacon-chain:attestation,missing_input_validation,malicious_attestation,Unrated,B_corroborated,Possible DoS via beacon node API endpoints if the API exposed to untru,https://github.com/OffchainLabs/prysm/issues/9247
 prysm,bls,missing_input_validation,malformed_input,Unrated,B_corroborated,Detect unsafe coefficients in VerifyMultipleSignatures,https://github.com/OffchainLabs/prysm/issues/9098
-prysm,beacon-chain:slashing,other,malformed_input,Info,A_authoritative,Update jwt-go library to fix CVE-2020-26160 (#9017) ([8f90e91](https:/,https://github.com/OffchainLabs/prysm/releases/tag/v1.3.11
+prysm,beacon-chain:slashing,missing_input_validation,malformed_input,Info,A_authoritative,Update jwt-go library to fix CVE-2020-26160 (#9017) ([8f90e91](https:/,https://github.com/OffchainLabs/prysm/releases/tag/v1.3.11
 prysm,p2p-interface,other,malicious_p2p_message,Unrated,A_authoritative,Update go-libp2p-noise to release v0.2.0,https://github.com/OffchainLabs/prysm/issues/8863
 prysm,beacon-chain:slashing,missing_input_validation,large_input,Unrated,B_corroborated,[Mega tracking] - Security Improvements and More Robust Code,https://github.com/OffchainLabs/prysm/issues/7514
 reth,other,other,internal_only,Unrated,C_candidate,chore(meta): remove security link from issue template config,https://github.com/paradigmxyz/reth/pull/9350
@@ -1042,7 +1042,7 @@ besu,rpc,crypto_misuse,malformed_input,Info,C_candidate,This allows use of a dif
 besu,p2p,resource_exhaustion,peer,Info,C_candidate,Fixed memory leak in eth/65 subprotocol behavior. It is now enabled by,https://github.com/besu-eth/besu/releases/tag/20.10.0-RC1
 besu,p2p,resource_exhaustion,malicious_p2p_message,Info,C_candidate,\[Reverted\] Fixed memory leak in eth/65 subprotocol behavior. It is n,https://github.com/besu-eth/besu/releases/tag/20.10.0-RC2
 besu,other,missing_input_validation,malformed_input,Info,C_candidate,Updated log4j to 2.15.0 and disabled JNDI message format lookups to im,https://github.com/besu-eth/besu/releases/tag/21.10.3
-besu,other,unhandled_error_or_nil,malformed_input,Info,B_corroborated,Update to log4j 2.17.1. Resolves potential vulnerability only exploita,https://github.com/besu-eth/besu/releases/tag/22.1.0-RC2
+besu,rpc,consensus_divergence,malformed_input,Info,B_corroborated,Update to log4j 2.17.1. Resolves potential vulnerability only exploita,https://github.com/besu-eth/besu/releases/tag/22.1.0-RC2
 besu,transactions,resource_exhaustion,malformed_input,Info,C_candidate,This is a STRONGLY RECOMMENDED upgrade which resolves known issues in ,https://github.com/besu-eth/besu/releases/tag/22.7.4
 besu,other,missing_input_validation,malformed_input,Info,A_authoritative,update appache-commons-text to 1.10.0 to address CVE-2022-42889 [#4542,https://github.com/besu-eth/besu/releases/tag/22.7.7
 besu,sync,improper_state_update,crafted_state,Info,A_authoritative,Updated jackson-databind library to version 2.13.4.2 addressing [CVE-2,https://github.com/besu-eth/besu/releases/tag/22.10.0
@@ -1070,7 +1070,7 @@ erigon,p2p,unhandled_error_or_nil,malicious_p2p_message,Info,B_corroborated,anac
 erigon,rpc,missing_bounds_check,malformed_input,High,A_authoritative,github.com/buger/jsonparser: bump 1.1.1 → 1.1.2 to address CVE-2026-32,https://github.com/erigontech/erigon/blob/main/ChangeLog.md#L383
 erigon,rpc,unhandled_error_or_nil,malicious_p2p_message,Info,B_corroborated,p2p: fix nil pointer crash with --nodiscover (#19056) by @sudeepdino00,https://github.com/erigontech/erigon/blob/main/ChangeLog.md#L446
 erigon,p2p,other,malicious_p2p_message,Info,B_corroborated,p2p: resolve security vulnerability (#18650) by @yperbasis,https://github.com/erigontech/erigon/blob/main/ChangeLog.md#L499
-erigon,rpc,improper_state_update,malicious_attestation,Info,B_corroborated,rpc: fix panic on `GetEthV1BeaconBlobs` (#17992) (#18232) by @domiwei,https://github.com/erigontech/erigon/blob/main/ChangeLog.md#L515
+erigon,rpc,missing_input_validation,malicious_attestation,Info,B_corroborated,rpc: fix panic on `GetEthV1BeaconBlobs` (#17992) (#18232) by @domiwei,https://github.com/erigontech/erigon/blob/main/ChangeLog.md#L515
 erigon,txpool,other,malformed_input,Info,B_corroborated,rpc: fix txpool_content crash: unknown (#18120) by @canepat,https://github.com/erigontech/erigon/blob/main/ChangeLog.md#L533
 erigon,other,other,internal_only,Info,A_authoritative,"docs/site, tracetest: fix Dependabot npm alerts (uuid, ws) (#21691)",https://github.com/erigontech/erigon/commit/98508bf433490c4785b0b955df93166d3375f939
 erigon,other,missing_input_validation,malformed_input,Info,C_candidate,test workflows: user input sanitisation (remaining issues) (#17221),https://github.com/erigontech/erigon/commit/3f46d19f5cf3008a3b6e94184ac799017b373eec
@@ -1184,7 +1184,7 @@ erigon,serialization,serialization_bug,malformed_input,Info,B_corroborated,f01e3
 erigon,sync,other,malicious_p2p_message,Info,B_corroborated,510993f09 libp2p pubsub panic fix (#6924),https://github.com/erigontech/erigon/releases/tag/v2.40.0
 erigon,txpool,missing_bounds_check,malformed_input,Info,B_corroborated,b70e8d795 fix race condition in snapshot_test (#6761),https://github.com/erigontech/erigon/releases/tag/v2.40.0
 erigon,txpool,missing_bounds_check,malformed_input,Info,B_corroborated,eb0f7e463 Don't panic on some AuRa transactions in the past (#6760),https://github.com/erigontech/erigon/releases/tag/v2.40.0
-erigon,other,race_condition,internal_only,Info,B_corroborated,0ccda8443 Fix defer order to prevent concurrent map write panic (#6736,https://github.com/erigontech/erigon/releases/tag/v2.40.0
+erigon,engine-api,missing_input_validation,malformed_input,Info,B_corroborated,0ccda8443 Fix defer order to prevent concurrent map write panic (#6736,https://github.com/erigontech/erigon/releases/tag/v2.40.0
 erigon,state-trie,integer_overflow_underflow,peer,Info,B_corroborated,df21079ae vmTrace - prevent panic at stack underflow (#6275),https://github.com/erigontech/erigon/releases/tag/v2.40.0
 erigon,transactions,unhandled_error_or_nil,malformed_input,Info,C_candidate,3. Fixed regression introduced in 2.40.0 causing panic in `debug_trace,https://github.com/erigontech/erigon/releases/tag/v2.40.1
 erigon,state-trie,race_condition,malformed_input,Info,C_candidate,89571074c panic in trace_adhoc,https://github.com/erigontech/erigon/releases/tag/v2.41.0
@@ -1194,9 +1194,9 @@ erigon,rpc,other,malformed_input,High,A_authoritative,"A few fixes for Polygon, 
 erigon,sync,resource_exhaustion,peer,Info,C_candidate,sync: fix a memory leak when header verification fails by @battlmonstr,https://github.com/erigontech/erigon/releases/tag/v2.53.0
 erigon,txpool,consensus_divergence,malicious_p2p_message,Info,B_corroborated,p2p: panic in enode DB Close on shutdown (#9237) by @battlmonstr in ht,https://github.com/erigontech/erigon/releases/tag/v2.57.0
 erigon,transactions,race_condition,crafted_state,Info,B_corroborated,fix panic issue in initializeStateAntiquaryIfNeeded (#11608) by @domiw,https://github.com/erigontech/erigon/releases/tag/2.60.7
-erigon,gas,incorrect_gas_accounting,malformed_input,Info,C_candidate,Added support for the latest protocol upgrades and features—delivering,https://github.com/erigontech/erigon/releases/tag/v3.1.0-rc1
+erigon,gas,missing_input_validation,malformed_input,Info,C_candidate,Added support for the latest protocol upgrades and features—delivering,https://github.com/erigontech/erigon/releases/tag/v3.1.0-rc1
 erigon,txpool,other,peer,Info,B_corroborated,rpc: fix txpool_content crash: unknown by @canepat in https://github.c,https://github.com/erigontech/erigon/releases/tag/v3.3.1
-erigon,rpc,consensus_divergence,malicious_attestation,Info,B_corroborated,rpc: fix panic on `GetEthV1BeaconBlobs` (#17992) by @domiwei in https:,https://github.com/erigontech/erigon/releases/tag/v3.3.2
+erigon,rpc,missing_input_validation,malicious_attestation,Info,B_corroborated,rpc: fix panic on `GetEthV1BeaconBlobs` (#17992) by @domiwei in https:,https://github.com/erigontech/erigon/releases/tag/v3.3.2
 erigon,p2p,other,malicious_p2p_message,Info,B_corroborated,p2p: resolve security vulnerability in #18650 by @yperbasis,https://github.com/erigontech/erigon/releases/tag/v3.3.3
 erigon,rpc,unhandled_error_or_nil,malicious_p2p_message,Info,B_corroborated,p2p: fix nil pointer crash with --nodiscover by @sudeepdino008 in http,https://github.com/erigontech/erigon/releases/tag/v3.3.8
 erigon,rpc,incorrect_gas_accounting,malformed_input,Info,C_candidate,Security note: the embedded MCP server binds to `localhost` by default,https://github.com/erigontech/erigon/releases/tag/v3.4.0-rc.5
@@ -1381,7 +1381,7 @@ geth,sync,other,malformed_input,Info,C_candidate,Security issue EC Recover and r
 geth,sync,other,malformed_input,Info,C_candidate,Downloader security improvements,https://github.com/ethereum/go-ethereum/releases/tag/v0.9.28
 geth,sync,resource_exhaustion,malformed_input,Info,C_candidate,Downloader potential DOS attack #1314,https://github.com/ethereum/go-ethereum/releases/tag/v0.9.32
 geth,rpc,unhandled_error_or_nil,malformed_input,Info,B_corroborated,This release fixes a potential crash. For changes see https://github.c,https://github.com/ethereum/go-ethereum/releases/tag/v0.9.34-1
-geth,rpc,resource_exhaustion,malformed_input,Info,C_candidate,"Syncing DoS protection #1451, #1450",https://github.com/ethereum/go-ethereum/releases/tag/v0.9.38
+geth,sync,resource_exhaustion,malformed_input,Info,C_candidate,"Syncing DoS protection #1451, #1450",https://github.com/ethereum/go-ethereum/releases/tag/v0.9.38
 geth,rpc,resource_exhaustion,malformed_input,Info,C_candidate,Possible (though hardly!) chain DoS fixed #1443,https://github.com/ethereum/go-ethereum/releases/tag/v0.9.38
 geth,transactions,incorrect_gas_accounting,malformed_input,Info,C_candidate,Crash in chain manager #1568,https://github.com/ethereum/go-ethereum/releases/tag/v1.0.1.1
 geth,rpc,other,malformed_input,Info,B_corroborated,Fixed crash on unknown blocks (`develop` only) #1842,https://github.com/ethereum/go-ethereum/releases/tag/1.2.1
@@ -1390,7 +1390,7 @@ geth,p2p,other,malformed_input,Info,B_corroborated,Security fixes**,https://gith
 geth,sync,resource_exhaustion,malformed_input,Info,C_candidate,Fixed: DoS attack vector in the block downloader,https://github.com/ethereum/go-ethereum/releases/tag/v1.4.4
 geth,transactions,other,malformed_input,Info,B_corroborated,Fixed: crash when assigning `--rpcaddr` #2555 (#2563),https://github.com/ethereum/go-ethereum/releases/tag/v1.4.4
 geth,transactions,other,malformed_input,Info,B_corroborated,Fixed: panic in the `abigen` tool #2519 (#2559 #2551),https://github.com/ethereum/go-ethereum/releases/tag/v1.4.4
-geth,rpc,incorrect_gas_accounting,malformed_input,Info,B_corroborated,Fixed `nil` pointer crash for topics #2585,https://github.com/ethereum/go-ethereum/releases/tag/v1.4.5
+geth,sync,incorrect_gas_accounting,crafted_state,Info,B_corroborated,Fixed `nil` pointer crash for topics #2585,https://github.com/ethereum/go-ethereum/releases/tag/v1.4.5
 geth,block-processing,race_condition,malicious_block,Info,B_corroborated,This release should be considered nuked. The soft-fork turned out to v,https://github.com/ethereum/go-ethereum/releases/tag/v1.4.8
 geth,transactions,consensus_divergence,malformed_input,Info,B_corroborated,Geth 1.4.9 is a reversal release to undo the code changes that went in,https://github.com/ethereum/go-ethereum/releases/tag/v1.4.9
 geth,p2p,resource_exhaustion,peer,Info,C_candidate,Hotfix release for a network DOS attack! Please update ASAP.,https://github.com/ethereum/go-ethereum/releases/tag/v1.4.12
@@ -1401,20 +1401,20 @@ geth,state-trie,resource_exhaustion,crafted_state,Info,C_candidate,Geth 1.4.15 i
 geth,transactions,resource_exhaustion,crafted_state,Info,C_candidate,This release improves block processing performance to work around rece,https://github.com/ethereum/go-ethereum/releases/tag/v1.4.16
 geth,transactions,resource_exhaustion,crafted_state,Info,C_candidate,The DoS issue that began affecting the network two days ago has been r,https://github.com/ethereum/go-ethereum/releases/tag/v1.4.16
 geth,rpc,other,peer,Info,C_candidate,cmd/swarm doesn't crash if `--ethapi` is empty or invalid (#3754).,https://github.com/ethereum/go-ethereum/releases/tag/v1.6.0
-geth,evm,resource_exhaustion,malicious_tx,Info,C_candidate,Geth v1.6.5 is a security release to counter on ongoing attack on main,https://github.com/ethereum/go-ethereum/releases/tag/v1.6.5
+geth,evm,other,malformed_input,Info,C_candidate,Geth v1.6.5 is a security release to counter on ongoing attack on main,https://github.com/ethereum/go-ethereum/releases/tag/v1.6.5
 geth,txpool,incorrect_gas_accounting,malformed_input,Info,B_corroborated,"Important notice to projects running public nodes (MyEtherWallet, Ethe",https://github.com/ethereum/go-ethereum/releases/tag/v1.6.7
 geth,evm,resource_exhaustion,malicious_tx,Info,B_corroborated,Geth 1.7.2 is a hotfix release to address a DOS vulnerability in the E,https://github.com/ethereum/go-ethereum/releases/tag/v1.7.2
 geth,rpc,other,malicious_p2p_message,Info,C_candidate,All HTTP RPC requests from now on need to have the `Content-Type: appl,https://github.com/ethereum/go-ethereum/releases/tag/v1.7.3
 geth,block-processing,resource_exhaustion,malicious_block,Info,B_corroborated,This is a security and maintenance release containing bug fixes and pr,https://github.com/ethereum/go-ethereum/releases/tag/v1.8.3
-geth,transactions,race_condition,crafted_state,Info,C_candidate,Geth Titanium (v1.8.7) is a hotfix release to address a leveldb crash ,https://github.com/ethereum/go-ethereum/releases/tag/v1.8.7
+geth,evm,race_condition,crafted_state,Info,C_candidate,Geth Titanium (v1.8.7) is a hotfix release to address a leveldb crash ,https://github.com/ethereum/go-ethereum/releases/tag/v1.8.7
 geth,database,other,crafted_state,Info,B_corroborated,Fix crash when using an invalid private network genesis ([#16682](http,https://github.com/ethereum/go-ethereum/releases/tag/v1.8.8
 geth,p2p,other,malformed_input,Info,C_candidate,A crash in the LES header fetcher is resolved ([#17034](https://github,https://github.com/ethereum/go-ethereum/releases/tag/v1.8.12
 geth,rpc,race_condition,malformed_input,Low,A_authoritative,Fix a miner race condition for low block-period (1s) chains ([#17173](,https://github.com/ethereum/go-ethereum/releases/tag/v1.8.13
 geth,transactions,race_condition,malformed_input,Info,B_corroborated,Fix a transaction chain tracing panic if an invalid parametrization wa,https://github.com/ethereum/go-ethereum/releases/tag/v1.8.14
 geth,transactions,race_condition,malformed_input,Info,B_corroborated,Fix a crash in the mobile framework when setting a transaction recipie,https://github.com/ethereum/go-ethereum/releases/tag/v1.8.14
 geth,transactions,other,malformed_input,Info,B_corroborated,Fix a puppeth `nil` panic caused by non responsive remote servers ([#1,https://github.com/ethereum/go-ethereum/releases/tag/v1.8.14
-geth,database,unhandled_error_or_nil,internal_only,Info,B_corroborated,MRU panic fix ([#17313](https://github.com/ethereum/go-ethereum/pull/1,https://github.com/ethereum/go-ethereum/releases/tag/v1.8.14
-geth,rpc,unhandled_error_or_nil,malformed_input,Info,B_corroborated,Fix nil-pointer panic when processing malicious ABIs ([#17653](https:/,https://github.com/ethereum/go-ethereum/releases/tag/v1.8.16
+geth,state-trie,improper_state_update,malformed_input,Info,B_corroborated,MRU panic fix ([#17313](https://github.com/ethereum/go-ethereum/pull/1,https://github.com/ethereum/go-ethereum/releases/tag/v1.8.14
+geth,transactions,race_condition,crafted_state,Info,B_corroborated,Fix nil-pointer panic when processing malicious ABIs ([#17653](https:/,https://github.com/ethereum/go-ethereum/releases/tag/v1.8.16
 geth,rpc,missing_input_validation,malformed_input,Info,B_corroborated,Fix a rare panic in the light client on shutdown ([#17639](https://git,https://github.com/ethereum/go-ethereum/releases/tag/v1.8.16
 geth,database,resource_exhaustion,crafted_state,Info,B_corroborated,Fixed DoS attack with invalid OfferedHashes message length ([17734](ht,https://github.com/ethereum/go-ethereum/releases/tag/v1.8.17
 geth,database,resource_exhaustion,crafted_state,Info,B_corroborated,Fixed panic on ARMl6 arch (64bit struct alignment) ([17766](https://gi,https://github.com/ethereum/go-ethereum/releases/tag/v1.8.17
@@ -1424,26 +1424,26 @@ geth,sync,other,crafted_state,Info,B_corroborated,Fix puppeth panic when using d
 geth,p2p,consensus_divergence,peer,Info,B_corroborated,"In addition to the consensus changes, this release contains peer-to-pe",https://github.com/ethereum/go-ethereum/releases/tag/v1.8.22
 geth,transactions,race_condition,crafted_state,Info,B_corroborated,Fix a trie decoding issue that could cause a state sync to crash (http,https://github.com/ethereum/go-ethereum/releases/tag/v1.8.23
 geth,sync,unhandled_error_or_nil,peer,Info,C_candidate,Geth v1.8.26 is a tiny light client DoS hotfix. We've dropped support ,https://github.com/ethereum/go-ethereum/releases/tag/v1.8.26
-geth,transactions,race_condition,malformed_input,Info,B_corroborated,Fix a crash in the transaction pool caused by the 1.9.0 internal rewor,https://github.com/ethereum/go-ethereum/releases/tag/v1.9.1
+geth,txpool,race_condition,malformed_input,Info,B_corroborated,Fix a crash in the transaction pool caused by the 1.9.0 internal rewor,https://github.com/ethereum/go-ethereum/releases/tag/v1.9.1
 geth,transactions,race_condition,malformed_input,Info,B_corroborated,Fix a crash in `geth dumpconfig` caused by the release oracle fields (,https://github.com/ethereum/go-ethereum/releases/tag/v1.9.1
 geth,database,unhandled_error_or_nil,internal_only,Info,B_corroborated,Fix an import crash caused by a data loss from a previous crash ([#199,https://github.com/ethereum/go-ethereum/releases/tag/v1.9.3
 geth,block-processing,consensus_divergence,internal_only,High,A_authoritative,This is a security-critical release that fixes a regression in v1.9.4 ,https://github.com/ethereum/go-ethereum/releases/tag/v1.9.5
 geth,rpc,race_condition,peer,Info,B_corroborated,Fix a JavaScript tracer panic when accessing illegal memory ([#20612](,https://github.com/ethereum/go-ethereum/releases/tag/v1.9.11
 geth,database,improper_state_update,crafted_state,Info,B_corroborated,"Improve node shutdown, avoiding a crash in fast sync ([#20695](https:/",https://github.com/ethereum/go-ethereum/releases/tag/v1.9.13
-geth,rpc,race_condition,crafted_state,Info,B_corroborated,Fix a crash in initial fast sync when also mining at the same time ([#,https://github.com/ethereum/go-ethereum/releases/tag/v1.9.13
+geth,sync,race_condition,crafted_state,Info,B_corroborated,Fix a crash in initial fast sync when also mining at the same time ([#,https://github.com/ethereum/go-ethereum/releases/tag/v1.9.13
 geth,state-trie,resource_exhaustion,crafted_state,Info,C_candidate,Fix receipt loss in empty Clique blocks after a crash ([#21045](https:,https://github.com/ethereum/go-ethereum/releases/tag/v1.9.14
 geth,state-trie,resource_exhaustion,crafted_state,Info,C_candidate,Fix a memory leak in the snapshot storage iteration ([#21036](https://,https://github.com/ethereum/go-ethereum/releases/tag/v1.9.14
 geth,rpc,incorrect_gas_accounting,malformed_input,Info,C_candidate,Account management methods no longer crash when the external signer is,https://github.com/ethereum/go-ethereum/releases/tag/v1.9.16
 geth,sync,race_condition,crafted_state,Info,B_corroborated,Fix a panic in ethstats on the Görli stats page ([#21404](https://gith,https://github.com/ethereum/go-ethereum/releases/tag/v1.9.19
 geth,sync,resource_exhaustion,peer,Info,C_candidate,"Geth v1.9.21 is a regular maintenance release, the highlights being th",https://github.com/ethereum/go-ethereum/releases/tag/v1.9.21
-geth,sync,resource_exhaustion,malformed_input,Info,B_corroborated,"Cap the number of in-memory trie nodes during fast sync, fix crasher m",https://github.com/ethereum/go-ethereum/releases/tag/v1.9.21
-geth,state-trie,other,malicious_p2p_message,Info,B_corroborated,Improve snapshot recovery to allow resuming generation after a crash (,https://github.com/ethereum/go-ethereum/releases/tag/v1.9.24
+geth,sync,resource_exhaustion,crafted_state,Info,B_corroborated,"Cap the number of in-memory trie nodes during fast sync, fix crasher m",https://github.com/ethereum/go-ethereum/releases/tag/v1.9.21
+geth,state-trie,improper_state_update,malicious_p2p_message,Info,B_corroborated,Improve snapshot recovery to allow resuming generation after a crash (,https://github.com/ethereum/go-ethereum/releases/tag/v1.9.24
 geth,rpc,race_condition,peer,Info,B_corroborated,Fix an RPC crash caused by an invalid AccountRange request ([#21710](h,https://github.com/ethereum/go-ethereum/releases/tag/v1.9.24
 geth,transactions,improper_state_update,malformed_input,Info,B_corroborated,"Geth has a new subcommand, `geth version-check`, which displays known ",https://github.com/ethereum/go-ethereum/releases/tag/v1.9.25
 geth,rpc,race_condition,malformed_input,Info,C_candidate,Failures in internal CPU metrics collection no longer crash geth ([#21,https://github.com/ethereum/go-ethereum/releases/tag/v1.9.25
 geth,txpool,consensus_divergence,crafted_state,Info,B_corroborated,core/state: fix panic in state dumping ([#22225](https://github.com/et,https://github.com/ethereum/go-ethereum/releases/tag/v1.10.0
 geth,eof,serialization_bug,malicious_p2p_message,Info,B_corroborated,tests/fuzzers/abi: fixed one-off panic with int.Min64 value ([#22233](,https://github.com/ethereum/go-ethereum/releases/tag/v1.10.0
-geth,state-trie,resource_exhaustion,malformed_input,Info,B_corroborated,trie: fix bloom crash on fast sync restart ([#22332](https://github.co,https://github.com/ethereum/go-ethereum/releases/tag/v1.10.0
+geth,sync,resource_exhaustion,malformed_input,Info,B_corroborated,trie: fix bloom crash on fast sync restart ([#22332](https://github.co,https://github.com/ethereum/go-ethereum/releases/tag/v1.10.0
 geth,rpc,other,malformed_input,Info,C_candidate,A rare crash in RPC client subscription handling has been fixed ([#225,https://github.com/ethereum/go-ethereum/releases/tag/v1.10.2
 geth,rpc,incorrect_gas_accounting,malformed_input,Info,C_candidate,JS tracing via `debug_traceTransaction` and `debug_traceBlockByNumber`,https://github.com/ethereum/go-ethereum/releases/tag/v1.10.4
 geth,precompiles,race_condition,malformed_input,Info,B_corroborated,Fix a panic in the access list creation RPC API ([#23133](https://gith,https://github.com/ethereum/go-ethereum/releases/tag/v1.10.5
@@ -1454,12 +1454,12 @@ geth,rpc,resource_exhaustion,crafted_state,Info,C_candidate,A very rare crash in
 geth,rpc,other,malformed_input,Info,C_candidate,"Geth is much less likely to crash during shutdown, especially when min",https://github.com/ethereum/go-ethereum/releases/tag/v1.10.10
 geth,state-trie,resource_exhaustion,malformed_input,Info,B_corroborated,Fix a crash in LES serving code ([#23865](https://github.com/ethereum/,https://github.com/ethereum/go-ethereum/releases/tag/v1.10.12
 geth,state-trie,resource_exhaustion,malformed_input,Info,B_corroborated,Fix a missing snapshot error after recovering from a crash ([#23496](h,https://github.com/ethereum/go-ethereum/releases/tag/v1.10.12
-geth,gas,resource_exhaustion,malformed_input,Info,B_corroborated,Fix a memory leak in Clique if the network temporarilly halts ([#23861,https://github.com/ethereum/go-ethereum/releases/tag/v1.10.12
-geth,rpc,resource_exhaustion,malformed_input,Info,B_corroborated,Fix a crash if the disk gets full during ethash DAG generation ([#2379,https://github.com/ethereum/go-ethereum/releases/tag/v1.10.12
-geth,rpc,resource_exhaustion,crafted_state,Info,B_corroborated,Fix an RPC crash when getting the signer of an empty Clique chain ([#2,https://github.com/ethereum/go-ethereum/releases/tag/v1.10.12
+geth,gas,consensus_divergence,malformed_input,Info,B_corroborated,Fix a memory leak in Clique if the network temporarilly halts ([#23861,https://github.com/ethereum/go-ethereum/releases/tag/v1.10.12
+geth,rpc,consensus_divergence,malformed_input,Info,B_corroborated,Fix a crash if the disk gets full during ethash DAG generation ([#2379,https://github.com/ethereum/go-ethereum/releases/tag/v1.10.12
+geth,rpc,consensus_divergence,crafted_state,Info,B_corroborated,Fix an RPC crash when getting the signer of an empty Clique chain ([#2,https://github.com/ethereum/go-ethereum/releases/tag/v1.10.12
 geth,rpc,improper_state_update,crafted_state,Info,B_corroborated,Fix a crash in `abigen` generated code if backend header retrieval fai,https://github.com/ethereum/go-ethereum/releases/tag/v1.10.12
 geth,gas,incorrect_gas_accounting,crafted_state,Info,B_corroborated,Fix a snap sync issue where a malicious response could crash the synci,https://github.com/ethereum/go-ethereum/releases/tag/v1.10.13
-geth,rpc,other,malformed_input,Info,C_candidate,A panic in the `clique_getSigner` RPC method is resolved. ([#23961](ht,https://github.com/ethereum/go-ethereum/releases/tag/v1.10.14
+geth,rpc,consensus_divergence,malformed_input,Info,C_candidate,A panic in the `clique_getSigner` RPC method is resolved. ([#23961](ht,https://github.com/ethereum/go-ethereum/releases/tag/v1.10.14
 geth,p2p,race_condition,peer,Info,B_corroborated,A crash in the LES server related to reorg handling is resolved. (#241,https://github.com/ethereum/go-ethereum/releases/tag/v1.10.15
 geth,state-trie,race_condition,crafted_state,Info,B_corroborated,An crash in LES ultralight sync is resolved. ([#24641](https://github.,https://github.com/ethereum/go-ethereum/releases/tag/v1.10.18
 geth,transactions,resource_exhaustion,malformed_input,Info,B_corroborated,"This is a security release of Geth, improving resilience of the transa",https://github.com/ethereum/go-ethereum/releases/tag/v1.11.4
@@ -1468,7 +1468,7 @@ geth,database,incorrect_gas_accounting,malformed_input,Info,B_corroborated,Preve
 geth,rpc,missing_input_validation,malicious_tx,Info,B_corroborated,Fix crash on querying finalized block (#27162),https://github.com/ethereum/go-ethereum/releases/tag/v1.12.0
 geth,other,other,internal_only,Info,C_candidate,This release is a recommended upgrade for all users and contains secur,https://github.com/ethereum/go-ethereum/releases/tag/v1.12.1
 geth,transactions,race_condition,crafted_state,Info,B_corroborated,A crash in the prestate tracer is resolved ([#27691](https://github.co,https://github.com/ethereum/go-ethereum/releases/tag/v1.12.1
-geth,transactions,resource_exhaustion,malicious_p2p_message,Info,B_corroborated,A serious memory leak related to database writes in snap sync is fixed,https://github.com/ethereum/go-ethereum/releases/tag/v1.12.1
+geth,sync,resource_exhaustion,malicious_p2p_message,Info,B_corroborated,A serious memory leak related to database writes in snap sync is fixed,https://github.com/ethereum/go-ethereum/releases/tag/v1.12.1
 geth,sync,other,malicious_p2p_message,Info,B_corroborated,A very rare crash related to peer connection tracking is resolved ([#2,https://github.com/ethereum/go-ethereum/releases/tag/v1.12.1
 geth,blobs,crypto_misuse,malformed_input,Info,B_corroborated,A crash related to leveldb metrics is resolved ([#27904](https://githu,https://github.com/ethereum/go-ethereum/releases/tag/v1.12.2
 geth,rpc,incorrect_gas_accounting,malformed_input,Info,C_candidate,Support unpacking Solidity panic events ([#27868](https://github.com/e,https://github.com/ethereum/go-ethereum/releases/tag/v1.13.0
@@ -1482,8 +1482,8 @@ geth,opcodes,incorrect_gas_accounting,malformed_input,Info,B_corroborated,Fix a 
 geth,state-trie,missing_bounds_check,peer,Info,B_corroborated,Fix shutdown crash when geth runs in blsync mode ([#29946](https://git,https://github.com/ethereum/go-ethereum/releases/tag/v1.14.6
 geth,rpc,improper_state_update,crafted_state,Info,B_corroborated,A v1.15.0 regression was identified in genesis handling for custom net,https://github.com/ethereum/go-ethereum/releases/tag/v1.15.1
 geth,rpc,improper_state_update,crafted_state,Info,B_corroborated,A crash in `debug_getRaw*` RPC methods has been fixed. (#31157),https://github.com/ethereum/go-ethereum/releases/tag/v1.15.1
-geth,p2p,missing_input_validation,malicious_p2p_message,Info,B_corroborated,The eth protocol now properly handles very large `skip` values when pr,https://github.com/ethereum/go-ethereum/releases/tag/v1.15.8
-geth,transactions,consensus_divergence,malformed_input,Info,B_corroborated,An corner-case crash in `eth_feeHistory` related to blob fees is resol,https://github.com/ethereum/go-ethereum/releases/tag/v1.15.9
+geth,p2p,other,large_input,Info,B_corroborated,The eth protocol now properly handles very large `skip` values when pr,https://github.com/ethereum/go-ethereum/releases/tag/v1.15.8
+geth,transactions,incorrect_gas_accounting,malformed_input,Info,B_corroborated,An corner-case crash in `eth_feeHistory` related to blob fees is resol,https://github.com/ethereum/go-ethereum/releases/tag/v1.15.9
 geth,transactions,crypto_misuse,malformed_input,Info,B_corroborated,A rare crash in `geth --dev` mode related to `debug_setHead` is resolv,https://github.com/ethereum/go-ethereum/releases/tag/v1.16.1
 geth,rpc,incorrect_gas_accounting,crafted_state,Info,C_candidate,graphql: add query depth limit to prevent DoS attacks [#32344](https:/,https://github.com/ethereum/go-ethereum/releases/tag/v1.16.3
 geth,blobs,crypto_misuse,malicious_block,Info,B_corroborated,The KZG proof libraries have been updated to the latest release to fix,https://github.com/ethereum/go-ethereum/releases/tag/v1.16.4
@@ -1493,7 +1493,7 @@ geth,blobs,improper_state_update,malformed_input,Info,B_corroborated,Fix for a c
 geth,p2p,other,peer,Info,B_corroborated,This is a security fix release and is recommended for all users. It re,https://github.com/ethereum/go-ethereum/releases/tag/v1.16.8
 geth,other,other,internal_only,Info,C_candidate,The `geth version-check` subcommand has been removed. This command che,https://github.com/ethereum/go-ethereum/releases/tag/v1.17.0
 geth,transactions,improper_state_update,crafted_state,Info,B_corroborated,A rare crash in the log indexer related to reorg handling has been fix,https://github.com/ethereum/go-ethereum/releases/tag/v1.17.0
-geth,rpc,resource_exhaustion,malformed_input,Info,C_candidate,A memory leak in the beacon chain light client was fixed (#33483),https://github.com/ethereum/go-ethereum/releases/tag/v1.17.0
+geth,sync,resource_exhaustion,malformed_input,Info,C_candidate,A memory leak in the beacon chain light client was fixed (#33483),https://github.com/ethereum/go-ethereum/releases/tag/v1.17.0
 geth,transactions,missing_input_validation,malicious_p2p_message,Info,B_corroborated,The eth and snap protocol implementations nows validates most p2p mess,https://github.com/ethereum/go-ethereum/releases/tag/v1.17.0
 geth,sync,other,peer,Info,B_corroborated,This is a bug fix release and is recommended for all users. It resolve,https://github.com/ethereum/go-ethereum/releases/tag/v1.17.1
 geth,blobs,other,malicious_p2p_message,Info,B_corroborated,A rare crash in p2p request tracking is resolved (#33940),https://github.com/ethereum/go-ethereum/releases/tag/v1.17.1
@@ -1616,7 +1616,7 @@ grandine,other,resource_exhaustion,internal_only,Info,C_candidate,Proper cleanup
 grandine,bls,serialization_bug,peer,Info,B_corroborated,Updated crates because of 'openssl' vulnerability by @sauliusgrigaitis,https://github.com/grandinetech/grandine/releases/tag/1.0.0
 grandine,beacon-chain:registry-updates,other,other,High,A_authoritative,"Grandine 2.0.2 is a high-priority release for mainnet users, as it con",https://github.com/grandinetech/grandine/releases/tag/2.0.2
 grandine,other,other,other,High,A_authoritative,"Grandine 2.0.3 is a high-priority release for mainnet users, as it con",https://github.com/grandinetech/grandine/releases/tag/2.0.3
-grandine,beacon-chain:execution-payload,other,internal_only,High,A_authoritative,Grandine 2.0.4 is a high-priority release for mainnet users - it conta,https://github.com/grandinetech/grandine/releases/tag/2.0.4
+grandine,fork-choice,consensus_divergence,malformed_input,High,A_authoritative,Grandine 2.0.4 is a high-priority release for mainnet users - it conta,https://github.com/grandinetech/grandine/releases/tag/2.0.4
 grandine,beacon-chain:registry-updates,other,malformed_input,High,A_authoritative,Grandine 2.0.5 is a high-priority release for mainnet users - it conta,https://github.com/grandinetech/grandine/releases/tag/2.0.5
 grandine,beacon-chain:attestation,resource_exhaustion,malicious_attestation,Info,C_candidate,Fix nethermind integration memory leak by @ArtiomTr in https://github.,https://github.com/grandinetech/grandine/releases/tag/2.0.5
 grandine,p2p-interface,resource_exhaustion,malicious_p2p_message,High,A_authoritative,libp2p DoS vulnerability from lack of resource management,https://rustsec.org/advisories/RUSTSEC-2022-0084.html
@@ -1676,13 +1676,13 @@ lighthouse,beacon-chain:attestation,race_condition,malicious_attestation,Info,B_
 lighthouse,validator,missing_input_validation,malformed_input,Info,B_corroborated,Allow truncation of pubkey cache on creation (#1686),https://github.com/sigp/lighthouse/commit/fcf8419c90e0922161451d006047e36aa3915097
 lighthouse,p2p-interface,race_condition,peer,Info,B_corroborated,Ban peer race condition (#4140),https://github.com/sigp/lighthouse/commit/311e69db65f0133fb3f9ce980d3f88202cea042d
 lighthouse,fork-choice,consensus_divergence,crafted_state,Info,B_corroborated,Apply hotfix for inconsistent head (#1639),https://github.com/sigp/lighthouse/commit/bd39cc8e26ccb9566b03c8363d2f391daafaa1b0
-lighthouse,p2p-interface,resource_exhaustion,malicious_p2p_message,Info,C_candidate,This release provides a significant stability improvement (#1546) and ,https://github.com/sigp/lighthouse/releases/tag/v0.2.6
+lighthouse,p2p-interface,resource_exhaustion,malformed_input,Info,C_candidate,This release provides a significant stability improvement (#1546) and ,https://github.com/sigp/lighthouse/releases/tag/v0.2.6
 lighthouse,beacon-chain:slashing,missing_input_validation,crafted_state,Info,B_corroborated,Lockfiles on EIP-2335 keypairs are now strictly enforced. The `--delet,https://github.com/sigp/lighthouse/releases/tag/v0.3.0
 lighthouse,beacon-chain:slashing,other,malformed_input,Info,B_corroborated,Various security fixes.,https://github.com/sigp/lighthouse/releases/tag/v0.3.0
-lighthouse,database,resource_exhaustion,crafted_state,Info,C_candidate,A memory leak has been fixed in #1923.,https://github.com/sigp/lighthouse/releases/tag/v0.3.5
+lighthouse,beacon-chain:block-processing,resource_exhaustion,crafted_state,Info,C_candidate,A memory leak has been fixed in #1923.,https://github.com/sigp/lighthouse/releases/tag/v0.3.5
 lighthouse,p2p-interface,crypto_misuse,malicious_p2p_message,Info,B_corroborated,"Updates libp2p (security fixes, spec incompatibility updates)",https://github.com/sigp/lighthouse/releases/tag/v1.0.2
-lighthouse,beacon-chain:slashing,other,crafted_state,High,A_authoritative,"Although these bugs were *not* security risks, they caused significant",https://github.com/sigp/lighthouse/releases/tag/v1.0.6
-lighthouse,other,race_condition,internal_only,Info,B_corroborated,Fix race condition when creating LocalBeaconNode (#2137),https://github.com/sigp/lighthouse/releases/tag/v1.1.0
+lighthouse,beacon-chain:slashing,missing_input_validation,crafted_state,High,A_authoritative,"Although these bugs were *not* security risks, they caused significant",https://github.com/sigp/lighthouse/releases/tag/v1.0.6
+lighthouse,p2p-interface,consensus_divergence,malformed_input,Info,B_corroborated,Fix race condition when creating LocalBeaconNode (#2137),https://github.com/sigp/lighthouse/releases/tag/v1.1.0
 lighthouse,p2p-interface,missing_input_validation,malformed_input,Info,B_corroborated,"Additionally, an upgrade to a upstream dependency (`tokio`) contains a",https://github.com/sigp/lighthouse/releases/tag/v1.1.1
 lighthouse,p2p-interface,crypto_misuse,malformed_input,High,A_authoritative,Analysis of the network shows a concerning portion of users are runnin,https://github.com/sigp/lighthouse/releases/tag/v1.3.0
 lighthouse,beacon-chain:exit-consolidation,other,malformed_input,Info,C_candidate,This alone reduces the memory consumption of Lighthouse by at least 50,https://github.com/sigp/lighthouse/releases/tag/v1.4.0-rc.0
@@ -1694,16 +1694,16 @@ lighthouse,beacon-chain:slashing,other,malformed_input,Info,B_corroborated,9461a
 lighthouse,beacon-chain:attestation,missing_input_validation,malicious_attestation,Info,B_corroborated,aca49fc45 Security update for openssl (#2539),https://github.com/sigp/lighthouse/releases/tag/v1.5.1
 lighthouse,validator,other,internal_only,Info,C_candidate,Restricting access to log files and API tokens is a security best-prac,https://github.com/sigp/lighthouse/releases/tag/v1.5.2-rc.0
 lighthouse,beacon-chain:attestation,consensus_divergence,malicious_attestation,Info,B_corroborated,1eefd6d41 Add how users should report security vulnerabilities for thi,https://github.com/sigp/lighthouse/releases/tag/v1.5.2
-lighthouse,p2p-interface,unhandled_error_or_nil,peer,Info,B_corroborated,This release contains a fix for a runtime panic in peer discovery that,https://github.com/sigp/lighthouse/releases/tag/v2.0.1
-lighthouse,p2p-interface,unhandled_error_or_nil,peer,Info,B_corroborated,Any user that is running a version *prior* to `v2.0.0` **must update b,https://github.com/sigp/lighthouse/releases/tag/v2.0.1
+lighthouse,p2p-interface,other,malicious_p2p_message,Info,B_corroborated,This release contains a fix for a runtime panic in peer discovery that,https://github.com/sigp/lighthouse/releases/tag/v2.0.1
+lighthouse,p2p-interface,other,malicious_p2p_message,Info,B_corroborated,Any user that is running a version *prior* to `v2.0.0` **must update b,https://github.com/sigp/lighthouse/releases/tag/v2.0.1
 lighthouse,validator,missing_input_validation,malformed_input,Info,C_candidate,The validator client compatibility changes inadvertently introduced a ,https://github.com/sigp/lighthouse/releases/tag/v2.1.1
 lighthouse,beacon-chain:slashing,missing_input_validation,malicious_p2p_message,Info,B_corroborated,OpenSSL Vulnerability Detail,https://github.com/sigp/lighthouse/releases/tag/v2.1.5
 lighthouse,crypto,other,peer,Info,C_candidate,OpenSSL security advisory: https://www.openssl.org/news/secadv/2022031,https://github.com/sigp/lighthouse/releases/tag/v2.1.5
 lighthouse,validator,missing_input_validation,malformed_input,Info,C_candidate,`--execution-jwt-secret-key KEY`: set the JWT secret via the CLI rathe,https://github.com/sigp/lighthouse/releases/tag/v3.2.0
-lighthouse,beacon-chain:attestation,resource_exhaustion,malicious_attestation,Info,B_corroborated,"Provide support for ""proposer-only"" BNs to mitigate targeted DoS attac",https://github.com/sigp/lighthouse/releases/tag/v4.2.0
+lighthouse,beacon-chain:attestation,missing_input_validation,malicious_attestation,Info,B_corroborated,"Provide support for ""proposer-only"" BNs to mitigate targeted DoS attac",https://github.com/sigp/lighthouse/releases/tag/v4.2.0
 lighthouse,p2p-interface,resource_exhaustion,malicious_p2p_message,Info,B_corroborated,Fix an OOM crash caused by a build-up of messages in gossipsub send qu,https://github.com/sigp/lighthouse/releases/tag/v4.6.0-rc.0
 lighthouse,beacon-chain:rewards-and-penalties,improper_state_update,crafted_state,Info,C_candidate,Restore crash safety for database pruning (#4975),https://github.com/sigp/lighthouse/releases/tag/v4.6.111-exp
-lighthouse,beacon-chain:attestation,improper_state_update,malicious_attestation,Info,B_corroborated,"Epoch and block processing have been optimized, resulting in improved ",https://github.com/sigp/lighthouse/releases/tag/v5.2.0
+lighthouse,beacon-chain:attestation,consensus_divergence,malicious_attestation,Info,B_corroborated,"Epoch and block processing have been optimized, resulting in improved ",https://github.com/sigp/lighthouse/releases/tag/v5.2.0
 lighthouse,beacon-chain:exit-consolidation,missing_input_validation,large_input,Info,C_candidate,"The headline change is known as _Max EB_, and raises the maximum effec",https://github.com/sigp/lighthouse/releases/tag/v7.0.0-beta.0
 lighthouse,data-availability-sampling,consensus_divergence,malformed_input,Info,C_candidate,"While primarily intended for testnets**, this release includes a memor",https://github.com/sigp/lighthouse/releases/tag/v8.0.0-rc.0
 lighthouse,kzg-commitments,resource_exhaustion,malformed_input,Info,B_corroborated,Fixed reprocess queue memory leak** (#8065): Resolves gradual memory c,https://github.com/sigp/lighthouse/releases/tag/v8.0.0-rc.0
@@ -1739,7 +1739,7 @@ lodestar,serialization,race_condition,crafted_state,Info,B_corroborated,fix: awa
 lodestar,beacon-chain:block-processing,race_condition,internal_only,Info,B_corroborated,Handle race condition where processedBlock event comes too soon,https://github.com/ChainSafe/lodestar/commit/7d26952671a2d431f56855c1f49ee0f692ffe506
 lodestar,validator,missing_input_validation,malformed_input,Info,C_candidate,[Snyk] Security upgrade grafana/grafana from 8.5.16 to 8.5.20 (#5166) ,https://github.com/ChainSafe/lodestar/releases/tag/v1.5.0-rc.0
 lodestar,kzg-commitments,missing_input_validation,malformed_input,Info,C_candidate,[Snyk] Security upgrade grafana/grafana from 8.4.2 to 8.5.16 (#5071) (,https://github.com/ChainSafe/lodestar/releases/tag/v1.5.0-rc.0
-lodestar,p2p-interface,resource_exhaustion,malformed_input,Info,C_candidate,DOS protection based on message slot (#5394) (@tuyennhv),https://github.com/ChainSafe/lodestar/releases/tag/v1.8.0-rc.0
+lodestar,p2p-interface,resource_exhaustion,crafted_state,Info,C_candidate,DOS protection based on message slot (#5394) (@tuyennhv),https://github.com/ChainSafe/lodestar/releases/tag/v1.8.0-rc.0
 lodestar,other,other,internal_only,Info,C_candidate,[Snyk] Security upgrade grafana/grafana from 8.5.20 to 8.5.22 (#5321) ,https://github.com/ChainSafe/lodestar/releases/tag/v1.8.0-rc.0
 lodestar,p2p-interface,other,malformed_input,Info,C_candidate,[Snyk] Security upgrade grafana/grafana from 8.5.22 to 8.5.25 (#5571) ,https://github.com/ChainSafe/lodestar/releases/tag/v1.9.0-rc.1
 lodestar,fork-choice,consensus_divergence,malicious_p2p_message,Info,B_corroborated,require node 18.17.0 to fix native fetch memory leak (#5873) (@matthew,https://github.com/ChainSafe/lodestar/releases/tag/v1.11.0-rc.0
@@ -1749,7 +1749,7 @@ lodestar,other,other,internal_only,Info,C_candidate,lint yarn lockfiles to analy
 lodestar,p2p-interface,incorrect_gas_accounting,malformed_input,Info,C_candidate,Hey Lodestar users! We've got our first minor release out for 2025. We,https://github.com/ChainSafe/lodestar/releases/tag/v1.25.0
 lodestar,crypto,other,malformed_input,Info,C_candidate,update the `elliptic` to fix a vulnerability  (#8374) (@nazarhussain),https://github.com/ChainSafe/lodestar/releases/tag/v1.35.0-rc.0
 lodestar,validator,missing_input_validation,malformed_input,Info,C_candidate,prevent duplicate aggregates passing validation due to race condition ,https://github.com/ChainSafe/lodestar/releases/tag/v1.39.0-rc.2
-lodestar,validator,missing_input_validation,malformed_input,Info,B_corroborated,await processFn to prevent buffer pool race condition (#8877) (@lodeke,https://github.com/ChainSafe/lodestar/releases/tag/v1.40.0-rc.1
+lodestar,validator,missing_input_validation,crafted_state,Info,B_corroborated,await processFn to prevent buffer pool race condition (#8877) (@lodeke,https://github.com/ChainSafe/lodestar/releases/tag/v1.40.0-rc.1
 lodestar,beacon-chain:execution-payload,missing_input_validation,malformed_input,Info,B_corroborated,avoid metrics crash on payload envelope publish (#9279) (@lodekeeper),https://github.com/ChainSafe/lodestar/releases/tag/v1.43.0-rc.1
 nethermind,other,other,internal_only,Info,C_candidate,security docs,https://github.com/NethermindEth/nethermind/commit/c18009ecedd27ae824deb8adefc698bf8eeadb1e
 nethermind,other,other,internal_only,Info,C_candidate,Update security.rst,https://github.com/NethermindEth/nethermind/commit/d0f3d6c529a1c76258de94f246c29de4196dd9f4
@@ -1792,10 +1792,10 @@ nethermind,p2p,resource_exhaustion,peer,Info,C_candidate,[MEMORY] Fixes a memory
 nethermind,serialization,serialization_bug,malformed_input,Info,B_corroborated,[CLI] Fix packaging of CLI that caused it to crash on start,https://github.com/NethermindEth/nethermind/releases/tag/1.9.54
 nethermind,other,resource_exhaustion,internal_only,Info,C_candidate,[Memory] Fixed memory leak in the node stats manager,https://github.com/NethermindEth/nethermind/releases/tag/1.10.51
 nethermind,rpc,missing_input_validation,peer,Info,B_corroborated,"[AuRa/Validator] Fix race condition, that could lead to crash on node ",https://github.com/NethermindEth/nethermind/releases/tag/1.12.2
-nethermind,rpc,resource_exhaustion,malformed_input,Info,C_candidate,[Fix/Memory Leak] Fix big memory leak when broadcasting transactions**,https://github.com/NethermindEth/nethermind/releases/tag/1.12.6
-nethermind,txpool,other,malformed_input,Info,B_corroborated,[SECURITY] Updated all of our dependencies (#4094),https://github.com/NethermindEth/nethermind/releases/tag/1.13.3
+nethermind,txpool,resource_exhaustion,malformed_input,Info,C_candidate,[Fix/Memory Leak] Fix big memory leak when broadcasting transactions**,https://github.com/NethermindEth/nethermind/releases/tag/1.12.6
+nethermind,txpool,missing_input_validation,crafted_state,Info,B_corroborated,[SECURITY] Updated all of our dependencies (#4094),https://github.com/NethermindEth/nethermind/releases/tag/1.13.3
 nethermind,state-trie,improper_state_update,crafted_state,Info,B_corroborated,Fix crash after full pruning complete by @asdacap [#5458],https://github.com/NethermindEth/nethermind/releases/tag/1.18.0
-nethermind,state-trie,missing_input_validation,crafted_state,Info,B_corroborated,Fix occasional start-up hang or crash by @benaadams [#5547],https://github.com/NethermindEth/nethermind/releases/tag/1.18.0
+nethermind,state-trie,missing_input_validation,malformed_input,Info,B_corroborated,Fix occasional start-up hang or crash by @benaadams [#5547],https://github.com/NethermindEth/nethermind/releases/tag/1.18.0
 nethermind,other,other,internal_only,Info,C_candidate,This release introduces a new chiseled rootless Docker image for enhan,https://github.com/NethermindEth/nethermind/releases/tag/1.26.0
 nethermind,opcodes,consensus_divergence,malformed_input,Info,B_corroborated,Introducing a new Macro Op: `EXTCODESIZE+POP` which was a common patte,https://github.com/NethermindEth/nethermind/releases/tag/1.29.0
 nethermind,opcodes,resource_exhaustion,malicious_tx,Info,C_candidate,"Macro Op: EXTCODESIZE+POP, turns a (historic) DoS vector into a NOP by",https://github.com/NethermindEth/nethermind/releases/tag/1.29.0
@@ -1805,12 +1805,12 @@ nethermind,rpc,incorrect_gas_accounting,malformed_input,Info,C_candidate,`trace_
 nethermind,other,race_condition,internal_only,Info,B_corroborated,Fix race condition when loading plugins by @ak88 in https://github.com,https://github.com/NethermindEth/nethermind/releases/tag/1.31.8
 nethermind,gas,incorrect_gas_accounting,malformed_input,Info,B_corroborated,Memory leak fixes,https://github.com/NethermindEth/nethermind/releases/tag/1.31.11
 nethermind,transactions,race_condition,malformed_input,Info,B_corroborated,Fix/initsteps race condition by @ak88 in https://github.com/Nethermind,https://github.com/NethermindEth/nethermind/releases/tag/1.32.0
-nethermind,state-trie,serialization_bug,malformed_input,Info,C_candidate,Don't crash process in debug for Disposal warning messages by @benaada,https://github.com/NethermindEth/nethermind/releases/tag/1.34.0
+nethermind,evm,serialization_bug,crafted_state,Info,C_candidate,Don't crash process in debug for Disposal warning messages by @benaada,https://github.com/NethermindEth/nethermind/releases/tag/1.34.0
 nethermind,crypto,resource_exhaustion,malicious_tx,Info,B_corroborated,Fix MCL memory leak by @rubo in https://github.com/NethermindEth/nethe,https://github.com/NethermindEth/nethermind/releases/tag/1.34.0
 nethermind,rpc,crypto_misuse,malformed_input,Info,C_candidate,Added build-time signing of release artifacts to improve release secur,https://github.com/NethermindEth/nethermind/releases/tag/1.35.8
 nethermind,rpc,improper_state_update,crafted_state,Info,C_candidate,A node crash path was adjusted from `Environment.FailFast` to `Environ,https://github.com/NethermindEth/nethermind/releases/tag/1.36.0
 nethermind,precompiles,race_condition,malformed_input,Info,B_corroborated,Fix race condition in ShutterBlockHandler by @davidjsonn in https://gi,https://github.com/NethermindEth/nethermind/releases/tag/1.37.0-alpha
-nethermind,rpc,race_condition,malformed_input,Info,B_corroborated,Fix flaky tests: timing and race condition by @LukaszRozmej in https:/,https://github.com/NethermindEth/nethermind/releases/tag/1.37.0-alpha
+nethermind,sync,race_condition,malformed_input,Info,B_corroborated,Fix flaky tests: timing and race condition by @LukaszRozmej in https:/,https://github.com/NethermindEth/nethermind/releases/tag/1.37.0-alpha
 nethermind,transactions,integer_overflow_underflow,malicious_p2p_message,Unrated,B_corroborated,feat: host-side prerequisites for the embedded beacon chain plugin (SS,https://github.com/NethermindEth/nethermind/pull/11985
 nethermind,precompiles,integer_overflow_underflow,crafted_state,Unrated,B_corroborated,ModExp exponent `int32` oveflow fix,https://github.com/NethermindEth/nethermind/pull/11692
 nethermind,transactions,integer_overflow_underflow,malformed_input,Unrated,C_candidate,Fix nonce handling in eth_simulate,https://github.com/NethermindEth/nethermind/pull/9499
@@ -1858,30 +1858,30 @@ nethermind,rlp,missing_bounds_check,malformed_input,Unrated,B_corroborated,fix: 
 nethermind,evm,integer_overflow_underflow,large_input,Unrated,B_corroborated,fix casting when tracing,https://github.com/NethermindEth/nethermind/pull/7464
 nethermind,engine-api,consensus_divergence,crafted_state,Unrated,B_corroborated,Reorg up to lastFinalized block,https://github.com/NethermindEth/nethermind/pull/11396
 nethermind,engine-api,consensus_divergence,crafted_state,Unrated,B_corroborated,+2 hive tests. Merge/latest block after payload,https://github.com/NethermindEth/nethermind/pull/4110
-nimbus,database,unhandled_error_or_nil,internal_only,Medium,A_authoritative,Avoid crash when in limited column custody mode:,https://github.com/status-im/nimbus-eth2/releases/tag/v26.6.0
+nimbus,beacon-chain:block-processing,consensus_divergence,peer,Medium,A_authoritative,Avoid crash when in limited column custody mode:,https://github.com/status-im/nimbus-eth2/releases/tag/v26.6.0
 nimbus,validator,missing_input_validation,malformed_input,Medium,A_authoritative,Fix a validator client crash on startup with offline or unavailable be,https://github.com/status-im/nimbus-eth2/releases/tag/v26.2.0
 nimbus,beacon-chain:block-processing,unhandled_error_or_nil,malformed_input,Medium,A_authoritative,"Nimbus `v25.7.1` is a `medium-urgency` release, fixing a potential syn",https://github.com/status-im/nimbus-eth2/blob/stable/CHANGELOG.md#L365
 nimbus,validator,missing_input_validation,malformed_input,Low,A_authoritative,Fix sync-related crash regression in v25.6.0:,https://github.com/status-im/nimbus-eth2/releases/tag/v25.7.0
 nimbus,beacon-chain:execution-payload,other,other,Medium,A_authoritative,Nimbus `v25.1.0` is a `medium-urgency` release with a gas limit increa,https://github.com/status-im/nimbus-eth2/blob/stable/CHANGELOG.md#L582
 nimbus,validator,missing_input_validation,malformed_input,Low,A_authoritative,Fix crash on overlong JSON array reading:,https://github.com/status-im/nimbus-eth2/releases/tag/v24.10.0
-nimbus,builder,crypto_misuse,malformed_input,Low,A_authoritative,Avoid potential crash while initializing UPnP:,https://github.com/status-im/nimbus-eth2/releases/tag/v24.9.0
+nimbus,builder,missing_input_validation,malformed_input,Low,A_authoritative,Avoid potential crash while initializing UPnP:,https://github.com/status-im/nimbus-eth2/releases/tag/v24.9.0
 nimbus,p2p-interface,missing_input_validation,malicious_p2p_message,Low,A_authoritative,Fix potential crash on slow libp2p sending:,https://github.com/status-im/nimbus-eth2/releases/tag/v24.5.0
 nimbus,beacon-chain:execution-payload,missing_input_validation,malformed_input,Low,A_authoritative,Avoid a crash when handling blob backfill:,https://github.com/status-im/nimbus-eth2/releases/tag/v24.4.0
-nimbus,fork-choice,missing_input_validation,malformed_input,Low,A_authoritative,The Nimbus validator client will no longer crash when the indicated be,https://github.com/status-im/nimbus-eth2/releases/tag/v23.10.0
+nimbus,fork-choice,missing_input_validation,malicious_p2p_message,Low,A_authoritative,The Nimbus validator client will no longer crash when the indicated be,https://github.com/status-im/nimbus-eth2/releases/tag/v23.10.0
 nimbus,p2p-interface,missing_input_validation,malicious_p2p_message,Low,A_authoritative,The GossipSub implementation of Nimbus now consumes less bandwidth and,https://github.com/status-im/nimbus-eth2/releases/tag/v23.9.0
 nimbus,p2p-interface,missing_input_validation,crafted_state,Medium,A_authoritative,The `trustedNodeSync` command features a new `--trusted-block-root` op,https://github.com/status-im/nimbus-eth2/releases/tag/v23.4.0
-nimbus,validator,missing_input_validation,malformed_input,Medium,A_authoritative,The Nimbus validator client will no longer crash on start-up when supp,https://github.com/status-im/nimbus-eth2/releases/tag/v23.4.0
-nimbus,beacon-chain:slashing,other,crafted_state,Medium,A_authoritative,Nimbus will no longer crash when there is a network mismatch between t,https://github.com/status-im/nimbus-eth2/releases/tag/v23.4.0
-nimbus,beacon-chain:execution-payload,unhandled_error_or_nil,peer,Medium,A_authoritative,The release addresses a potential crash triggered by Engine API connec,https://github.com/status-im/nimbus-eth2/releases/tag/v23.3.1
+nimbus,validator,missing_input_validation,crafted_state,Medium,A_authoritative,The Nimbus validator client will no longer crash on start-up when supp,https://github.com/status-im/nimbus-eth2/releases/tag/v23.4.0
+nimbus,beacon-chain:slashing,missing_input_validation,crafted_state,Medium,A_authoritative,Nimbus will no longer crash when there is a network mismatch between t,https://github.com/status-im/nimbus-eth2/releases/tag/v23.4.0
+nimbus,beacon-chain:block-processing,other,peer,Medium,A_authoritative,The release addresses a potential crash triggered by Engine API connec,https://github.com/status-im/nimbus-eth2/releases/tag/v23.3.1
 nimbus,beacon-chain:deposit,missing_input_validation,large_input,Low,A_authoritative,the documentation provided in the Nimbus guide in order to understand ,https://github.com/status-im/nimbus-eth2/releases/tag/v23.2.0
 nimbus,validator,missing_input_validation,malformed_input,Low,A_authoritative,Nimbus will no longer crash when it fails to resolve the hostname of a,https://github.com/status-im/nimbus-eth2/releases/tag/v23.2.0
 nimbus,validator,missing_input_validation,malformed_input,High,A_authoritative,A crash on start-up after running the client with `--history:prune` op,https://github.com/status-im/nimbus-eth2/releases/tag/v23.1.1
 nimbus,beacon-chain:block-processing,unhandled_error_or_nil,internal_only,Low,A_authoritative,"Nimbus `v22.8.2` is a `low-urgency` hotfix release, eliminating a risk",https://github.com/status-im/nimbus-eth2/blob/stable/CHANGELOG.md#L2218
-nimbus,beacon-chain:block-processing,unhandled_error_or_nil,internal_only,Low,A_authoritative,A potential crash during block production when DEBUG logging is enable,https://github.com/status-im/nimbus-eth2/releases/tag/v22.8.2
+nimbus,validator,missing_input_validation,malformed_input,Low,A_authoritative,A potential crash during block production when DEBUG logging is enable,https://github.com/status-im/nimbus-eth2/releases/tag/v22.8.2
 nimbus,beacon-chain:attestation,missing_input_validation,malicious_attestation,Low,A_authoritative,A potential crash while processing rare gossip messages such as slashi,https://github.com/status-im/nimbus-eth2/releases/tag/v22.8.0
 nimbus,beacon-chain:execution-payload,unhandled_error_or_nil,malformed_input,Low,A_authoritative,A rare crash triggered when using a HTTP web3 URL.,https://github.com/status-im/nimbus-eth2/releases/tag/v22.6.0
-nimbus,validator,resource_exhaustion,internal_only,Low,A_authoritative,A crash triggered by the use of Web3Signer remote keystores,https://github.com/status-im/nimbus-eth2/releases/tag/v22.5.0
-nimbus,validator,resource_exhaustion,internal_only,Low,A_authoritative,A rare crash triggered when Nimbus is performing a large number of con,https://github.com/status-im/nimbus-eth2/releases/tag/v22.5.0
+nimbus,beacon-chain:block-processing,race_condition,large_input,Low,A_authoritative,A crash triggered by the use of Web3Signer remote keystores,https://github.com/status-im/nimbus-eth2/releases/tag/v22.5.0
+nimbus,deposit-contract,missing_input_validation,large_input,Low,A_authoritative,A rare crash triggered when Nimbus is performing a large number of con,https://github.com/status-im/nimbus-eth2/releases/tag/v22.5.0
 nimbus,beacon-chain:slashing,missing_bounds_check,crafted_state,Low,A_authoritative,Validator index-out-of-bounds crash that was triggered upon certain re,https://github.com/status-im/nimbus-eth2/releases/tag/v22.3.0
 nimbus,p2p-interface,missing_input_validation,malicious_p2p_message,Medium,A_authoritative,A crash in the `/eth/v2/debug/beacon/states` REST API call on systems ,https://github.com/status-im/nimbus-eth2/releases/tag/v1.5.4
 nimbus,beacon-chain:attestation,missing_input_validation,malicious_attestation,Medium,A_authoritative,Our [REST API](https://nimbus.guide/rest-api.html) is now feature comp,https://github.com/status-im/nimbus-eth2/releases/tag/v1.5.0
@@ -1965,7 +1965,7 @@ prysm,data-availability-sampling,missing_input_validation,malformed_input,Info,B
 prysm,data-availability-sampling,missing_bounds_check,crafted_state,Info,B_corroborated,Fixed a condition where the blob cache could panic when there were les,https://github.com/prysmaticlabs/prysm/blob/develop/CHANGELOG.md#L866
 prysm,beacon-chain:attestation,race_condition,malicious_attestation,Info,B_corroborated,Fix prysmctl panic when baseFee is not set in genesis.json. [[PR]](htt,https://github.com/prysmaticlabs/prysm/blob/develop/CHANGELOG.md#L883
 prysm,other,other,peer,Info,A_authoritative,Updated distroless/cc-debian11 to latest to resolve CVE-2024-2961. [[P,https://github.com/prysmaticlabs/prysm/blob/develop/CHANGELOG.md#L895
-prysm,p2p-interface,resource_exhaustion,malicious_p2p_message,Info,A_authoritative,Fix CVE-2025-22869. [[PR]](https://github.com/prysmaticlabs/prysm/pull,https://github.com/prysmaticlabs/prysm/blob/develop/CHANGELOG.md#L1049
+prysm,data-availability-sampling,other,malformed_input,Info,A_authoritative,Fix CVE-2025-22869. [[PR]](https://github.com/prysmaticlabs/prysm/pull,https://github.com/prysmaticlabs/prysm/blob/develop/CHANGELOG.md#L1049
 prysm,p2p-interface,serialization_bug,malicious_p2p_message,Info,B_corroborated,Added a static analyzer to discourage use of panic() in Prysm. [[PR]](,https://github.com/prysmaticlabs/prysm/blob/develop/CHANGELOG.md#L1130
 prysm,beacon-chain:attestation,serialization_bug,malicious_attestation,Info,B_corroborated,fix panic with type cast on pbgenericblock(). [[PR]](https://github.co,https://github.com/prysmaticlabs/prysm/blob/develop/CHANGELOG.md#L1355
 prysm,crypto,crypto_misuse,malformed_input,Info,A_authoritative,go version upgrade to 1.22.10 for CVE CVE-2024-34156. [[PR]](https://g,https://github.com/prysmaticlabs/prysm/blob/develop/CHANGELOG.md#L1376
@@ -1997,18 +1997,18 @@ prysm,beacon-chain:justification-and-finality,other,malformed_input,Info,C_candi
 prysm,other,other,internal_only,Info,C_candidate,Added another encryption key to security.txt.,https://github.com/prysmaticlabs/prysm/blob/develop/CHANGELOG.md#L4143
 prysm,beacon-chain:deposit,missing_input_validation,malformed_input,Info,B_corroborated,UI: Add security headers,https://github.com/prysmaticlabs/prysm/blob/develop/CHANGELOG.md#L4182
 prysm,validator,missing_input_validation,malformed_input,Info,B_corroborated,Resolve Panic in ListValidatorBalances RPC [#4051](https://github.com/,https://github.com/OffchainLabs/prysm/releases/tag/v0.2.7
-prysm,other,missing_bounds_check,malformed_input,Info,B_corroborated,fixed panic: runtime error: integer divide by zero #4777 (#4823) ([888,https://github.com/OffchainLabs/prysm/releases/tag/v0.3.2
+prysm,beacon-chain:attestation,other,malicious_attestation,Info,B_corroborated,fixed panic: runtime error: integer divide by zero #4777 (#4823) ([888,https://github.com/OffchainLabs/prysm/releases/tag/v0.3.2
 prysm,beacon-chain:attestation,consensus_divergence,malicious_attestation,Info,B_corroborated,Check attestation bitlist length in aggregation to prevent panic (#487,https://github.com/OffchainLabs/prysm/releases/tag/v0.3.2
-prysm,weak-subjectivity,unhandled_error_or_nil,peer,Info,B_corroborated,Do not panic if initial sync fails (#4477) ([22a3bf5](https://github.c,https://github.com/OffchainLabs/prysm/releases/tag/v0.3.2
-prysm,p2p-interface,unhandled_error_or_nil,peer,Info,C_candidate,Don't Panic if 0 Peers are Left (#4594) ([781b7d6](https://github.com/,https://github.com/OffchainLabs/prysm/releases/tag/v0.3.2
+prysm,p2p-interface,consensus_divergence,malicious_p2p_message,Info,B_corroborated,Do not panic if initial sync fails (#4477) ([22a3bf5](https://github.c,https://github.com/OffchainLabs/prysm/releases/tag/v0.3.2
+prysm,beacon-chain:block-processing,improper_state_update,crafted_state,Info,C_candidate,Don't Panic if 0 Peers are Left (#4594) ([781b7d6](https://github.com/,https://github.com/OffchainLabs/prysm/releases/tag/v0.3.2
 prysm,beacon-chain:deposit,missing_input_validation,crafted_state,Info,B_corroborated,Fix crash when reporting validator metrics (#4968) ([5cb5126](https://,https://github.com/OffchainLabs/prysm/releases/tag/v0.3.2
-prysm,beacon-chain:slashing,other,malformed_input,Info,B_corroborated,Fix RPC Panic (#4564) ([11731c4](https://github.com/prysmaticlabs/prys,https://github.com/OffchainLabs/prysm/releases/tag/v0.3.2
-prysm,fork-choice,missing_input_validation,malformed_input,Info,B_corroborated,Fixes race condition at genesis (#5016) ([b4aaa61](https://github.com/,https://github.com/OffchainLabs/prysm/releases/tag/v0.3.2
+prysm,beacon-chain:slashing,missing_input_validation,malformed_input,Info,B_corroborated,Fix RPC Panic (#4564) ([11731c4](https://github.com/prysmaticlabs/prys,https://github.com/OffchainLabs/prysm/releases/tag/v0.3.2
+prysm,fork-choice,missing_input_validation,malicious_attestation,Info,B_corroborated,Fixes race condition at genesis (#5016) ([b4aaa61](https://github.com/,https://github.com/OffchainLabs/prysm/releases/tag/v0.3.2
 prysm,beacon-chain:attestation,missing_bounds_check,malicious_attestation,Info,B_corroborated,Prevent panic on wrong interface conversion (#4803) ([7e0d050](https:/,https://github.com/OffchainLabs/prysm/releases/tag/v0.3.2
-prysm,other,missing_bounds_check,malformed_input,Info,B_corroborated,Avoid crash due to invalid index (#5025) ([0ecd83a](https://github.com,https://github.com/OffchainLabs/prysm/releases/tag/v0.3.3
+prysm,validator,missing_input_validation,malformed_input,Info,B_corroborated,Avoid crash due to invalid index (#5025) ([0ecd83a](https://github.com,https://github.com/OffchainLabs/prysm/releases/tag/v0.3.3
 prysm,beacon-chain:attestation,improper_state_update,malicious_attestation,Info,B_corroborated,Prevent panic for different size bitlists (#5233) ([6bc70e2](https://g,https://github.com/OffchainLabs/prysm/releases/tag/v0.3.9
-prysm,p2p-interface,race_condition,peer,Info,B_corroborated,p2p/sync: Wrong genesis digest is used to register pubsub topic subscr,https://github.com/OffchainLabs/prysm/releases/tag/v1.0.0-alpha.4
-prysm,validator,missing_input_validation,malformed_input,Info,B_corroborated,Fix Voluntary Exits Panic (#5688) ([3a295fb](https://github.com/prysma,https://github.com/OffchainLabs/prysm/releases/tag/v1.0.0-alpha.6
+prysm,beacon-chain:attestation,missing_input_validation,malicious_attestation,Info,B_corroborated,p2p/sync: Wrong genesis digest is used to register pubsub topic subscr,https://github.com/OffchainLabs/prysm/releases/tag/v1.0.0-alpha.4
+prysm,beacon-chain:exit-consolidation,missing_input_validation,malformed_input,Info,B_corroborated,Fix Voluntary Exits Panic (#5688) ([3a295fb](https://github.com/prysma,https://github.com/OffchainLabs/prysm/releases/tag/v1.0.0-alpha.6
 prysm,validator,missing_input_validation,crafted_state,Info,B_corroborated,fixes runtime panic in state/getters (#5728) ([140aff4](https://github,https://github.com/OffchainLabs/prysm/releases/tag/v1.0.0-alpha.7
 prysm,beacon-chain:slashing,missing_input_validation,malicious_p2p_message,Info,B_corroborated,Resolve Nil Validator Panic (#6218) ([2fb4855](https://github.com/prys,https://github.com/OffchainLabs/prysm/releases/tag/v1.0.0-alpha.11
 prysm,beacon-chain:justification-and-finality,missing_input_validation,malformed_input,Info,B_corroborated,Fix Discovery Panic (#6261) ([9d8420b](https://github.com/prysmaticlab,https://github.com/OffchainLabs/prysm/releases/tag/v1.0.0-alpha.12
@@ -2016,7 +2016,7 @@ prysm,p2p-interface,other,crafted_state,Info,C_candidate,This release introduces
 prysm,beacon-chain:slashing,race_condition,crafted_state,Info,B_corroborated,Fix race condition issues in beacon state (#6322) ([d454523](https://g,https://github.com/OffchainLabs/prysm/releases/tag/v1.0.0-alpha.13
 prysm,crypto,missing_input_validation,malformed_input,Info,C_candidate,automaxprocs: Log error to DEBUG instead of panic (#6592) ([b099cab](h,https://github.com/OffchainLabs/prysm/releases/tag/v1.0.0-alpha.16
 prysm,p2p-interface,resource_exhaustion,malicious_p2p_message,Info,B_corroborated,Harden Against DOS Attacks (#6780) ([edc9fcd](https://github.com/prysm,https://github.com/OffchainLabs/prysm/releases/tag/v1.0.0-alpha.17
-prysm,beacon-chain:slashing,improper_state_update,large_input,Info,B_corroborated,Fix Panic in Wallet HasDir() (#6857) ([1f9d155](https://github.com/pry,https://github.com/OffchainLabs/prysm/releases/tag/v1.0.0-alpha.19
+prysm,beacon-chain:slashing,missing_input_validation,large_input,Info,B_corroborated,Fix Panic in Wallet HasDir() (#6857) ([1f9d155](https://github.com/pry,https://github.com/OffchainLabs/prysm/releases/tag/v1.0.0-alpha.19
 prysm,beacon-chain:attestation,missing_input_validation,malicious_attestation,Info,B_corroborated,Return an error when wallet is nil rather than panic (#6875) ([bc883aa,https://github.com/OffchainLabs/prysm/releases/tag/v1.0.0-alpha.19
 prysm,beacon-chain:attestation,missing_input_validation,malicious_attestation,Info,B_corroborated,Slasher protection race condition fix  (#6871) ([0d6fb72](https://gith,https://github.com/OffchainLabs/prysm/releases/tag/v1.0.0-alpha.19
 prysm,validator,missing_input_validation,malformed_input,Info,C_candidate,Various security fixes,https://github.com/OffchainLabs/prysm/releases/tag/v1.0.0-alpha.25
@@ -2029,7 +2029,7 @@ prysm,beacon-chain:attestation,missing_input_validation,malicious_attestation,In
 prysm,beacon-chain:deposit,improper_state_update,crafted_state,Info,C_candidate,Update Dependencies for Bug Fixes and OSS Vulnerability Patching (#764,https://github.com/OffchainLabs/prysm/releases/tag/v1.0.0-beta.2
 prysm,bls,missing_input_validation,crafted_state,Info,B_corroborated,Security patch from go 1.15.5,https://github.com/OffchainLabs/prysm/releases/tag/v1.0.0-beta.3
 prysm,beacon-chain:attestation,missing_input_validation,malicious_attestation,Info,B_corroborated,Fix potential panic with nil *big.Int (#7874) ([c3fc409](https://githu,https://github.com/OffchainLabs/prysm/releases/tag/v1.0.0
-prysm,beacon-chain:attestation,other,malicious_attestation,Info,B_corroborated,Refactor HD Wallets for Enhanced Security (#7821) ([7449eba](https://g,https://github.com/OffchainLabs/prysm/releases/tag/v1.0.0
+prysm,beacon-chain:attestation,missing_input_validation,malicious_attestation,Info,B_corroborated,Refactor HD Wallets for Enhanced Security (#7821) ([7449eba](https://g,https://github.com/OffchainLabs/prysm/releases/tag/v1.0.0
 prysm,beacon-chain:slashing,other,malformed_input,Info,B_corroborated,Update security.txt (#7956) ([987205a](https://github.com/prysmaticlab,https://github.com/OffchainLabs/prysm/releases/tag/v1.0.1
 prysm,beacon-chain:attestation,other,malicious_attestation,Info,B_corroborated,Resolve panic on shutdown with offline eth1 node (#8033) ([fbbdd94](ht,https://github.com/OffchainLabs/prysm/releases/tag/v1.0.5
 prysm,beacon-chain:slashing,missing_input_validation,malformed_input,Info,B_corroborated,Fix Slasher Backup DB panic on call. (#8099) ([630d573](https://github,https://github.com/OffchainLabs/prysm/releases/tag/v1.1.0
@@ -2042,18 +2042,18 @@ prysm,beacon-chain:slashing,other,malformed_input,Info,C_candidate,❗❗This re
 prysm,beacon-chain:attestation,missing_input_validation,malicious_attestation,Info,B_corroborated,Fix Panic When Accessing State Frequently (#8928) ([503ec12](https://g,https://github.com/OffchainLabs/prysm/releases/tag/v1.3.10
 prysm,beacon-chain:deposit,missing_input_validation,malformed_input,Info,B_corroborated,UI: Add security headers #9775,https://github.com/OffchainLabs/prysm/releases/tag/v2.0.2
 prysm,other,other,internal_only,Info,C_candidate,Added another encryption key to security.txt. #9896,https://github.com/OffchainLabs/prysm/releases/tag/v2.0.3
-prysm,beacon-chain:justification-and-finality,other,malformed_input,Info,C_candidate,Add justifications to gosec security finding suppression. #10005,https://github.com/OffchainLabs/prysm/releases/tag/v2.0.5
+prysm,beacon-chain:justification-and-finality,crypto_misuse,malformed_input,Info,C_candidate,Add justifications to gosec security finding suppression. #10005,https://github.com/OffchainLabs/prysm/releases/tag/v2.0.5
 prysm,other,other,internal_only,Info,C_candidate,Go version updated to security release [1.17.9](https://groups.google.,https://github.com/OffchainLabs/prysm/releases/tag/v2.1.0
 prysm,beacon-chain:withdrawal,integer_overflow_underflow,malformed_input,Info,B_corroborated,Race condition with blockchain service Head() #10741,https://github.com/OffchainLabs/prysm/releases/tag/v2.1.3
 prysm,beacon-chain:withdrawal,integer_overflow_underflow,malformed_input,Info,C_candidate,Race condition with validator's highest valid slot accessor #10722,https://github.com/OffchainLabs/prysm/releases/tag/v2.1.3
 prysm,p2p-interface,unhandled_error_or_nil,malformed_input,Info,B_corroborated,Eth1 connection API panic #10938,https://github.com/OffchainLabs/prysm/releases/tag/v2.1.4
 prysm,validator,missing_input_validation,malformed_input,Info,B_corroborated,Handle panic when rpc client is not yet initialized #11528,https://github.com/OffchainLabs/prysm/releases/tag/v3.1.2
 prysm,builder,missing_input_validation,malformed_input,Info,B_corroborated,Sync: bandwidth limiter panic #11988,https://github.com/OffchainLabs/prysm/releases/tag/v3.2.2-rc.0
-prysm,builder,unhandled_error_or_nil,peer,Info,B_corroborated,Fix Panic In Builder Service https://github.com/prysmaticlabs/prysm/pu,https://github.com/OffchainLabs/prysm/releases/tag/v4.0.3
+prysm,beacon-chain:block-processing,missing_input_validation,malformed_input,Info,B_corroborated,Fix Panic In Builder Service https://github.com/prysmaticlabs/prysm/pu,https://github.com/OffchainLabs/prysm/releases/tag/v4.0.3
 prysm,builder,missing_input_validation,malicious_attestation,Info,B_corroborated,Avoid panic on nil broadcast object #12369,https://github.com/OffchainLabs/prysm/releases/tag/v4.0.4
 prysm,other,resource_exhaustion,internal_only,Info,B_corroborated,Release lock before panic for feed #12464,https://github.com/OffchainLabs/prysm/releases/tag/v4.0.6
 prysm,other,other,internal_only,Info,C_candidate,Happy new year! We have an incredibly exciting release to kick off the,https://github.com/OffchainLabs/prysm/releases/tag/v4.2.0
-prysm,beacon-chain:slashing,race_condition,malformed_input,Info,B_corroborated,fix race condition when pinging peers #13701,https://github.com/OffchainLabs/prysm/releases/tag/v5.0.2
+prysm,beacon-chain:slashing,race_condition,malicious_p2p_message,Info,B_corroborated,fix race condition when pinging peers #13701,https://github.com/OffchainLabs/prysm/releases/tag/v5.0.2
 prysm,validator,missing_input_validation,crafted_state,Info,B_corroborated,Fixed nil block panic in API #14063,https://github.com/OffchainLabs/prysm/releases/tag/v5.1.0
 prysm,p2p-interface,missing_input_validation,malformed_input,Info,B_corroborated,Fix panic on empty block result in REST API #14280,https://github.com/OffchainLabs/prysm/releases/tag/v5.1.0
 prysm,validator,missing_input_validation,malformed_input,Info,B_corroborated,Prysm v5.1.1 contains an updated implementation of the beacon api stre,https://github.com/OffchainLabs/prysm/releases/tag/v5.1.2
@@ -2105,7 +2105,7 @@ reth,p2p,race_condition,internal_only,Info,B_corroborated,test: fix flaky shutdo
 reth,txpool,consensus_divergence,malformed_input,Info,B_corroborated,Fixed txpool memory leak (#4599),https://github.com/paradigmxyz/reth/releases/tag/v0.1.0-alpha.9
 reth,rpc,missing_input_validation,crafted_state,High,A_authoritative,A fix of critical bug during live sync that could lead to panic or bad,https://github.com/paradigmxyz/reth/releases/tag/v0.1.0-alpha.21
 reth,transactions,resource_exhaustion,crafted_state,Info,B_corroborated,[Rework](https://github.com/paradigmxyz/reth/pull/6590) of the network,https://github.com/paradigmxyz/reth/releases/tag/v0.2.0-beta.1
-reth,transactions,resource_exhaustion,crafted_state,Info,B_corroborated,"Resource leak fixes, such as a [memory leak](https://github.com/paradi",https://github.com/paradigmxyz/reth/releases/tag/v0.2.0-beta.1
+reth,txpool,resource_exhaustion,crafted_state,Info,B_corroborated,"Resource leak fixes, such as a [memory leak](https://github.com/paradi",https://github.com/paradigmxyz/reth/releases/tag/v0.2.0-beta.1
 reth,rpc,consensus_divergence,crafted_state,Info,B_corroborated,fix: dont panic on invalud fcu response by @mattsse in https://github.,https://github.com/paradigmxyz/reth/releases/tag/v1.0.0-rc.1
 reth,txpool,resource_exhaustion,malformed_input,High,A_authoritative,"Stable**: Since releasing reth 0.2.0-beta.6 in April 2024, there have ",https://github.com/paradigmxyz/reth/releases/tag/v1.0.0
 reth,state-trie,improper_state_update,crafted_state,Info,B_corroborated,test: include unexpected event in panic by @mattsse in https://github.,https://github.com/paradigmxyz/reth/releases/tag/v1.0.1
@@ -2118,7 +2118,7 @@ reth,txpool,race_condition,malformed_input,Info,B_corroborated,fix: storage lock
 reth,rpc,improper_state_update,malformed_input,Info,B_corroborated,chore(engine): avoid panic on mpsc send in sparse trie worker by @sash,https://github.com/paradigmxyz/reth/releases/tag/v1.8.0
 reth,txpool,improper_state_update,malformed_input,Info,B_corroborated,fix(reth-bench): do not panic on empty results by @shekhirin in https:,https://github.com/paradigmxyz/reth/releases/tag/v1.8.0
 reth,p2p,improper_state_update,crafted_state,Info,B_corroborated,fix: avoid panic in new-payload-fcu benchmark by @LandLord529 in https,https://github.com/paradigmxyz/reth/releases/tag/v1.9.0
-reth,rpc,improper_state_update,crafted_state,Info,C_candidate,fix: Bearer token parsing vulnerability  by @viktorking7 in https://gi,https://github.com/paradigmxyz/reth/releases/tag/v1.9.0
+reth,rpc,missing_input_validation,crafted_state,Info,C_candidate,fix: Bearer token parsing vulnerability  by @viktorking7 in https://gi,https://github.com/paradigmxyz/reth/releases/tag/v1.9.0
 reth,rpc,missing_input_validation,malformed_input,Info,B_corroborated,Fixed panic in `eth_feeHistory` ([#20969](https://github.com/paradigmx,https://github.com/paradigmxyz/reth/releases/tag/v1.10.0
 reth,state-trie,improper_state_update,malformed_input,Info,B_corroborated,fix(trie): panic in sparse trie proof workers,https://github.com/paradigmxyz/reth/releases/tag/v1.11.3
 reth,state-trie,improper_state_update,malformed_input,Info,B_corroborated,cherry-pick: install rayon panic handler (37f5b3a),https://github.com/paradigmxyz/reth/releases/tag/v1.11.3
@@ -2312,7 +2312,7 @@ teku,other,other,malformed_input,Info,B_corroborated,Additional security vulnera
 teku,other,other,other,Info,C_candidate,This is a recommended update containing security and performance impro,https://github.com/Consensys/teku/releases/tag/22.1.0
 teku,serialization,resource_exhaustion,malformed_input,Info,A_authoritative,Updated jackson-databind library to version 2.13.4.2 addressing [CVE-2,https://github.com/Consensys/teku/releases/tag/22.10.2
 teku,other,other,internal_only,Info,C_candidate,This is a recommended update containing security updates. It is a requ,https://github.com/Consensys/teku/releases/tag/22.11.0
-teku,p2p-interface,resource_exhaustion,malicious_p2p_message,Info,B_corroborated,Updated protobuf used by libp2p library to resolve a potential DoS vec,https://github.com/Consensys/teku/releases/tag/22.11.0
+teku,p2p-interface,missing_input_validation,malicious_p2p_message,Info,B_corroborated,Updated protobuf used by libp2p library to resolve a potential DoS vec,https://github.com/Consensys/teku/releases/tag/22.11.0
 teku,beacon-chain:attestation,missing_input_validation,malicious_attestation,Info,C_candidate,Early access: Support for additional DoS protection by using a separat,https://github.com/Consensys/teku/releases/tag/22.12.0
 teku,beacon-chain:exit-consolidation,other,malformed_input,Info,A_authoritative,"Fixed reported security issue on Netty, updating to version 4.1.87.Fin",https://github.com/Consensys/teku/releases/tag/23.1.0
 teku,other,serialization_bug,malformed_input,Info,A_authoritative,[CVE-2022-1471](https://nvd.nist.gov/vuln/detail/CVE-2022-1471) securi,https://github.com/Consensys/teku/releases/tag/23.3.1

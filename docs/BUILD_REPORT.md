@@ -83,7 +83,7 @@ Critical** (geth, besu, teku). Severities preserved through the canonical path.
 | `source_url`, `title`, `description`, `attack_path` | 100.0% | attack_path defaults to a best-effort class |
 | `label` (assigned, non-`other`) | **90.4%** | deterministic path/keyword + LLM fallback (`gemma4:31b`); the 9.6% `other` are mostly advisory/release rows with no diff |
 | `root_cause` (assigned) | 86.9% | keyword + classifier reason + LLM |
-| `fix_commit` / `introduced_in_commit` | 74.5% | resolved for `/commit/` + `/pull/` rows; advisory-page / release URLs have no commit |
-| `pre_fix_code` / `post_fix_code` (inline) | 60.7% | **80.5% of the 1,757 "codeable" rows** (a `/commit/`, `/pull/`, or resolvable GHSA URL). The overall cap is structural: ~576 rows are CHANGELOG / release-note / NVD / issue URLs that summarize a release and map to no single fix commit. GHSA advisory pages are resolved to the fix commit when the patched version is a small dedicated security-patch release (range ≤ 6 commits). |
+| `fix_commit` / `introduced_in_commit` | **88.6%** | `/commit/` + `/pull/` URLs, GHSA advisory patch-releases, and **inline `#PR` / commit refs parsed from CHANGELOG/release text** (author-linked, high precision) |
+| `pre_fix_code` / `post_fix_code` (inline) | **72.8%** | present wherever a fix commit resolves (URL, GHSA patch-release, or an inline `#PR` reference in the changelog text). The remaining ~27% are NVD/issue/release rows with no resolvable single commit — no code exists to inline. |
 | `silent_fix_prob` (LLM classifier) | 38.5% | classified rows (C_candidate + plausible gate-dropped) |
 | `severity` (rated Critical–Low) | 6.3% | most fixes are silently patched, unrated |
