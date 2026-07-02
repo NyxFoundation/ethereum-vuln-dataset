@@ -282,6 +282,11 @@ def build(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
     for col in ("title", "description", "severity", "stride", "cwe_top25", "source_platform"):
         if col not in df.columns:
             df[col] = ""
+    # Canonicalize the "unclassified" sentinels once, so the gate/signal logic
+    # can treat NaN / "" / "nan" identically to Other/N/A. (Makes the former
+    # external `normalize` collection step unnecessary — see run_pipeline.sh.)
+    df["stride"] = df["stride"].fillna("Other").replace({"": "Other", "nan": "Other"})
+    df["cwe_top25"] = df["cwe_top25"].fillna("N/A").replace({"": "N/A", "nan": "N/A"})
     blob = df["title"].fillna("").astype(str) + " " + df["description"].fillna("").astype(str)
 
     # T1

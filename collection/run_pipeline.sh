@@ -8,10 +8,10 @@
 #   Stage 2  supplementary crawlers        -> $WORK/supp/*.csv
 #   Stage 3  advisory DBs (CVE)            -> $WORK/cve/<client>.cve.csv
 #   Stage 4  build_derived (canonical)     -> $WORK/derived/ethereum/train.parquet
-#   Stage 5  merge supp + cve              -> train.parquet (in place)
+#   Stage 5  merge supp + cve (one pass)   -> train.parquet (in place)
 #   Stage 6  cross_reference (dedup)       -> train.parquet
 #   Stage 7  blame_walk (FULL only)        -> enrich introduced_in_commit
-#   Stage 8  normalize stride/cwe          -> data/raw/train.classified.parquet
+#   Stage 8  publish raw snapshot (copy)   -> data/raw/train.classified.parquet
 #   Stage 9  curate                        -> data/ethereum_vulns.parquet (+manifest)
 #
 # LLM STRIDE/CWE classification is intentionally skipped (stride=Other, cwe=N/A);
@@ -123,9 +123,10 @@ stage build_derived PY collection/build_derived.py --domain ethereum \
     --filter-platforms "" --out-dir "$DERIVED" "${SRC_ARGS[@]}"
 [ -f "$TRAIN" ] || { echo "FATAL: $TRAIN not produced"; exit 1; }
 
-# --- Stage 5: merge supplementary + CVE CSVs -------------------------------
-stage merge_supp PY collection/merge_crawl_csvs.py --src-dirs "$SUPP" --parquet "$TRAIN" --out "$TRAIN"
-stage merge_cve  PY collection/merge_cve.py        --cve-dir "$CVE"  --parquet "$TRAIN" --out "$TRAIN"
+# --- Stage 5: merge supplementary + CVE CSVs (one pass) --------------------
+# CVE CSVs share the crawl schema, so merge_crawl_csvs ingests them alongside
+# the supplementary dir — no separate merge_cve step needed.
+stage merge PY collection/merge_crawl_csvs.py --src-dirs "$SUPP" "$CVE" --parquet "$TRAIN" --out "$TRAIN"
 
 # --- Stage 6: cross_reference (de-dup GHSA/PR/CVE) -------------------------
 stage cross_ref PY collection/cross_reference.py --in "$TRAIN" --out "$DERIVED/ethereum/train.crossref.parquet" --quiet
@@ -137,19 +138,11 @@ if [ "$MODE" = "full" ] && [ "${SKIP_BLAME:-0}" != "1" ]; then
       --manifest "$DERIVED/ethereum/blame_walk_manifest.json"
 fi
 
-# --- Stage 8: normalize stride/cwe (classification skipped) ----------------
+# --- Stage 8: publish the raw snapshot -------------------------------------
+# No stride/cwe munging here: build_security_dataset canonicalizes the
+# unclassified sentinels itself, so this is just a copy of the crossref output.
 mkdir -p data/raw
-stage normalize PY - "$TRAIN" data/raw/train.classified.parquet <<'PYEOF'
-import sys, pandas as pd
-src, dst = sys.argv[1], sys.argv[2]
-df = pd.read_parquet(src)
-if "stride" not in df.columns: df["stride"] = "Other"
-if "cwe_top25" not in df.columns: df["cwe_top25"] = "N/A"
-df["stride"] = df["stride"].fillna("Other").replace("", "Other")
-df["cwe_top25"] = df["cwe_top25"].fillna("N/A").replace("", "N/A")
-df.to_parquet(dst, index=False)
-print(f"normalized {len(df)} rows -> {dst}")
-PYEOF
+stage publish_raw cp "$TRAIN" data/raw/train.classified.parquet
 
 # --- Stage 9: curate --------------------------------------------------------
 stage curate PY pipeline/build_security_dataset.py \
