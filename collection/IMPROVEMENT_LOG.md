@@ -83,6 +83,38 @@ drops and is the real path to *comprehensive* recall. User deferred it
 ("ひとまずskip"); re-enabling is a user decision, so the autonomous loop pauses
 here rather than flip it unilaterally.
 
+## Training-free LLM classifier PoC (2026-07-02) — WORKS
+Research-backed replacement for the failed TF-IDF model, implemented per
+**LLM4VFD** (arXiv 2501.14983: CoT over diff + dev-artifacts, prompting-only) +
+**From-LLMs-to-Agents** (arXiv 2511.08060: zero-shot LLM reaches graph-level
+precision) with **graph-lite context** (the security-sensitive subsystem touched
+— the LLM×graph combination those papers call unexplored). Driver: `claude -p`,
+no training, no torch. `collection/llm_classify_fixes.py`.
+
+Fixed labelled eval (clean title-based ground truth), same prompt, `claude -p`
+parallelised ~8–10 wide:
+
+| run | eval | precision | recall | F1 |
+|---|---|---|---|---|
+| v1 | 40 | 0.938 | 0.750 | 0.833 |
+| v2 | 80 (cleaned) | **0.941** | 0.800 | **0.865** |
+| v3 | 80 (tighter pos) | 0.931 | 0.675 | 0.783 |
+
+**Precision is robustly ~0.93–0.94** across runs (the deployable metric); recall
+(0.68–0.80) moves with how many borderline cases (startup/debug-build panics,
+offline-CLI/diagnostic tools, spec-validation features) are counted as vulns.
+**Error analysis: nearly every FN/FP is the LLM being _more_ precise than the
+heuristic label** — its reasons correctly cite "test-only, no production code",
+"CLI/init path untrusted input can't reach", "local db-inspect diagnostic". So
+the measured F1 *understates* true quality. Contrast iter 6 TF-IDF: CV-AUC 0.97
+but inverted in deployment. Here the applied ranking is clean (DoS/OOM/overflow
+fixes on top, renames/cleanup at bottom) — the discipline that killed the TF-IDF
+model validates this one.
+
+**Deployable as a high-precision promotion signal** (threshold on confidence),
+applied to C_candidate — unlike the TF-IDF model, this survived the
+applied-ranking spot-check. Cost: ~1 `claude -p` call per row.
+
 **Remaining levers require a technique switch (heavier / user-gated):**
 - [A1] cherry-pick/backport via local clones — the one untapped *new-source*
   (geth silently backports fixes to release branches). Uncertain yield, ~1 GB

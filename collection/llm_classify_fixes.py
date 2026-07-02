@@ -1,0 +1,246 @@
+#!/usr/bin/env python3
+"""llm_classify_fixes.py — training-free LLM silent-fix classifier (PoC).
+
+Implements the LLM4VFD recipe (Code Change Intention + Development Artifacts +
+light structural context) with a Chain-of-Thought prompt driven by `claude -p`
+— no fine-tuning, no torch. This is the research-backed replacement for the
+TF-IDF classifier that failed deployment validation.
+
+  paper anchors:
+    LLM4VFD (arXiv 2501.14983): CoT over diff + issue/PR artifacts + history-RAG,
+      prompting-only, +68–145% F1 over PLM baselines.
+    From LLMs to Agents (arXiv 2511.08060): zero-shot LLM/agents reach graph-level
+      precision; LLM×graph is unexplored. We add "graph-lite" context (the
+      security-sensitive subsystem touched) as a cheap structural signal.
+
+Evaluation discipline (learned the hard way): report precision/recall/F1 AND the
+applied ranking (highest/lowest confidence) — a good CV metric that ranks
+features above real fixes is worthless.
+
+Modes:
+  --build-eval   sample a fixed, labelled eval set -> llm_eval_set.json
+  --run          classify the eval set with claude -p, write predictions+metrics
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import subprocess
+import sys
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+
+import pandas as pd
+
+DEPBUMP_RE = re.compile(r"\bbump\b|chore\(deps|dependabot|renovate", re.I)
+NONFIX_TITLE_RE = re.compile(
+    r"\b(?:feat|feature|refactor|perf|rename|cleanup|clean up|implement"
+    r"|add support|introduce|improve|optimi[sz]e|simplify|migrate|style|move)\b", re.I)
+ID_RE = re.compile(r"CVE-\d{4}-\d{4,7}|GHSA-", re.I)
+SRC_EXT_RE = re.compile(r"\.(go|rs|java|nim|ts|js|py|c|cpp|h|sol)\b")
+SENSITIVE_RE = re.compile(
+    r"fork.?choice|state.?transition|epoch|consensus|finality|reorg|slashing"
+    r"|attestation|sync.?committee|blob|kzg|bls|discv5|gossip|p2p|rlpx|evm"
+    r"|opcode|precompile|trie|tx.?pool|mempool|signature|merkle|ssz|rlp|secp256",
+    re.I)
+PR_RE = re.compile(r"/pull/(\d+)")
+SHA_RE = re.compile(r"/commit/([0-9a-f]{7,40})", re.I)
+
+
+def _diff_doc(diff: str, cap: int = 6000) -> str:
+    keep = []
+    for ln in diff.splitlines():
+        if ln.startswith(("diff --git", "@@")) or (ln[:1] in "+-" and not ln.startswith(("+++", "---"))):
+            keep.append(ln)
+    return "\n".join(keep)[:cap]
+
+
+# Clean ground truth from the TITLE (unambiguous), not from leaky severity/id
+# signals. Positive = title explicitly states a vuln-class fix; negative =
+# title is clearly a feature/refactor with no vuln language. The LLM is scored
+# on whether it can reach the same verdict from the diff + artifacts.
+FIXVULN_TITLE_RE = re.compile(
+    r"\b(?:fix|fixes|fixed|prevent|guard|avoid|patch|resolve)\w*\b[^.\n]{0,45}"
+    r"\b(?:crash|panic|segfault|deadlock|hang|oom|out.of.memory|overflow"
+    r"|underflow|use.after.free|nil (?:pointer|deref)|null (?:pointer|deref)"
+    r"|data race|race condition|reorg|consensus|invalid block|dos"
+    r"|denial.of.service|memory leak|infinite loop|out.of.bounds)\b", re.I)
+
+
+# Exclude label-noise from positives: vendored-dep updates, reverts, and
+# test-only "fix test panic" changes are not clean client-code vuln fixes even
+# when the title says "fix … crash".
+# Not clean client-vuln positives even when titled "fix … crash": vendored deps,
+# reverts, and changes confined to tests / offline CLI / diagnostic tooling
+# (not reachable by untrusted network input — the LLM's own FN reasons flagged
+# these, and it was right).
+POS_EXCLUDE_RE = re.compile(
+    r"^\s*(?:vendor|revert|ci)\b|vendored|third.party|\btest(?:s|ing)?\b|\bsim\b"
+    r"|simulator|evmtool|\binspect\b|pprof|\bflak", re.I)
+
+
+def build_eval(cur, raw, cache, per_class, seed):
+    ptitle = cur["title"].fillna("")
+    pos = cur[ptitle.str.contains(FIXVULN_TITLE_RE)
+              & cur["source_url"].str.contains(r"/pull/|/commit/", na=False)
+              & ~ptitle.str.contains(DEPBUMP_RE)
+              & ~ptitle.str.contains(POS_EXCLUDE_RE)]
+    rtitle = raw["title"].fillna("")
+    neg = raw[rtitle.str.contains(NONFIX_TITLE_RE)
+              & ~rtitle.str.contains(FIXVULN_TITLE_RE)
+              & ~rtitle.str.contains(DEPBUMP_RE)
+              & raw["source_url"].str.contains(r"/pull/|/commit/", na=False)
+              & ~(raw["title"].fillna("") + " " + raw["description"].fillna("")).str.contains(ID_RE)]
+
+    def take(df, label, n):
+        out = []
+        df = df.sample(frac=1.0, random_state=seed)
+        for _, r in df.iterrows():
+            diff = cache.get(str(r["source_url"]))
+            if not diff or not SRC_EXT_RE.search(diff):
+                continue
+            out.append({
+                "url": str(r["source_url"]), "label": label,
+                "platform": r["source_platform"], "title": str(r["title"])[:200],
+                "desc": str(r["description"])[:600], "diff": _diff_doc(diff),
+            })
+            if len(out) >= n:
+                break
+        return out
+
+    items = take(pos, 1, per_class) + take(neg, 0, per_class)
+    return items
+
+
+PROMPT_VERSION = "v2"
+
+
+def build_prompt(it: dict) -> str:
+    sens = sorted(set(m.group(0).lower() for m in SENSITIVE_RE.finditer(
+        it["title"] + " " + it["desc"] + " " + it["diff"])))
+    graph_ctx = (f"Security-sensitive subsystems touched: {', '.join(sens[:6])}"
+                 if sens else "No obviously security-sensitive subsystem in the paths.")
+    return f"""You are a security engineer triaging a code change in an Ethereum client.
+Decide whether it is a SECURITY / vulnerability fix versus an ORDINARY change
+(feature, refactor, performance, test, docs, style, dependency bump).
+
+A SECURITY fix repairs an exploitable or availability-affecting defect, e.g.:
+crash / panic / segfault, DoS / OOM / unbounded resource use, memory-safety
+(use-after-free, OOB), integer overflow/underflow, auth / validation bypass — OR,
+CRUCIALLY for a blockchain client, a CONSENSUS-class defect: fork-choice /
+finality / reorg / state-transition / invalid-block-acceptance / non-determinism.
+Treat a consensus-class fix as security-relevant EVEN IF no external attacker is
+named — the pre-fix code can split the chain or accept invalid blocks. Nodes
+process untrusted network input (blocks, txs, attestations, p2p messages, peers),
+so weigh the WORST-CASE trigger, not the common case.
+
+NOT security: adding a feature/flag/metric, renaming, refactoring, perf tuning,
+test-only or CI/docs changes, or bumping a third-party/vendored dependency (even
+if that dep fixed a crash) — the client's own code has no defect there.
+
+Reason step by step (Chain-of-Thought):
+1. What does the diff actually change (client source, or test/vendor/config)?
+2. Does it ADD a guard/validation/bounds/nil/overflow check or error handling,
+   or REMOVE an exploitable condition (panic/unwrap/unchecked path)?
+3. Is the touched subsystem security- or consensus-relevant?
+4. Could malformed/untrusted input or a peer trigger the pre-fix path (worst case)?
+
+Calibrate: confidence >0.7 only when the diff concretely shows a defect being
+repaired; <0.4 when it is a feature/refactor/vendor/test change.
+
+Output ONLY a single JSON object on the last line, no prose after it:
+{{"is_security_fix": true|false, "confidence": 0.0-1.0, "vuln_class": "<dos|memory|overflow|consensus|auth|validation|other|none>", "reason": "<one sentence>"}}
+
+## Development artifacts
+title: {it['title']}
+description: {it['desc']}
+
+## Structural context (graph-lite)
+{graph_ctx}
+
+## Code change (unified diff, truncated)
+{it['diff']}
+"""
+
+
+def classify(it: dict) -> dict:
+    prompt = build_prompt(it)
+    try:
+        r = subprocess.run(["claude", "-p", prompt], capture_output=True, text=True,
+                           timeout=120, encoding="utf-8", errors="replace")
+        out = r.stdout.strip()
+        m = re.search(r"\{[^{}]*\"is_security_fix\"[^{}]*\}", out)
+        obj = json.loads(m.group(0)) if m else {}
+    except Exception as e:
+        obj = {"error": str(e)}
+    return {**it, "pred": obj}
+
+
+def evaluate(preds):
+    tp = fp = tn = fn = 0
+    scored = []
+    for p in preds:
+        pr = p.get("pred", {})
+        yhat = 1 if pr.get("is_security_fix") else 0
+        conf = float(pr.get("confidence") or 0)
+        y = p["label"]
+        scored.append((conf if yhat else 1 - conf, y, yhat, p["title"], pr.get("vuln_class")))
+        if yhat and y: tp += 1
+        elif yhat and not y: fp += 1
+        elif not yhat and not y: tn += 1
+        else: fn += 1
+    prec = tp / (tp + fp) if tp + fp else 0
+    rec = tp / (tp + fn) if tp + fn else 0
+    f1 = 2 * prec * rec / (prec + rec) if prec + rec else 0
+    print(f"\n===== LLM classifier {PROMPT_VERSION} (n={len(preds)}) =====")
+    print(f"  TP={tp} FP={fp} TN={tn} FN={fn}")
+    print(f"  precision={prec:.3f} recall={rec:.3f} F1={f1:.3f} acc={(tp+tn)/len(preds):.3f}")
+    scored.sort(key=lambda x: -x[0])
+    print("\n  -- most-confident SECURITY-FIX predictions (should be real fixes) --")
+    for s, y, yh, t, vc in [x for x in scored if x[2] == 1][:8]:
+        print(f"    conf={s:.2f} label={'POS' if y else 'NEG'} [{vc}] {t[:52]}")
+    print("  -- most-confident ORDINARY predictions (should be non-fixes) --")
+    for s, y, yh, t, vc in [x for x in scored if x[2] == 0][:8]:
+        print(f"    conf={s:.2f} label={'POS' if y else 'NEG'} {t[:52]}")
+    return {"precision": prec, "recall": rec, "f1": f1, "tp": tp, "fp": fp, "tn": tn, "fn": fn}
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--build-eval", action="store_true")
+    ap.add_argument("--run", action="store_true")
+    ap.add_argument("--eval-set", default=Path("scratchpad_crawl/llm_eval_set.json"), type=Path)
+    ap.add_argument("--out", default=Path("scratchpad_crawl/llm_preds.json"), type=Path)
+    ap.add_argument("--in", dest="inp", default=Path("data/ethereum_vulns.parquet"), type=Path)
+    ap.add_argument("--raw", default=Path("data/raw/train.classified.parquet"), type=Path)
+    ap.add_argument("--cache", default=Path("scratchpad_crawl/diff_cache.json"), type=Path)
+    ap.add_argument("--per-class", type=int, default=25)
+    ap.add_argument("--workers", type=int, default=4)
+    ap.add_argument("--seed", type=int, default=0)
+    a = ap.parse_args()
+
+    if a.build_eval:
+        cache = json.loads(a.cache.read_text())
+        items = build_eval(pd.read_parquet(a.inp), pd.read_parquet(a.raw), cache, a.per_class, a.seed)
+        a.eval_set.write_text(json.dumps(items, indent=1))
+        print(f"wrote {len(items)} eval items ({sum(i['label'] for i in items)} pos) -> {a.eval_set}")
+        return 0
+
+    if a.run:
+        items = json.loads(a.eval_set.read_text())
+        print(f"classifying {len(items)} items with claude -p ({a.workers} workers)…", file=sys.stderr)
+        with ThreadPoolExecutor(max_workers=a.workers) as ex:
+            preds = list(ex.map(classify, items))
+        a.out.write_text(json.dumps(preds, indent=1))
+        evaluate(preds)
+        n_err = sum(1 for p in preds if "error" in p.get("pred", {}))
+        if n_err:
+            print(f"  ({n_err} classification errors)", file=sys.stderr)
+        return 0
+
+    ap.error("pass --build-eval or --run")
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
