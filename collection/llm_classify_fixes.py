@@ -253,10 +253,81 @@ def evaluate(preds):
     return {"precision": prec, "recall": rec, "f1": f1, "tp": tp, "fp": fp, "tn": tn, "fn": fn}
 
 
+def apply_to_dataset(a) -> int:
+    """Classify real dataset rows and emit source_url -> silent_fix_prob.
+
+    Diffs come from local_diffs (bare clone + persistent cache, rate-limit-free);
+    LLM predictions are cached per URL so re-runs are resumable ("差分だけ").
+    """
+    import csv
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import local_diffs
+
+    df = pd.read_parquet(a.inp)
+    if a.tier != "all" and "authority_tier" in df.columns:
+        df = df[df["authority_tier"] == a.tier]
+    df = df[df["source_url"].str.contains(r"/pull/|/commit/", na=False)].copy()
+    if a.limit:
+        df = df.head(a.limit)
+    diff_cache = json.loads(a.cache.read_text()) if a.cache.exists() else {}
+    pred_cache = json.loads(a.pred_cache.read_text()) if a.pred_cache.exists() else {}
+    rows = df.to_dict("records")
+    print(f"[apply] {len(rows)} rows (tier={a.tier}); "
+          f"{sum(1 for r in rows if str(r['source_url']) in pred_cache)} already predicted",
+          file=sys.stderr)
+
+    def work(r):
+        url = str(r["source_url"])
+        if url in pred_cache:
+            return url, pred_cache[url]
+        diff = local_diffs.get_diff_cached(url, r["source_platform"], diff_cache)
+        if not diff:
+            return url, {"skip": "nodiff"}
+        it = {"title": str(r.get("title") or "")[:200],
+              "desc": str(r.get("description") or "")[:600], "diff": _diff_doc(diff)}
+        return url, classify(it)["pred"]
+
+    done = 0
+    with ThreadPoolExecutor(max_workers=a.workers) as ex:
+        for url, pred in ex.map(work, rows):
+            pred_cache[url] = pred
+            done += 1
+            if done % 40 == 0:
+                a.pred_cache.write_text(json.dumps(pred_cache))
+                a.cache.write_text(json.dumps(diff_cache))
+                print(f"  [apply] {done}/{len(rows)}", file=sys.stderr)
+    a.pred_cache.write_text(json.dumps(pred_cache))
+    a.cache.write_text(json.dumps(diff_cache))
+
+    a.apply_out.parent.mkdir(parents=True, exist_ok=True)
+    n_fix = 0
+    with a.apply_out.open("w", newline="", encoding="utf-8") as fh:
+        w = csv.writer(fh)
+        w.writerow(["source_url", "silent_fix_prob", "is_security_fix", "vuln_class", "reason"])
+        for r in rows:
+            url = str(r["source_url"]); pr = pred_cache.get(url, {})
+            if not isinstance(pr, dict) or "is_security_fix" not in pr:
+                continue
+            isfix = bool(pr.get("is_security_fix"))
+            conf = float(pr.get("confidence") or 0)
+            prob = conf if isfix else 1 - conf          # p(security fix)
+            if prob >= 0.70:
+                n_fix += 1
+            w.writerow([url, f"{prob:.3f}", int(isfix), pr.get("vuln_class", ""),
+                        str(pr.get("reason", ""))[:200]])
+    print(f"[apply] wrote {a.apply_out} — {n_fix} rows with silent_fix_prob>=0.70", file=sys.stderr)
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--build-eval", action="store_true")
     ap.add_argument("--run", action="store_true")
+    ap.add_argument("--apply", action="store_true", help="classify dataset rows -> silent_fix csv")
+    ap.add_argument("--tier", default="C_candidate", help="authority_tier to classify (or 'all')")
+    ap.add_argument("--apply-out", default=Path("scratchpad_crawl/supp/llm_silent_fix.csv"), type=Path)
+    ap.add_argument("--pred-cache", default=Path("scratchpad_crawl/llm_pred_cache.json"), type=Path)
+    ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--eval-set", default=Path("scratchpad_crawl/llm_eval_set.json"), type=Path)
     ap.add_argument("--out", default=Path("scratchpad_crawl/llm_preds.json"), type=Path)
     ap.add_argument("--in", dest="inp", default=Path("data/ethereum_vulns.parquet"), type=Path)
@@ -283,6 +354,9 @@ def main() -> int:
                   base_url=a.base_url, api_key=os.environ.get(a.api_key_env, "") if a.api_key_env else "")
     if a.engine == "ollama" and a.workers > 2:
         a.workers = 2  # a single local model serializes; avoid thrashing
+
+    if a.apply:
+        return apply_to_dataset(a)
 
     if a.build_eval:
         cache = json.loads(a.cache.read_text())

@@ -16,6 +16,7 @@
     "stride",
     "cwe_top25",
     "evidence",
+    "silent_fix_prob",
     "security_score",
     "fix_commit",
     "confidence",
@@ -40,13 +41,13 @@
       "low": 1
     },
     "by_authority_tier": {
-      "B_corroborated": 1130,
-      "C_candidate": 511,
+      "B_corroborated": 1296,
+      "C_candidate": 345,
       "A_authoritative": 239
     },
     "by_n_signals": {
-      "1": 556,
-      "2": 907,
+      "1": 390,
+      "2": 1073,
       "3": 343,
       "4": 69,
       "5": 5

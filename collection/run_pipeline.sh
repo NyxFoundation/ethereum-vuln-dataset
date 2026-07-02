@@ -145,9 +145,14 @@ mkdir -p data/raw
 stage publish_raw cp "$TRAIN" data/raw/train.classified.parquet
 
 # --- Stage 9: curate --------------------------------------------------------
+# Optionally fold in the learned silent-fix signal (gemma4:31b via
+# llm_classify_fixes.py --apply). Present -> promotes classified C_candidate
+# fixes to the corroborated tier; absent -> deterministic build only.
+SILENT_FIX_ARG=()
+[ -f data/silent_fix_llm.csv ] && SILENT_FIX_ARG=(--silent-fix-csv data/silent_fix_llm.csv)
 stage curate PY pipeline/build_security_dataset.py \
     --in data/raw/train.classified.parquet \
     --out data/ethereum_vulns.parquet \
-    --manifest data/manifest.json
+    --manifest data/manifest.json "${SILENT_FIX_ARG[@]}"
 
 echo "=== DONE. Curated -> data/ethereum_vulns.parquet ==="

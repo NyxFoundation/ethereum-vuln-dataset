@@ -41,11 +41,15 @@ Critical** (geth, besu, teku). Severities preserved through the canonical path.
 
 ## After (curated)
 
-- rows: **1,877**
+- rows: **1,880**
 - residual boilerplate FP: **0**  ✅
-- **essential slice (A+B): 1,367** (was 173 rated-only) — 7.9× larger clean high-precision core
-- by authority_tier: {'B_corroborated': 1134, 'C_candidate': 510, 'A_authoritative': 233}
-- by n_signals: {1: 555, 2: 907, 3: 345, 4: 65, 5: 5} — 60% of rows now carry ≥2 independent signals
+- **essential slice (A+B): 1,535** (was 173 rated-only) — clean high-precision core
+- by authority_tier: {'B_corroborated': 1296, 'C_candidate': 345, 'A_authoritative': 239}
+- **learned silent-fix signal (gemma4:31b):** classified 339 C_candidate diffs,
+  flagged 166 as real silent fixes (133 DoS / 16 consensus / 11 validation …),
+  promoting them C→B. Model chosen by an 80-item eval sweep (F1 0.872, precision
+  0.895); see `docs/model_evaluation.md`. Regenerate via
+  `collection/llm_classify_fixes.py --apply` → `data/silent_fix_llm.csv`.
 - by severity: {'Unrated': 963, 'Info': 773, 'High': 63, 'Medium': 54, 'Low': 21, 'Critical': 3}
   (High/Medium dropped vs iter-1 because T2b removed 49 unrelated CVEs' bogus CVSS severities)
 - by source:
