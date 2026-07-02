@@ -134,13 +134,15 @@ LLM4VFD-style, **no training, no torch**:
   subsystem as context — the cheap LLM×graph combination the 2025 survey calls
   unexplored. Full CPG/GNN would need training and a code checkout.
 
-### What we rejected (validated negatives)
-- **Regex diff classifier** (`detect_silent_fixes.py`) — surface guard/impact
-  regexes don't discriminate (ranking inverted, then collapsed to ≈chance).
-  This reproduces the literature's reason for using learned embeddings.
-- **TF-IDF patch-as-document classifier** (`train_silent_fix_classifier.py`) —
-  CV-AUC 0.97 but *misleading*: dep-bump/manifest confound, then topic-vocabulary
-  overfitting; in deployment it ranked features above real fixes. Not shipped.
+### What we rejected (validated negatives — code removed, findings kept here)
+- **Regex diff classifier** — surface guard/impact regexes don't discriminate
+  (ranking inverted, then collapsed to ≈chance). This reproduces the
+  literature's reason for using learned embeddings.
+- **TF-IDF patch-as-document classifier** — CV-AUC 0.97 but *misleading*:
+  dep-bump/manifest confound, then topic-vocabulary overfitting; in deployment it
+  ranked features above real fixes. Not shipped.
+- **Linked-issue / fuzzer-report enrichment** — client PRs almost never use
+  formal `Closes #N` (0/116), so the API route was a dead end.
 - **Multi-agent consensus** (devstral + qwen, majority vote) — no gain over the
   best single model; the models' errors are correlated (devstral+qwen are
   nested). Only `AND(gemma,qwen)` is useful, as a 0.93-precision sub-tier.
@@ -164,4 +166,4 @@ corroborated tier. Essential slice (A∪B): **173 → 1,535** across the project
 - OSV schema — https://ossf.github.io/osv-schema/ ; VCMatch / PatchScout (CVE→commit ranking).
 
 _See also [`model_evaluation.md`](./model_evaluation.md) for model benchmarks and
-`collection/IMPROVEMENT_LOG.md` for the full iteration ledger._
+`IMPROVEMENT_LOG.md` for the full iteration ledger._

@@ -96,7 +96,7 @@ pulls (NVD / OSV / RustSec / govulncheck), and an LLM STRIDE+CWE classifier. See
 
 ## Build report
 
-[`data/BUILD_REPORT.md`](data/BUILD_REPORT.md) records the before/after of every
+[`docs/BUILD_REPORT.md`](docs/BUILD_REPORT.md) records the before/after of every
 build stage for the current snapshot.
 
 ## License
