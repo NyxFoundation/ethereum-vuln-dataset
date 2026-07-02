@@ -176,10 +176,17 @@ _E = [  # execution
     (r"devp2p|/p2p|discover|/eth/protocol|/eth/handler|snap[-_]?protocol|wire", "p2p"),
     (r"block[-_]?process|/core/blockchain|verifyheader|process(?:block|_block)|state_transition", "block-processing"),
 ]
-_X = [  # cross-cutting (checked last)
+_X = [  # cross-cutting (checked after protocol rules; most-informative first)
     (r"crypto|secp256|ecrecover|keccak|\bhash\b|blst|bn256|bls12|schnorr", "crypto"),
     (r"\bssz\b|serial|encode|decode|marshal|unmarshal|codec", "serialization"),
     (r"leveldb|rocksdb|pebble|/db\b|database|/ethdb|/storage/kv", "database"),
+    # non-protocol but real areas (keeps 'other' honest instead of forced)
+    (r"\.github|\.circleci|dockerfile|docker-compose|\.gradle\b|gradle/|makefile\b"
+     r"|/build/|verification-metadata|renovate|/vendor/|docs/vulnerab|go\.mod\b|go\.sum"
+     r"|package-lock|yarn\.lock|Cargo\.(?:toml|lock)|\.ya?ml\b", "build-ci"),
+    (r"metric|diagnostic|prometheus|grafana|observ|telemetr|tracing|\botel\b", "metrics-observability"),
+    (r"\bcmd/|/cli/|main\.(?:go|rs)\b|BesuCommand|/flags?/|command\.java", "cli"),
+    (r"_test\.(?:go|rs|py|ts|js)|/tests?/|testhelper|mock_|spec\.(?:ts|js)|\bfuzz", "test"),
 ]
 _C = [(re.compile(p, re.I), l) for p, l in _C]
 _E = [(re.compile(p, re.I), l) for p, l in _E]
@@ -299,7 +306,8 @@ EXECUTION_LABELS = [
     "evm", "opcodes", "precompiles", "gas", "transactions", "txpool",
     "block-processing", "state-trie", "rlp", "p2p", "sync", "engine-api",
     "blobs", "eof", "rpc"]
-CROSS = ["crypto", "serialization", "database", "other"]
+CROSS = ["crypto", "serialization", "database", "build-ci", "cli",
+         "metrics-observability", "test", "other"]
 RC_ENUM = [v for _, v in _RC] + ["improper_state_update", "other"]
 AP_ENUM = [v for _, v in _AP] + ["internal_only"]
 

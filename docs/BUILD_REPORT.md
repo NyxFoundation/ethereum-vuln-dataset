@@ -81,7 +81,7 @@ Critical** (geth, besu, teku). Severities preserved through the canonical path.
 | column | coverage | notes |
 |---|---:|---|
 | `source_url`, `title`, `description`, `attack_path` | 100.0% | attack_path defaults to a best-effort class |
-| `label` (assigned, non-`other`) | **88.4%** | deterministic path/keyword + LLM fallback (`gemma4:31b`) reading the diff or, for no-commit rows, the advisory text |
+| `label` (assigned, non-`other`) | **93.4%** | deterministic path/keyword + LLM fallback (`gemma4:31b`) reading the diff or, for no-commit rows, the advisory text |
 | `root_cause` (assigned) | 86.8% | keyword + classifier reason + LLM |
 | `cwe_top25` (from advisory/diff text via LLM) | **24.7%** | read from the link's advisory text / diff even when no fix commit exists — advisories often lack a CWE but the Impact text yields one |
 | `fix_commit` / `introduced_in_commit` | **88.0%** | `/commit/` + `/pull/` URLs, GHSA advisory patch-releases, and **inline `#PR` / commit refs parsed from CHANGELOG/release text** (author-linked, high precision) |

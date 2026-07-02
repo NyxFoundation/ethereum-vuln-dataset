@@ -85,7 +85,14 @@ pyspec `process_*` operations:
 
 ### Cross-cutting (either layer)
 `crypto` (hashing, secp256k1, BLS/KZG math) · `serialization` (SSZ / RLP not tied
-to one area) · `database` (storage / DB layer) · `other` (keep rare; forces review).
+to one area) · `database` (storage / DB layer) · `build-ci` (build system, CI,
+Docker, dependency manifests, vendored deps) · `cli` (command-line / node startup
+/ flags) · `metrics-observability` (metrics, diagnostics, tracing, logging) ·
+`test` (test-only changes) · `other` (keep rare; forces review).
+
+The non-protocol labels (`build-ci` / `cli` / `metrics-observability` / `test`)
+exist so a CI/build/test/CLI change is labelled *accurately* rather than forced
+into a protocol area — they keep the `other` bucket small and honest.
 
 ---
 
