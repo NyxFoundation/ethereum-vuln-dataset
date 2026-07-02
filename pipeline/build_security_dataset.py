@@ -397,6 +397,9 @@ def main() -> int:
     ap.add_argument("--silent-fix-csv", type=Path,
                     help="optional source_url->silent_fix_prob CSV from the "
                          "learned classifier; joined as a scoring signal")
+    ap.add_argument("--labels-csv", type=Path,
+                    help="optional id-keyed labels from enrich_labels.py "
+                         "(label / root_cause / attack_path / pre+post code / fix_commit)")
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
 
@@ -409,6 +412,16 @@ def main() -> int:
         print(f"[silent-fix] joined {probs['silent_fix_prob'].notna().sum()} "
               f"classifier scores", file=sys.stderr)
     sec, report = build(df)
+
+    # Optional: fold in the id-keyed label enrichment (docs/label_design.md).
+    if a.labels_csv and a.labels_csv.exists():
+        labels = pd.read_csv(a.labels_csv).drop_duplicates("id")
+        # labels.csv carries the authoritative fix_commit / introduced_in_commit
+        sec = sec.drop(columns=[c for c in ("fix_commit", "introduced_in_commit")
+                                if c in sec.columns])
+        sec = sec.merge(labels, on="id", how="left")
+        report["labelled"] = int((sec["label"].fillna("other") != "other").sum())
+        print(f"[labels] joined {report['labelled']} area labels", file=sys.stderr)
 
     print(json.dumps(report, indent=2, ensure_ascii=False))
     assert report["residual_boilerplate_fp"] == 0, "T1 leak: boilerplate survived into the security set"
@@ -425,12 +438,12 @@ def main() -> int:
     # preview that stays under GitHub's ~512 KB table-render limit.
     csv_path = a.out.with_suffix(".csv")
     sec.to_csv(csv_path, index=False)
-    prev_cols = [c for c in ("id", "source_platform", "severity", "authority_tier",
-                             "confidence", "n_signals", "cwe_top25", "title",
-                             "source_url", "fix_commit") if c in sec.columns]
+    prev_cols = [c for c in ("source_platform", "label", "root_cause", "attack_path",
+                             "severity", "authority_tier", "title", "source_url")
+                 if c in sec.columns]
     prev = sec[prev_cols].copy()
     if "title" in prev:
-        prev["title"] = prev["title"].astype(str).str.slice(0, 120)
+        prev["title"] = prev["title"].astype(str).str.slice(0, 70)
     prev.to_csv(a.out.with_suffix(".preview.csv"), index=False)
     print(f"wrote {csv_path} + {a.out.with_suffix('.preview.csv')}")
 

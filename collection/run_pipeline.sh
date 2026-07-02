@@ -150,9 +150,18 @@ stage publish_raw cp "$TRAIN" data/raw/train.classified.parquet
 # fixes to the corroborated tier; absent -> deterministic build only.
 SILENT_FIX_ARG=()
 [ -f data/silent_fix_llm.csv ] && SILENT_FIX_ARG=(--silent-fix-csv data/silent_fix_llm.csv)
-stage curate PY pipeline/build_security_dataset.py \
-    --in data/raw/train.classified.parquet \
-    --out data/ethereum_vulns.parquet \
-    --manifest data/manifest.json "${SILENT_FIX_ARG[@]}"
+CURATE=(pipeline/build_security_dataset.py
+        --in data/raw/train.classified.parquet
+        --out data/ethereum_vulns.parquet
+        --manifest data/manifest.json "${SILENT_FIX_ARG[@]}")
+stage curate PY "${CURATE[@]}"
 
-echo "=== DONE. Curated -> data/ethereum_vulns.parquet ==="
+# --- Stage 10: area labels + inline pre/post code (docs/label_design.md) -----
+# Derives label / root_cause / attack_path / files_changed / pre+post code /
+# fix_commit / introduced_in_commit from the local diffs, then re-curates so the
+# columns land in the dataset. Needs the local clones (local_diffs warm/warm-prs).
+stage labels PY pipeline/enrich_labels.py \
+    --in data/ethereum_vulns.parquet --out data/labels.csv
+[ -f data/labels.csv ] && stage curate_labelled PY "${CURATE[@]}" --labels-csv data/labels.csv
+
+echo "=== DONE. Curated -> data/ethereum_vulns.parquet (+ .csv / .preview.csv) ==="

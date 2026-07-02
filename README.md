@@ -144,7 +144,12 @@ spec-divergence fixes.
 | `severity` | `Critical` / `High` / `Medium` / `Low` / `Info` / `Unrated` |
 | `title`, `description` | fix text (verbatim from the client's public repo) |
 | `source_url` | link to the upstream fix |
-| `fix_commit` | fixing commit SHA (from `/commit/` URLs / OSV backlink) |
+| `label` | **protocol area of the bug** (e.g. `fork-choice`, `beacon-chain:attestation`, `precompiles`, `blobs`) — see [`docs/label_design.md`](docs/label_design.md) |
+| `root_cause` | why it was a bug (`missing_bounds_check`, `integer_overflow_underflow`, `consensus_divergence`, …) |
+| `attack_path` | how it's triggered (`malicious_block`, `malicious_tx`, `malicious_p2p_message`, …) |
+| `pre_fix_code` / `post_fix_code` | **inline** before/after code as JSON `[{file, hunks:[{start_line, code}]}]` (multi-file) |
+| `files_changed` | JSON list of changed paths |
+| `fix_commit` | fixing commit SHA (`/commit/` URL, resolved PR head, or OSV backlink) |
 | `introduced_in_commit` | parent of the fix commit (last state with the bug present) |
 | `security_score` | keyword relevance score, 0.0–1.0 |
 | `silent_fix_prob` | learned classifier's p(silent fix), when classified |

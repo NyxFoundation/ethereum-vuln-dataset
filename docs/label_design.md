@@ -39,7 +39,11 @@ pyspec `process_*` operations:
 
 | `label` | area | since |
 |---|---|---|
-| `beacon-chain:epoch-processing` | justification/finality, rewards & penalties, registry, effective-balance, inactivity | phase0 |
+| `beacon-chain:justification-and-finality` | `process_justification_and_finalization` (FFG source/target, finality) | phase0 |
+| `beacon-chain:rewards-and-penalties` | `process_rewards_and_penalties`, inactivity leak | phase0 |
+| `beacon-chain:registry-updates` | `process_registry_updates` (activation / exit queue, churn) | phase0 |
+| `beacon-chain:effective-balance-updates` | `process_effective_balance_updates` (hysteresis) | phase0 |
+| `beacon-chain:epoch-processing` | remaining per-epoch steps: resets, historical summaries, participation flags, RANDAO mix reset | phase0 |
 | `beacon-chain:block-processing` | block header, RANDAO, eth1-data, block orchestration | phase0 |
 | `beacon-chain:attestation` | `process_attestation`, attestation validation | phase0 |
 | `beacon-chain:slashing` | proposer / attester slashing, `process_slashings` | phase0 |
