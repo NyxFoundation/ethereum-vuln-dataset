@@ -121,15 +121,30 @@ The env's `hermes-agent` provides an OpenAI-compatible route to **Ollama Cloud**
 (`https://ollama.com/v1`, key in `~/.hermes/.env`), so classification can run
 off Claude:
 
-| engine / model | precision | recall | F1 |
-|---|---|---|---|
-| claude (opus) | 0.931 | 0.675 | 0.783 |
-| openai · qwen3-coder:480b (Ollama Cloud) | 0.871 | 0.675 | 0.761 |
+Model sweep on the fixed 80-item eval (Ollama Cloud via hermes; devstral &
+nemotron got 2 runs each). Ranked:
 
-Open code-model is ~0.06 precision behind Claude, same recall — usable. (This is
-Ollama *Cloud*, hosted, not local hardware; a truly local model via `--engine
-ollama` on :11434 would need `ollama serve` + a pulled model, untested here.)
-`local_diffs.py` feeds diffs rate-limit-free; the two together make a full
+| engine / model | precision | recall | F1 | speed (80) |
+|---|---|---|---|---|
+| **openai · devstral-2:123b** ⭐ default | 0.78 | 0.90 | **0.84 / 0.84** | ~170s |
+| openai · nemotron-3-nano:30b | 0.78 | 0.90 | 0.83 / 0.84 | ~150s |
+| claude (opus) baseline | 0.93 | 0.68 | 0.78 | — |
+| openai · qwen3-coder:480b (highest precision) | 0.90 | 0.65 | 0.75 | ~112s |
+| openai · gpt-oss:120b | 0.74 | 0.78 | 0.76 | ~94s |
+| openai · qwen3-coder-next | 0.75 | 0.38 | 0.50 | ~55s |
+| openai · gemma4:31b | — | — | — | 73/80 JSON parse errors |
+| openai · kimi-k2.7-code | — | — | — | timeout (slow on real prompts) |
+
+**Default = `devstral-2:123b`** (Mistral's code model): best F1 (0.84, *beats*
+claude's 0.78), consistent across two runs, 0 parse errors, high recall with
+threshold-tunable precision. `--model qwen3-coder:480b` for the highest-precision
+(0.90) variant. Slow/reasoning models (glm-5, qwen3.5:397b, deepseek-v3.2 ~20-45s
+/call) and gemma (parse-broken) are impractical. Note: n=80 has ~0.05 run
+variance, so sub-0.06 gaps aren't meaningful.
+
+This is Ollama *Cloud* (hosted), not local hardware; a truly local model via
+`--engine ollama` on :11434 would need `ollama serve` + a pulled model (untested).
+`local_diffs.py` feeds diffs rate-limit-free; together they make a full
 off-Claude, cache-resumable classification run practical.
 
 **Remaining levers require a technique switch (heavier / user-gated):**

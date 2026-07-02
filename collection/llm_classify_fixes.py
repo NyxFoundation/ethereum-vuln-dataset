@@ -268,12 +268,17 @@ def main() -> int:
     ap.add_argument("--engine", choices=["claude", "ollama", "openai"], default="claude",
                     help="LLM backend for classification")
     ap.add_argument("--model", default="",
-                    help="model id (e.g. qwen3-coder:480b for openai/ollama-cloud)")
+                    help="model id; empty picks the engine default (openai -> devstral-2:123b)")
     ap.add_argument("--ollama-host", default="http://localhost:11434")
     ap.add_argument("--base-url", default="", help="OpenAI-compatible base url (openai engine)")
     ap.add_argument("--api-key-env", default="", help="env var holding the API key (openai engine)")
     a = ap.parse_args()
-    ENGINE.update(engine=a.engine, model=a.model, host=a.ollama_host,
+    # Best default for the openai/Ollama-Cloud engine, chosen by an 80-item eval
+    # sweep (see collection/IMPROVEMENT_LOG.md): devstral-2:123b — F1 0.84 (beats
+    # claude's 0.78), high recall, consistent, 0 parse errors. Use
+    # --model qwen3-coder:480b if you want the highest-precision (0.90) variant.
+    model = a.model or ("devstral-2:123b" if a.engine == "openai" else "")
+    ENGINE.update(engine=a.engine, model=model, host=a.ollama_host,
                   base_url=a.base_url, api_key=os.environ.get(a.api_key_env, "") if a.api_key_env else "")
     if a.engine == "ollama" and a.workers > 2:
         a.workers = 2  # a single local model serializes; avoid thrashing
