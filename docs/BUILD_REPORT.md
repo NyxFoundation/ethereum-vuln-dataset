@@ -41,14 +41,17 @@ Critical** (geth, besu, teku). Severities preserved through the canonical path.
 
 ## After (curated)
 
-- rows: **1,880**
+- rows: **2,333**
 - residual boilerplate FP: **0**  ✅
-- **essential slice (A+B): 1,535** (was 173 rated-only) — clean high-precision core
-- by authority_tier: {'B_corroborated': 1296, 'C_candidate': 345, 'A_authoritative': 239}
-- **learned silent-fix signal (gemma4:31b):** classified 339 C_candidate diffs,
-  flagged 166 as real silent fixes (133 DoS / 16 consensus / 11 validation …),
-  promoting them C→B. Model chosen by an 80-item eval sweep (F1 0.872, precision
-  0.895); see `docs/model_evaluation.md`. Regenerate via
+- **essential slice (A+B): 1,891** (was 173 rated-only) — clean high-precision core
+- by authority_tier: {'B_corroborated': 1652, 'C_candidate': 442, 'A_authoritative': 239}
+- **learned silent-fix signal (gemma4:31b):** classified **1,519** PR/commit diffs
+  across all 11 clients (curated C_candidate + gate-dropped *plausible* rows),
+  flagged **696** as real silent fixes. This both promotes classified fixes C→B
+  and, via the gate, **admits +453 silent fixes the deterministic keyword gate
+  had dropped** (1,880 → 2,333 rows). Model chosen by an 80-item eval sweep
+  (F1 0.872, precision 0.895); see `docs/model_evaluation.md`. Diffs served
+  rate-limit-free by `local_diffs.py` (bulk PR-ref clone). Regenerate via
   `collection/llm_classify_fixes.py --apply` → `data/silent_fix_llm.csv`.
 - by severity: {'Unrated': 963, 'Info': 773, 'High': 63, 'Medium': 54, 'Low': 21, 'Critical': 3}
   (High/Medium dropped vs iter-1 because T2b removed 49 unrelated CVEs' bogus CVSS severities)

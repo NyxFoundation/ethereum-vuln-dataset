@@ -1,6 +1,6 @@
 {
   "domain": "ethereum",
-  "n_rows": 1880,
+  "n_rows": 2333,
   "schema": [
     "id",
     "source_platform",
@@ -33,50 +33,50 @@
     "t2_noise_dropped": 1417,
     "t2b_nvd_fp_dropped": 49,
     "after_t1": 16998,
-    "security_rows": 1880,
-    "low_signal_dropped": 15118,
+    "security_rows": 2333,
+    "low_signal_dropped": 14665,
     "by_confidence": {
       "medium": 1542,
-      "high": 337,
-      "low": 1
+      "low": 454,
+      "high": 337
     },
     "by_authority_tier": {
-      "B_corroborated": 1296,
-      "C_candidate": 345,
+      "B_corroborated": 1652,
+      "C_candidate": 442,
       "A_authoritative": 239
     },
     "by_n_signals": {
-      "1": 390,
-      "2": 1073,
-      "3": 343,
-      "4": 69,
-      "5": 5
+      "1": 487,
+      "2": 1154,
+      "3": 566,
+      "4": 120,
+      "5": 6
     },
     "by_source": {
-      "geth": 376,
-      "erigon": 358,
-      "nimbus": 198,
-      "lodestar": 194,
-      "lighthouse": 177,
-      "reth": 161,
+      "geth": 449,
+      "erigon": 446,
+      "nimbus": 272,
+      "lodestar": 233,
+      "lighthouse": 221,
+      "reth": 197,
+      "nethermind": 138,
+      "teku": 123,
+      "besu": 117,
       "prysm": 114,
-      "nethermind": 104,
-      "teku": 91,
-      "besu": 89,
-      "grandine": 16,
+      "grandine": 21,
       "consensus-specs": 2
     },
     "by_severity": {
-      "Unrated": 960,
-      "Info": 773,
+      "Unrated": 1333,
+      "Info": 853,
       "High": 63,
       "Medium": 60,
       "Low": 21,
       "Critical": 3
     },
     "by_score": {
-      "0.0": 35,
-      "0.3": 4,
+      "0.0": 220,
+      "0.3": 272,
       "0.5": 1208,
       "0.8": 296,
       "0.9": 170,
