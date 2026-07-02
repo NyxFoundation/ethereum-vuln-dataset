@@ -135,12 +135,14 @@ nemotron got 2 runs each). Ranked:
 | openai · gemma4:31b | — | — | — | 73/80 JSON parse errors |
 | openai · kimi-k2.7-code | — | — | — | timeout (slow on real prompts) |
 
-**Default = `devstral-2:123b`** (Mistral's code model): best F1 (0.84, *beats*
-claude's 0.78), consistent across two runs, 0 parse errors, high recall with
-threshold-tunable precision. `--model qwen3-coder:480b` for the highest-precision
-(0.90) variant. Slow/reasoning models (glm-5, qwen3.5:397b, deepseek-v3.2 ~20-45s
-/call) and gemma (parse-broken) are impractical. Note: n=80 has ~0.05 run
-variance, so sub-0.06 gaps aren't meaningful.
+**Default = `gemma4:31b`** (updated after a clean isolated re-run): F1 **0.872**,
+precision **0.895** (near claude's 0.93) AND recall 0.85 — two clean runs
+identical, 0 errors. Its earlier 73-error run was API contention from two
+concurrent sweeps, not a model flaw. `--model qwen3-coder:480b` for a
+precision-leaning variant. **Multi-agent consensus did NOT beat gemma solo**
+(correlated errors; devstral+qwen are nested → no synergy); only `AND(gemma,qwen)`
+is useful, reaching 0.929 precision for a precision-max sub-tier.
+📄 Full table (incl. speed + consensus) in **`docs/model_evaluation.md`**.
 
 This is Ollama *Cloud* (hosted), not local hardware; a truly local model via
 `--engine ollama` on :11434 would need `ollama serve` + a pulled model (untested).

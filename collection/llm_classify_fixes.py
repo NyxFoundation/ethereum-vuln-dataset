@@ -274,10 +274,11 @@ def main() -> int:
     ap.add_argument("--api-key-env", default="", help="env var holding the API key (openai engine)")
     a = ap.parse_args()
     # Best default for the openai/Ollama-Cloud engine, chosen by an 80-item eval
-    # sweep (see collection/IMPROVEMENT_LOG.md): devstral-2:123b — F1 0.84 (beats
-    # claude's 0.78), high recall, consistent, 0 parse errors. Use
-    # --model qwen3-coder:480b if you want the highest-precision (0.90) variant.
-    model = a.model or ("devstral-2:123b" if a.engine == "openai" else "")
+    # sweep (see docs/model_evaluation.md): gemma4:31b — F1 0.872, precision 0.895
+    # (near claude's 0.93) AND recall 0.85, two clean runs identical, 0 errors.
+    # --model qwen3-coder:480b for a precision-leaning variant; multi-agent
+    # consensus did NOT beat this single model (correlated errors).
+    model = a.model or ("gemma4:31b" if a.engine == "openai" else "")
     ENGINE.update(engine=a.engine, model=model, host=a.ollama_host,
                   base_url=a.base_url, api_key=os.environ.get(a.api_key_env, "") if a.api_key_env else "")
     if a.engine == "ollama" and a.workers > 2:
