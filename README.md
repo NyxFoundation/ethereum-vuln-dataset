@@ -181,6 +181,7 @@ docs/            BUILD_REPORT · IMPROVEMENT_LOG · silent_fix_detection · mode
 
 ## Documentation
 
+- [`docs/label_design.md`](docs/label_design.md) — **proposal**: code-range / root-cause / pre+post-code labels tied to the specs
 - [`docs/silent_fix_detection.md`](docs/silent_fix_detection.md) — research background + the algorithm
 - [`docs/model_evaluation.md`](docs/model_evaluation.md) — LLM model benchmark (accuracy + speed)
 - [`docs/BUILD_REPORT.md`](docs/BUILD_REPORT.md) — per-stage before/after for the current snapshot
