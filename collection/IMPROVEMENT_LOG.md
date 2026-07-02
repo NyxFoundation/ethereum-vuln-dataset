@@ -47,6 +47,18 @@ rows → termination condition met for deterministic signals.
 - Takeaway: without a trained model, silent-fix *detection* (of unknown fixes)
   is not reliably solvable by regex; silent-fix *recovery* (of known ones) is.
 
+| 6 | **Learned silent-fix classifier (method 1, done right)** | 1367 | 1878 | 173 / 3 | User course-correction: drop ad-hoc heuristics, narrow to the research's methods. Built a Sabetta&Bezzi-style patch-as-document classifier (TF-IDF diff tokens + LogReg, torch-free). **ROC-AUC 0.971 / PR-AUC 0.975** (5-fold CV) — vs the regex proxy's 0.50. The *same* data regex couldn't split is highly separable by a *learned* model, exactly as the research predicts. `train_silent_fix_classifier.py`; model saved. Next: apply to C_candidate, wire as `silent_fix_signal`. |
+
+**Focus (per user): silent-fix research reduces to 2 methods —**
+1. **Learned code-change classifier** (Sabetta&Bezzi'18 → VulFixMiner'21 →
+   GraphSPD'23). ✅ Implemented torch-free; **AUC 0.971**. The one method that
+   detects *unknown* silent fixes. Regex proxy (iter 5) was validated-negative;
+   the learned version works.
+2. **Patch backlinking** (VCMatch/PatchScout/OSV). ✅ iter 5; recovers *known*
+   silent fixes from advisories. High precision, limited reach.
+The iter 3–4 keyword/path signals are NOT from silent-fix research and are
+retained only as coarse tiering hints, subordinate to methods 1–2.
+
 **Remaining levers require a technique switch (heavier / user-gated):**
 - [A1] cherry-pick/backport via local clones — the one untapped *new-source*
   (geth silently backports fixes to release branches). Uncertain yield, ~1 GB
