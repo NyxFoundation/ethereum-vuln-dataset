@@ -48,7 +48,17 @@ def test_every_row_has_a_security_signal(df):
     has_cwe = ~df["cwe_top25"].fillna("N/A").isin(["N/A"])
     blob = df["title"].fillna("") + " " + df["description"].fillna("")
     has_id = blob.str.contains(r"CVE-\d{4}-\d{4,7}|GHSA-", case=False, regex=True)
-    assert bool((has_sev | has_kw | has_stride | has_cwe | has_id).all())
+    # fix-verb × crash-class impact in the title (recall-expansion gate signal)
+    fiximpact = re.compile(
+        r"\b(?:fix|fixes|fixed|prevent|avoid|guard|handle|resolve|correct|patch)\w*"
+        r"\b[^.\n]{0,40}\b(?:crash|panic|segfault|deadlock|hang|freeze|oom"
+        r"|out.of.memory|overflow|underflow|data race|race condition|reorg"
+        r"|non.?determin|infinite loop|use.after.free|null (?:pointer|deref))\b"
+        r"|\b(?:crash|panic|segfault|deadlock|hang|oom|overflow|underflow|reorg"
+        r"|race condition)\b[^.\n]{0,25}"
+        r"\b(?:fix|fixed|prevent|avoid|guard against|resolved|patch)\w*\b", re.I)
+    has_fiximpact = df["title"].fillna("").str.contains(fiximpact)
+    assert bool((has_sev | has_kw | has_stride | has_cwe | has_id | has_fiximpact).all())
 
 
 def test_confidence_values(df):

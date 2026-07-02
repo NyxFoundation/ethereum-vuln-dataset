@@ -322,12 +322,19 @@ def build(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
     ]
 
     # GATE — union of independent signals
-    has_id = (df["title"].fillna("") + " " + df["description"].fillna("")).str.contains(CVE_RE)
+    gate_blob = df["title"].fillna("") + " " + df["description"].fillna("")
+    has_id = gate_blob.str.contains(CVE_RE)
     has_sev = df["severity"].fillna("").str.lower().isin(RATED_SEV)
     has_kw = df["security_score"] >= 0.5
     has_stride = ~df["stride"].fillna("Other").isin(["Other"])
     has_cwe = ~df["cwe_top25"].fillna("N/A").isin(["N/A"])
-    df["security_relevant"] = has_id | has_sev | has_kw | has_stride | has_cwe
+    # Recall expansion: a fix-verb × crash-class impact co-occurrence in the
+    # TITLE admits real crash/DoS fixes whose only keyword sat in the description
+    # (score 0.3, below the 0.5 threshold). Title-only — a description-level
+    # match also fires on release notes that merely *list* a "fix crash". T2
+    # already dropped dep-bump/CI titles upstream.
+    has_fiximpact = df["title"].fillna("").str.contains(FIX_IMPACT_RE)
+    df["security_relevant"] = has_id | has_sev | has_kw | has_stride | has_cwe | has_fiximpact
 
     sec = df[df["security_relevant"]].copy()
     sec["confidence"] = sec.apply(confidence_tier, axis=1)

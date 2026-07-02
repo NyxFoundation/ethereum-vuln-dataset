@@ -26,11 +26,23 @@ fuzzer report, [A1] cherry-pick/backport. Architecture: **multi-signal scoring**
 | 2 | [C] T2b NVD substring-match FP filter (+ source fix in crawl_cve.py) | 885 | 1877 | 173 / 3 | **Authoritative tier was 17% garbage** — "geth" matched as substring in gethostbyaddr/GetHost/"Gether Technology"/Linux usb. Dropped 49 unrelated CVEs (glibc/X.Org/Samba/kernel); 6 real client CVEs kept. Precision iteration: A-tier now clean. |
 | 3 | [C5'] fix-verb × impact co-occurrence signal | **1367** | 1877 | 173 / 3 | **C5-via-API dead end**: client PRs almost never use formal `Closes #N` (0/116 inline-ref PRs had closingIssuesReferences). Pivoted to the offline reservoir: "fix panic on…"/"prevent race in…" adjacency is a strong independent defect signal. +482 crash/DoS fixes promoted C→B. 907 rows now ≥2 signals (was 376). `enrich_linked_issues.py` kept as a tool (with `--require-inline-ref`). |
 
-**Loop status:** deterministic precision+recall largely worked through. Essential
-slice 173 → 1367 (7.9×) across 3 iterations. Remaining levers are heavier:
-[A1] cherry-pick/backport (needs local clones), [B4] review-comment mining
-(per-PR API), and the deferred LLM STRIDE/CWE classification (biggest recall
-lever — would admit the ~16k unrated stealth fixes; user deferred it, "ひとまずskip").
+| 4 | fix-impact added to the GATE (title-level, recall) + test coverage | 1367 | 1878 | 173 / 3 | Title-level fix-impact admits only **+1** new row — title crash fixes already score ≥0.5. Description-level would admit 200 but pulls release-note noise (rejected). **Deterministic recall is saturated.** |
+
+**Loop status — deterministic techniques exhausted (loop-until-dry hit).**
+Recall was flat across all 4 iterations (corpus already ~complete at 18,475 raw
+/ 1,878 curated); the wins were **precision + tiering**: essential slice
+173 → 1367 (7.9×), authoritative tier de-garbaged (−49 unrelated CVEs), −1417
+CI/docs/dep-bump noise. Two consecutive iterations (3,4) added <10 new corpus
+rows → termination condition met for deterministic signals.
+
+**Remaining levers require a technique switch (heavier / user-gated):**
+- [A1] cherry-pick/backport via local clones — the one untapped *new-source*
+  (geth silently backports fixes to release branches). Uncertain yield, ~1 GB
+  clones. **Next iteration to attempt.**
+- [B4] review-comment mining — per-PR API, slow, low expected yield (like C5).
+- **LLM STRIDE/CWE classification** — the biggest recall lever by far (admits the
+  ~16k unrated stealth fixes the keyword gate drops), but the user deferred it
+  ("ひとまずskip"). Re-enabling it is the real path to *comprehensive* coverage.
 
 ### Next iterations (API-heavy hidden-fix signals — recall expansion)
 - **iter 2** [C5] linked-issue / fuzzer-report signal: `gh pr view --json closingIssuesReferences`, score issue body for crash/panic/fuzz + reporter (oss-fuzz/Guido Vranken).

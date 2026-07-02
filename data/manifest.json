@@ -1,6 +1,6 @@
 {
   "domain": "ethereum",
-  "n_rows": 1877,
+  "n_rows": 1878,
   "schema": [
     "id",
     "source_platform",
@@ -31,19 +31,20 @@
     "t2_noise_dropped": 1417,
     "t2b_nvd_fp_dropped": 49,
     "after_t1": 16998,
-    "security_rows": 1877,
-    "low_signal_dropped": 15121,
+    "security_rows": 1878,
+    "low_signal_dropped": 15120,
     "by_confidence": {
       "medium": 1544,
-      "high": 333
+      "high": 333,
+      "low": 1
     },
     "by_authority_tier": {
       "B_corroborated": 1134,
-      "C_candidate": 510,
+      "C_candidate": 511,
       "A_authoritative": 233
     },
     "by_n_signals": {
-      "1": 555,
+      "1": 556,
       "2": 907,
       "3": 345,
       "4": 65,
@@ -58,13 +59,13 @@
       "reth": 161,
       "prysm": 114,
       "nethermind": 104,
-      "teku": 90,
+      "teku": 91,
       "besu": 89,
       "grandine": 16,
       "consensus-specs": 2
     },
     "by_severity": {
-      "Unrated": 963,
+      "Unrated": 964,
       "Info": 773,
       "High": 63,
       "Medium": 54,
@@ -72,7 +73,7 @@
       "Critical": 3
     },
     "by_score": {
-      "0.0": 34,
+      "0.0": 35,
       "0.3": 4,
       "0.5": 1208,
       "0.8": 298,
