@@ -185,7 +185,8 @@ docs/            BUILD_REPORT · IMPROVEMENT_LOG · silent_fix_detection · mode
 
 ## Documentation
 
-- [`docs/label_design.md`](docs/label_design.md) — **proposal**: code-range / root-cause / pre+post-code labels tied to the specs
+- [`docs/limitations.md`](docs/limitations.md) — **honest inventory of coverage gaps & caveats** (read before relying on the data)
+- [`docs/label_design.md`](docs/label_design.md) — the `label` / `root_cause` / `attack_path` / pre+post-code design, tied to the specs
 - [`docs/silent_fix_detection.md`](docs/silent_fix_detection.md) — research background + the algorithm
 - [`docs/model_evaluation.md`](docs/model_evaluation.md) — LLM model benchmark (accuracy + speed)
 - [`docs/BUILD_REPORT.md`](docs/BUILD_REPORT.md) — per-stage before/after for the current snapshot
