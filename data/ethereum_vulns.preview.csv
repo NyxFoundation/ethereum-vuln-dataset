@@ -207,7 +207,7 @@ erigon,state-trie,consensus_divergence,malformed_input,Unrated,B_corroborated,fi
 erigon,sync,race_condition,malformed_input,Unrated,B_corroborated,added mutex lock to avoid race condition in downloader,https://github.com/erigontech/erigon/pull/5089
 erigon,transactions,consensus_divergence,malformed_input,Unrated,B_corroborated,consensus/clique: fix race condition (#24957),https://github.com/erigontech/erigon/pull/4313
 erigon,sync,race_condition,peer,Unrated,B_corroborated,Fix race condition in ProcessHeadersPOS,https://github.com/erigontech/erigon/pull/4151
-geth,p2p,resource_exhaustion,malicious_p2p_message,High,A_authoritative,DoS via malicious p2p message,https://github.com/ethereum/go-ethereum/security/advisories/GHSA-2gjw-fg97-vg3r
+geth,crypto,resource_exhaustion,malicious_p2p_message,High,A_authoritative,DoS via malicious p2p message,https://github.com/ethereum/go-ethereum/security/advisories/GHSA-2gjw-fg97-vg3r
 geth,state-trie,consensus_divergence,crafted_state,Medium,A_authoritative,DoS via malicious snap/1 request,https://github.com/ethereum/go-ethereum/security/advisories/GHSA-59hh-656j-3p7v
 geth,evm,consensus_divergence,malicious_tx,High,A_authoritative,RETURNDATA corruption via datacopy,https://github.com/ethereum/go-ethereum/security/advisories/GHSA-9856-9gg9-qcmq
 geth,transactions,consensus_divergence,crafted_state,High,A_authoritative,Consensus flaw during block processing,https://github.com/ethereum/go-ethereum/security/advisories/GHSA-xw37-57qp-9mm4

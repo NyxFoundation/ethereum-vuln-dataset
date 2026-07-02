@@ -47,6 +47,71 @@ def layer(client: str) -> str:
     return "consensus" if client in CONSENSUS else "execution"
 
 
+# --- advisory -> fix commit (dedicated security patch releases only) ---------
+GHSA_URL_RE = re.compile(r"/security/advisories/(GHSA-[0-9a-z-]+)", re.I)
+SKIP_COMMIT = re.compile(
+    r"^(params: (?:release|begin)|version:|build:|ci:|Merge branch .*release"
+    r"|.*\bPPA\b|chore(?:\(release\))?: release|Prepare(?: for)? release)", re.I)
+_TAGS: dict = {}
+_ADV: dict = {}
+
+
+def _tags(client):
+    if client not in _TAGS:
+        out = ld._run(["git", "-C", str(ld.repo_path(client)), "tag", "--sort=v:refname"]).stdout
+        _TAGS[client] = [t for t in out.split() if re.match(r"^v?\d+\.\d+\.\d+$", t)]
+    return _TAGS[client]
+
+
+def _advisories(client):
+    if client not in _ADV:
+        repo = ld.CLIENT_REPOS.get(client); _ADV[client] = {}
+        if repo:
+            try:
+                for a in json.loads(ld._run(["gh", "api",
+                        f"/repos/{repo}/security-advisories?per_page=100"]).stdout):
+                    pv = next((v.get("patched_versions") for v in a.get("vulnerabilities", [])
+                               if v.get("patched_versions")), "")
+                    _ADV[client][a["ghsa_id"]] = (pv, a.get("summary", ""))
+            except Exception:
+                pass
+    return _ADV[client]
+
+
+def resolve_advisory(client, ghsa, summary):
+    """Fix commit for a GHSA advisory row, only when the patched version is a
+    small dedicated security patch release (range ≤ 6 non-release commits)."""
+    adv = _advisories(client).get(ghsa)
+    if not adv:
+        return None
+    m = re.search(r"(\d+\.\d+\.\d+)", adv[0] or "")
+    if not m:
+        return None
+    tags = _tags(client); ver = m.group(1)
+    tag = next((c for c in (f"v{ver}", ver) if c in tags), None)
+    if not tag:
+        return None
+    i = tags.index(tag)
+    if i == 0:
+        return None
+    prev = tags[i - 1]
+    log = ld._run(["git", "-C", str(ld.repo_path(client)), "log", f"{prev}..{tag}",
+                   "--pretty=%H\t%s", "--name-only"]).stdout
+    commits, cur = [], None
+    for ln in log.splitlines():
+        if re.match(r"^[0-9a-f]{40}\t", ln):
+            sha, subj = ln.split("\t", 1); cur = [sha, subj, []]; commits.append(cur)
+        elif ln.strip() and cur is not None:
+            cur[2].append(ln.strip())
+    fixes = [c for c in commits if not SKIP_COMMIT.match(c[1])]
+    if not (1 <= len(fixes) <= 6):
+        return None
+    toks = set(re.findall(r"[a-z]{3,}", (adv[1] or summary or "").lower()))
+    fixes.sort(key=lambda c: len(toks & set(re.findall(r"[a-z]{3,}",
+                                    (c[1] + " " + " ".join(c[2])).lower()))), reverse=True)
+    return fixes[0][0]
+
+
 # --- label rules: (regex, label). Ordered specific -> general; first match wins.
 # Matched against "changed file paths + title + description".
 _C = [  # consensus
@@ -280,19 +345,26 @@ def main() -> int:
     for i, r in enumerate(df.to_dict("records")):
         client = r["source_platform"]; url = str(r["source_url"]); lyr = layer(client)
         repo = ld.CLIENT_REPOS.get(client)
-        diff = ld.get_diff_cached(url, client, dcache) if repo else None
         files, pre, post = ([], [], [])
         fix_sha = introduced = ""
+        diff = None
         if repo:
-            m = SHA_RE.search(url); mp = PR_RE.search(url)
+            rp = str(ld.repo_path(client))
+            m = SHA_RE.search(url); mp = PR_RE.search(url); ma = GHSA_URL_RE.search(url)
             if m:
                 fix_sha = m.group(1)
+                diff = ld.get_diff_cached(url, client, dcache)
             elif mp:
                 ref = ld._resolve_pr_ref(ld.repo_path(client), mp.group(1))
                 if ref:
-                    fix_sha = ld._run(["git", "-C", str(ld.repo_path(client)), "rev-parse", ref]).stdout.strip()
+                    fix_sha = ld._run(["git", "-C", rp, "rev-parse", ref]).stdout.strip()
+                diff = ld.get_diff_cached(url, client, dcache)
+            elif ma:  # GHSA advisory page -> resolve the patch-release fix commit
+                fix_sha = resolve_advisory(client, ma.group(1), str(r.get("title") or "")) or ""
+                if fix_sha:
+                    diff = ld._run(["git", "-C", rp, "show", "--format=", "--unified=3", fix_sha]).stdout or None
             if fix_sha:
-                par = ld._run(["git", "-C", str(ld.repo_path(client)), "rev-parse", f"{fix_sha}^"])
+                par = ld._run(["git", "-C", rp, "rev-parse", f"{fix_sha}^"])
                 introduced = par.stdout.strip() if par.returncode == 0 else ""
         if diff:
             n_diff += 1
