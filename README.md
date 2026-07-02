@@ -15,11 +15,15 @@ this README explains.
 
 ```python
 import pandas as pd
-df = pd.read_parquet("data/ethereum_vulns.parquet")
+df = pd.read_parquet("data/ethereum_vulns.parquet")   # or data/ethereum_vulns.csv
 
 df[df.authority_tier != "C_candidate"]      # the essential slice (1,891 rows)
 df[df.confidence == "high"]                 # strongest evidence only
 ```
+
+**Browse it on GitHub:** [`data/ethereum_vulns.preview.csv`](data/ethereum_vulns.preview.csv)
+renders as a table (key columns). Full data: [`ethereum_vulns.csv`](data/ethereum_vulns.csv)
+(2.5 MB) or the `.parquet`.
 
 *(A HuggingFace `datasets` mirror under [`NyxFoundation/`](https://huggingface.co/NyxFoundation) is planned.)*
 

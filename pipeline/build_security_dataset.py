@@ -421,6 +421,19 @@ def main() -> int:
     sec.to_parquet(a.out, index=False)
     print(f"\nwrote {len(sec)} rows -> {a.out}")
 
+    # CSV siblings (parquet isn't viewable on GitHub): a full export + a compact
+    # preview that stays under GitHub's ~512 KB table-render limit.
+    csv_path = a.out.with_suffix(".csv")
+    sec.to_csv(csv_path, index=False)
+    prev_cols = [c for c in ("id", "source_platform", "severity", "authority_tier",
+                             "confidence", "n_signals", "cwe_top25", "title",
+                             "source_url", "fix_commit") if c in sec.columns]
+    prev = sec[prev_cols].copy()
+    if "title" in prev:
+        prev["title"] = prev["title"].astype(str).str.slice(0, 120)
+    prev.to_csv(a.out.with_suffix(".preview.csv"), index=False)
+    print(f"wrote {csv_path} + {a.out.with_suffix('.preview.csv')}")
+
     manifest_path = a.manifest or a.out.with_name("manifest.json")
     manifest = {
         "domain": "ethereum",
