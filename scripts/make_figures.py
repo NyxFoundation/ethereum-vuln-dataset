@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """make_figures.py — regenerate docs/figures/*.png from data/ethereum_vulns.parquet.
-
-Run from the repo root:  uv run --with matplotlib python scripts/make_figures.py
-Used by docs/analysis.md."""
+Run from repo root:  uv run --with matplotlib python scripts/make_figures.py"""
+import pandas as pd, numpy as np, json
+import matplotlib as mpl; mpl.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.ticker import PercentFormatter
 
@@ -130,3 +130,36 @@ plt.tight_layout(); plt.savefig(f"{FG}/fig6_coverage.png",bbox_inches="tight"); 
 print("figures written to",FG)
 import os
 for f in sorted(os.listdir(FG)): print("  ",f, round(os.path.getsize(FG+"/"+f)/1024),"KB")
+
+# ---- FIG 7: what raises severity (security-researcher view) -----------------
+sev=d.severity.str.lower()
+hi=d[sev.isin(['critical','high'])]
+causes=[c for c in d.root_cause.value_counts().head(8).index if c!='other']
+lift=[]; silent=[]
+for rc in causes:
+    p_all=(d.root_cause==rc).mean(); p_hi=(hi.root_cause==rc).mean()
+    lift.append(p_hi/p_all if p_all else 0)
+    sub=d[d.root_cause==rc]
+    silent.append(100*(~sub.severity.str.lower().isin(['critical','high','medium','low'])).mean())
+order=np.argsort(lift)
+causes=[causes[i] for i in order]; lift=[lift[i] for i in order]; silent=[silent[i] for i in order]
+fig,(a1,a2)=plt.subplots(1,2,figsize=(11.5,4.3))
+y=np.arange(len(causes))
+cols=[RED if l>1.15 else (GRAY if l<0.85 else BLUE) for l in lift]
+a1.hlines(y,1,lift,color=cols,lw=2,zorder=1)
+a1.scatter(lift,y,color=cols,s=60,zorder=2)
+a1.axvline(1,color="#888",lw=1,ls="--")
+a1.set_yticks(y); a1.set_yticklabels([c.replace('_',' ') for c in causes])
+a1.set_xlabel("severity lift   P(cause | Crit+High) / P(cause | all)")
+a1.set_title("(a) What raises severity",loc="left",fontsize=12,color=INK,fontweight="bold")
+a1.text(1.02,len(causes)-0.5,"over-\nrepresented →",color=RED,fontsize=8,va="top")
+a1.grid(axis="y",visible=False)
+a2.barh(y,silent,color=[ORANGE if s>85 else TEAL for s in silent],height=0.7)
+a2.set_yticks(y); a2.set_yticklabels([c.replace('_',' ') for c in causes])
+a2.set_xlabel("% shipped silently (no rated severity)")
+a2.xaxis.set_major_formatter(PercentFormatter()); a2.set_xlim(0,100)
+for yi,s in zip(y,silent): a2.text(s-3,yi,f"{s:.0f}%",va="center",ha="right",color="white",fontsize=8.5,fontweight="bold")
+a2.set_title("(b) …yet the severe classes are patched silently",loc="left",fontsize=12,color=INK,fontweight="bold")
+a2.grid(axis="y",visible=False)
+plt.tight_layout(); plt.savefig(f"{FG}/fig7_severity_drivers.png",bbox_inches="tight"); plt.close()
+print("fig7 written")

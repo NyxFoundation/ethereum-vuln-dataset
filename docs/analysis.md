@@ -7,7 +7,7 @@ security fixes across the eleven production Ethereum clients.*
 > **Summary.** The corpus is dominated by *silently patched* fixes (≈94% ship
 > with no advisory), its vulnerability profile is **availability- and
 > consensus-centric** rather than the memory-corruption profile of generic C/C++
-> datasets, its fixes are **localized** (43% single-file), and it spans **six
+> datasets, its fixes are **localized** (43% single-file), its **severe classes are the ones most often patched silently**, and it spans **six
 > languages implementing one protocol** — a diversity axis absent from prior
 > vulnerability datasets. We interpret each finding against the
 > vulnerability-dataset literature (CVEfixes, BigVul, Devign, CrossVul,
@@ -112,7 +112,49 @@ across implementations. It is the diversity dimension DiverseVul and CrossVul
 argue reduces overfitting, obtained here **within a single well-specified
 domain**.
 
-## 7. Data quality and coverage
+## 7. A security-researcher reading — what raises severity
+
+Only 143 rows carry a rated severity and 66 are Critical/High, so this is a small,
+biased sample (see the reporting-bias caveat below) — but the signal is sharp.
+
+![Figure 7](figures/fig7_severity_drivers.png)
+
+**(a) Attacker-reachability is the severity driver.** Among Critical/High fixes,
+38% are triggered by `malformed_input` and the rest by `malicious_tx` /
+`malicious_p2p_message` — externally reachable, adversary-controlled paths. By
+root cause, three classes are *over-represented* in the high-severity slice:
+**consensus_divergence (lift ×1.55)**, **resource_exhaustion / DoS (×1.39)**, and
+**integer_overflow (×1.28)**. Strikingly, **`race_condition` has lift ≈ 0** — it
+is 10% of all fixes but essentially never rated Critical/High, because it
+typically needs local timing rather than a remote trigger. Severity here tracks
+*reachability × blast-radius* (chain split, node crash, fund-affecting
+arithmetic), not code-level bug class alone.
+
+**(b) The severe classes are the ones most often patched silently — the central
+paradox.** Every root cause, including the severe ones, is shipped *silently*
+91–98% of the time: **consensus_divergence is 93% unrated, integer_overflow 96%,
+resource_exhaustion 94%.** Concretely, of **174 `consensus_divergence` fixes only
+12 are rated — 162 (93%) carry no severity at all**, despite consensus divergence
+being the single highest-severity-lift class. The rated-severity column therefore
+*understates* the severe population by roughly an order of magnitude.
+
+**Reporting bias, not a severity map.** Geth accounts for **41% (27/66)** of all
+Critical/High rows — not because Geth has more severe bugs, but because it
+publishes GitHub Security Advisories while most clients patch silently. So the
+rated slice is a **publication artifact**: a client's presence in it measures its
+disclosure policy, not its security posture. And fix size does **not** separate
+severity (median 51 LOC high-severity vs 45 overall) — you cannot spot a critical
+bug by diff size.
+
+*Takeaways for a researcher.* (i) Prioritize by **attacker-reachability ×
+subsystem** (p2p, rpc, crypto, consensus state-transition) rather than by whether
+a CVE exists. (ii) The **unrated `consensus_divergence` / `resource_exhaustion`
+rows are a hunting ground** for under-triaged severe bugs — the corpus surfaces
+exactly the silent, high-impact fixes that CVE-anchored datasets miss. (iii)
+Because one spec is implemented eleven ways, a severe fix in one client is a lead
+to look for its **silent analogue in the others** (§6).
+
+## 8. Data quality and coverage
 
 ![Figure 6](figures/fig6_coverage.png)
 
@@ -137,7 +179,7 @@ The low bars — `severity` (6.4%) and `silent_fix_prob` (40%) — are structura
 not defects: unrated severity *is* the silent-fix signal (§2), and full-commit
 LLM classification was deliberately bounded (§8).
 
-## 8. Implications for use
+## 9. Implications for use
 
 1. **Selection under a <1% base rate.** Security fixes are a fraction of a
    percent of commits — VulFixMiner's "needle in a haystack." The pipeline
