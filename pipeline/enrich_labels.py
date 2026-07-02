@@ -33,6 +33,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "collection"))
 import local_diffs as ld  # noqa: E402
+import llm_classify_fixes as llm  # noqa: E402  (reuse the pluggable LLM engine)
 
 CONSENSUS = {"lighthouse", "lodestar", "nimbus", "prysm", "teku", "grandine"}
 PR_RE = re.compile(r"/pull/(\d+)")
@@ -201,19 +202,81 @@ def _group(hunks):
     return out
 
 
+# --- LLM fallback for rows the deterministic rules leave as "other" ----------
+CONSENSUS_LABELS = [
+    "beacon-chain:justification-and-finality", "beacon-chain:rewards-and-penalties",
+    "beacon-chain:registry-updates", "beacon-chain:effective-balance-updates",
+    "beacon-chain:epoch-processing", "beacon-chain:block-processing",
+    "beacon-chain:attestation", "beacon-chain:slashing", "beacon-chain:deposit",
+    "beacon-chain:withdrawal", "beacon-chain:exit-consolidation",
+    "beacon-chain:sync-committee", "beacon-chain:execution-payload", "fork-choice",
+    "p2p-interface", "validator", "weak-subjectivity", "deposit-contract", "bls",
+    "light-client", "fork-transition", "kzg-commitments",
+    "data-availability-sampling", "builder"]
+EXECUTION_LABELS = [
+    "evm", "opcodes", "precompiles", "gas", "transactions", "txpool",
+    "block-processing", "state-trie", "rlp", "p2p", "sync", "engine-api",
+    "blobs", "eof", "rpc"]
+CROSS = ["crypto", "serialization", "database", "other"]
+RC_ENUM = [v for _, v in _RC] + ["improper_state_update", "other"]
+AP_ENUM = [v for _, v in _AP] + ["internal_only"]
+
+
+def llm_label(row, diff, lyr) -> dict:
+    labels = (CONSENSUS_LABELS if lyr == "consensus" else EXECUTION_LABELS) + CROSS
+    prompt = f"""Label this security fix in an Ethereum {lyr} client.
+
+Pick the ONE best AREA label from this list (use "other" only if truly none fit):
+{', '.join(labels)}
+
+Also pick root_cause from: {', '.join(sorted(set(RC_ENUM)))}
+and attack_path from: {', '.join(sorted(set(AP_ENUM)))}
+
+Changed files: {row.get('files') or '(none)'}
+Title: {str(row.get('title') or '')[:200]}
+Description: {str(row.get('description') or '')[:400]}
+Code diff (truncated):
+{(diff or '')[:3000]}
+
+Output ONLY one JSON object on the last line:
+{{"label": "...", "root_cause": "...", "attack_path": "..."}}"""
+    try:
+        out = llm._call_llm(prompt)
+        m = re.search(r"\{[^{}]*\"label\"[^{}]*\}", out, re.S)
+        obj = json.loads(m.group(0)) if m else {}
+    except Exception:
+        obj = {}
+    valid = set(labels)
+    lab = obj.get("label") if obj.get("label") in valid else None
+    return {"label": lab, "root_cause": obj.get("root_cause"),
+            "attack_path": obj.get("attack_path")}
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--in", dest="inp", default=Path("data/ethereum_vulns.parquet"), type=Path)
     ap.add_argument("--out", default=Path("data/labels.csv"), type=Path)
     ap.add_argument("--pred-cache", default=Path("scratchpad_crawl/llm_pred_cache.json"), type=Path)
     ap.add_argument("--diff-cache", default=Path("scratchpad_crawl/diff_cache.json"), type=Path)
+    ap.add_argument("--llm", action="store_true", help="LLM fallback for 'other' rows")
+    ap.add_argument("--llm-cache", default=Path("scratchpad_crawl/llm_label_cache.json"), type=Path)
+    ap.add_argument("--engine", default="openai")
+    ap.add_argument("--model", default="")
+    ap.add_argument("--base-url", default="https://ollama.com/v1")
+    ap.add_argument("--api-key-env", default="OLLAMA_API_KEY")
+    ap.add_argument("--workers", type=int, default=6)
     a = ap.parse_args()
+    import os
+    llm.ENGINE.update(engine=a.engine,
+                      model=a.model or ("gemma4:31b" if a.engine == "openai" else ""),
+                      base_url=a.base_url,
+                      api_key=os.environ.get(a.api_key_env, "") if a.api_key_env else "")
 
     df = pd.read_parquet(a.inp)
     preds = json.loads(a.pred_cache.read_text()) if a.pred_cache.exists() else {}
     dcache = json.loads(a.diff_cache.read_text()) if a.diff_cache.exists() else {}
 
-    rows, n_diff, n_label = [], 0, 0
+    rows, metas, n_diff, n_label = [], [], 0, 0
     for i, r in enumerate(df.to_dict("records")):
         client = r["source_platform"]; url = str(r["source_url"]); lyr = layer(client)
         repo = ld.CLIENT_REPOS.get(client)
@@ -251,10 +314,45 @@ def main() -> int:
             "post_fix_code": json.dumps(post, ensure_ascii=False),
             "fix_commit": fix_sha, "introduced_in_commit": introduced,
         })
+        metas.append({"url": url, "layer": lyr, "files": ", ".join(files[:6]),
+                      "title": r.get("title"), "description": r.get("description")})
         if (i + 1) % 200 == 0:
             a.diff_cache.write_text(json.dumps(dcache))
             print(f"  [labels] {i+1}/{len(df)}", file=sys.stderr)
     a.diff_cache.write_text(json.dumps(dcache))
+
+    # --- LLM fallback for rows still "other" -------------------------------
+    if a.llm:
+        from concurrent.futures import ThreadPoolExecutor
+        cache = json.loads(a.llm_cache.read_text()) if a.llm_cache.exists() else {}
+        todo = [i for i, row in enumerate(rows) if row["label"] == "other"]
+        print(f"[labels] LLM fallback on {len(todo)} 'other' rows "
+              f"({sum(1 for i in todo if rows[i]['id'] in cache)} cached)", file=sys.stderr)
+
+        def work(i):
+            rid = rows[i]["id"]
+            if rid in cache:
+                return i, cache[rid]
+            diff = dcache.get(metas[i]["url"]) or ""
+            res = llm_label(metas[i], diff, metas[i]["layer"])
+            return i, res
+
+        done = 0
+        with ThreadPoolExecutor(max_workers=a.workers) as ex:
+            for i, res in ex.map(work, todo):
+                cache[rows[i]["id"]] = res
+                if res.get("label"):
+                    rows[i]["label"] = res["label"]
+                if res.get("root_cause"):
+                    rows[i]["root_cause"] = res["root_cause"]
+                if res.get("attack_path"):
+                    rows[i]["attack_path"] = res["attack_path"]
+                done += 1
+                if done % 50 == 0:
+                    a.llm_cache.write_text(json.dumps(cache))
+                    print(f"  [labels-llm] {done}/{len(todo)}", file=sys.stderr)
+        a.llm_cache.write_text(json.dumps(cache))
+        n_label = sum(1 for r in rows if r["label"] != "other")
 
     a.out.parent.mkdir(parents=True, exist_ok=True)
     with a.out.open("w", newline="", encoding="utf-8") as fh:

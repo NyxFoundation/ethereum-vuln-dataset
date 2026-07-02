@@ -75,3 +75,15 @@ Critical** (geth, besu, teku). Severities preserved through the canonical path.
 - c-kzg-4844 / blst: present (kzg×12, 4844×13, blst×13 in curated)
 - Lodestar: 276 · Nimbus: 232 · Prysm: 116 — all present
 - `ethereum_specs` source: **0** (spec-divergence crawler returned no matches this run; the 11 clients + consensus-specs are covered)
+
+## Column coverage (n=2,333)
+
+| column | coverage | notes |
+|---|---:|---|
+| `source_url`, `title`, `description`, `attack_path` | 100.0% | attack_path defaults to a best-effort class |
+| `label` (assigned, non-`other`) | **90.4%** | deterministic path/keyword + LLM fallback (`gemma4:31b`); the 9.6% `other` are mostly advisory/release rows with no diff |
+| `root_cause` (assigned) | 86.9% | keyword + classifier reason + LLM |
+| `fix_commit` / `introduced_in_commit` | 74.5% | resolved for `/commit/` + `/pull/` rows; advisory-page / release URLs have no commit |
+| `pre_fix_code` / `post_fix_code` (inline) | 60.6% | present wherever a diff is fetchable; advisory/release rows have none |
+| `silent_fix_prob` (LLM classifier) | 38.5% | classified rows (C_candidate + plausible gate-dropped) |
+| `severity` (rated Critical–Low) | 6.3% | most fixes are silently patched, unrated |
