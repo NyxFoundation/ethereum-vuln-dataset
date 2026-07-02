@@ -17,13 +17,12 @@ this README explains.
 import pandas as pd
 df = pd.read_parquet("data/ethereum_vulns.parquet")   # or data/ethereum_vulns.csv
 
-df[df.authority_tier != "C_candidate"]      # the essential slice (1,891 rows)
+df[df.authority_tier != "C_candidate"]      # the essential slice (1,808 rows)
 df[df.confidence == "high"]                 # strongest evidence only
 ```
 
 **Browse it on GitHub:** [`data/ethereum_vulns.preview.csv`](data/ethereum_vulns.preview.csv)
-renders as a table (key columns). Full data: [`ethereum_vulns.csv`](data/ethereum_vulns.csv)
-(2.5 MB) or the `.parquet`.
+renders as a table (key columns). Full data with inline pre/post code: [`ethereum_vulns.csv`](data/ethereum_vulns.csv) or the `.parquet`.
 
 *(A HuggingFace `datasets` mirror under [`NyxFoundation/`](https://huggingface.co/NyxFoundation) is planned.)*
 
@@ -32,9 +31,9 @@ renders as a table (key columns). Full data: [`ethereum_vulns.csv`](data/ethereu
 | | rows |
 |---|---:|
 | raw snapshot (all clients) | 18,475 |
-| curated (security-only) | **2,333** |
-| └ essential slice (tier A ∪ B) | **1,891** |
-| by tier | A_authoritative 239 · B_corroborated 1,652 · C_candidate 442 |
+| curated (security-only) | **2,225** |
+| └ essential slice (tier A ∪ B) | **1,808** |
+| by tier | A_authoritative 235 · B_corroborated 1,573 · C_candidate 417 |
 | by confidence | high 337 · medium 1,542 · low 454 |
 | by severity | Critical 3 · High 63 · Medium 60 · Low 21 · Info 853 · Unrated 1,333 |
 
@@ -49,8 +48,8 @@ flowchart TD
     N -->|"T2b NVD substring-match false positives  −49"| D
     D --> G[["THE GATE<br/>keep on evidence"]]
     G -->|"no security signal  −14,665"| X["dropped<br/>(low-signal)"]
-    G -->|"≥ 1 signal"| K["curated<br/>2,333 rows"]
-    K --> T["authority tiers +<br/>silent-fix LLM enrichment"]
+    G -->|"≥ 1 signal"| K["curated<br/>2,225 rows"]
+    K --> T["authority tiers · silent-fix LLM ·<br/>labels · dedup by fix commit"]
 ```
 
 **"Gate-dropped"** = a row that survived de-noising but for which **no independent

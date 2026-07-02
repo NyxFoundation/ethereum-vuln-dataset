@@ -425,6 +425,32 @@ def main() -> int:
         report["labelled"] = int((sec["label"].fillna("other") != "other").sum())
         print(f"[labels] joined {report['labelled']} area labels", file=sys.stderr)
 
+        # De-dup rows that resolved to the SAME fix commit within a client:
+        # advisory / changelog / release entries collapse onto the PR/commit they
+        # reference. cross_reference ran before #PR resolution so it missed these.
+        # Keep the richest representative (has code > PR/commit URL > tier > text).
+        fc = sec["fix_commit"].fillna("").astype(str)
+
+        def _dscore(r):
+            s = 8.0 if str(r.get("pre_fix_code") or "[]") != "[]" else 0.0
+            u = str(r.get("source_url") or "")
+            s += 4 if ("/pull/" in u or "/commit/" in u) else 0
+            s += {"A_authoritative": 3, "B_corroborated": 2, "C_candidate": 1}.get(r.get("authority_tier"), 0)
+            s += min(len(str(r.get("description") or "")), 2000) / 1000
+            return s
+
+        sec = sec.assign(_k=sec["source_platform"].astype(str) + "|" + fc, _s=sec.apply(_dscore, axis=1))
+        hasfc = fc.str.len() > 0
+        before = len(sec)
+        dedup = pd.concat([sec[~hasfc],
+                           sec[hasfc].sort_values("_s", ascending=False).drop_duplicates("_k", keep="first")])
+        sec = dedup.drop(columns=["_k", "_s"]).sort_index()
+        report["deduped_fix_commit"] = int(before - len(sec))
+        report["security_rows"] = int(len(sec))
+        report["by_authority_tier"] = {k: int(v) for k, v in sec["authority_tier"].value_counts().items()}
+        print(f"[dedup] removed {report['deduped_fix_commit']} same-fix-commit duplicates "
+              f"-> {len(sec)} rows", file=sys.stderr)
+
     print(json.dumps(report, indent=2, ensure_ascii=False))
     assert report["residual_boilerplate_fp"] == 0, "T1 leak: boilerplate survived into the security set"
 

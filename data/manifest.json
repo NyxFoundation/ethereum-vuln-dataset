@@ -1,6 +1,6 @@
 {
   "domain": "ethereum",
-  "n_rows": 2333,
+  "n_rows": 2225,
   "schema": [
     "id",
     "source_platform",
@@ -40,7 +40,7 @@
     "t2_noise_dropped": 1417,
     "t2b_nvd_fp_dropped": 49,
     "after_t1": 16998,
-    "security_rows": 2333,
+    "security_rows": 2225,
     "low_signal_dropped": 14665,
     "by_confidence": {
       "medium": 1542,
@@ -48,9 +48,9 @@
       "high": 337
     },
     "by_authority_tier": {
-      "B_corroborated": 1652,
-      "C_candidate": 442,
-      "A_authoritative": 239
+      "B_corroborated": 1573,
+      "C_candidate": 417,
+      "A_authoritative": 235
     },
     "by_n_signals": {
       "1": 487,
@@ -90,7 +90,8 @@
       "1.0": 167
     },
     "residual_boilerplate_fp": 0,
-    "labelled": 2062
+    "labelled": 2062,
+    "deduped_fix_commit": 108
   },
   "source": "11 Ethereum execution + consensus clients (past security fixes)"
 }

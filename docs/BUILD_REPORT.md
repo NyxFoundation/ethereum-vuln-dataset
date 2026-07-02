@@ -41,10 +41,10 @@ Critical** (geth, besu, teku). Severities preserved through the canonical path.
 
 ## After (curated)
 
-- rows: **2,333**
+- rows: **2,225** (after removing 108 same-fix-commit duplicates)
 - residual boilerplate FP: **0**  ✅
-- **essential slice (A+B): 1,891** (was 173 rated-only) — clean high-precision core
-- by authority_tier: {'B_corroborated': 1652, 'C_candidate': 442, 'A_authoritative': 239}
+- **essential slice (A+B): 1,808** (was 173 rated-only) — clean high-precision core
+- by authority_tier: {'B_corroborated': 1573, 'C_candidate': 417, 'A_authoritative': 235}
 - **learned silent-fix signal (gemma4:31b):** classified **1,519** PR/commit diffs
   across all 11 clients (curated C_candidate + gate-dropped *plausible* rows),
   flagged **696** as real silent fixes. This both promotes classified fixes C→B
