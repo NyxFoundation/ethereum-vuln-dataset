@@ -416,10 +416,12 @@ def main() -> int:
     # Optional: fold in the id-keyed label enrichment (docs/label_design.md).
     if a.labels_csv and a.labels_csv.exists():
         labels = pd.read_csv(a.labels_csv).drop_duplicates("id")
-        # labels.csv carries the authoritative fix_commit / introduced_in_commit
-        sec = sec.drop(columns=[c for c in ("fix_commit", "introduced_in_commit")
+        # labels.csv carries authoritative fix_commit / introduced_in_commit / cwe_top25
+        sec = sec.drop(columns=[c for c in ("fix_commit", "introduced_in_commit", "cwe_top25")
                                 if c in sec.columns])
         sec = sec.merge(labels, on="id", how="left")
+        if "cwe_top25" in sec.columns:
+            sec["cwe_top25"] = sec["cwe_top25"].replace("", pd.NA).fillna("N/A")
         report["labelled"] = int((sec["label"].fillna("other") != "other").sum())
         print(f"[labels] joined {report['labelled']} area labels", file=sys.stderr)
 

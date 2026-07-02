@@ -81,8 +81,9 @@ Critical** (geth, besu, teku). Severities preserved through the canonical path.
 | column | coverage | notes |
 |---|---:|---|
 | `source_url`, `title`, `description`, `attack_path` | 100.0% | attack_path defaults to a best-effort class |
-| `label` (assigned, non-`other`) | **90.4%** | deterministic path/keyword + LLM fallback (`gemma4:31b`); the 9.6% `other` are mostly advisory/release rows with no diff |
-| `root_cause` (assigned) | 86.9% | keyword + classifier reason + LLM |
+| `label` (assigned, non-`other`) | **88.4%** | deterministic path/keyword + LLM fallback (`gemma4:31b`) reading the diff or, for no-commit rows, the advisory text |
+| `root_cause` (assigned) | 86.8% | keyword + classifier reason + LLM |
+| `cwe_top25` (from advisory/diff text via LLM) | **27.2%** | read from the link's advisory text / diff even when no fix commit exists — advisories often lack a CWE but the Impact text yields one |
 | `fix_commit` / `introduced_in_commit` | **88.6%** | `/commit/` + `/pull/` URLs, GHSA advisory patch-releases, and **inline `#PR` / commit refs parsed from CHANGELOG/release text** (author-linked, high precision) |
 | `pre_fix_code` / `post_fix_code` (inline) | **72.8%** | present wherever a fix commit resolves (URL, GHSA patch-release, or an inline `#PR` reference in the changelog text). The remaining ~27% are NVD/issue/release rows with no resolvable single commit — no code exists to inline. |
 | `silent_fix_prob` (LLM classifier) | 38.5% | classified rows (C_candidate + plausible gate-dropped) |

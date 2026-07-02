@@ -313,15 +313,16 @@ Pick the ONE best AREA label from this list (use "other" only if truly none fit)
 
 Also pick root_cause from: {', '.join(sorted(set(RC_ENUM)))}
 and attack_path from: {', '.join(sorted(set(AP_ENUM)))}
+and the single most-fitting CWE id (e.g. CWE-190) or "N/A".
 
 Changed files: {row.get('files') or '(none)'}
 Title: {str(row.get('title') or '')[:200]}
-Description: {str(row.get('description') or '')[:400]}
+Description (advisory / changelog text): {str(row.get('description') or '')[:900]}
 Code diff (truncated):
 {(diff or '')[:3000]}
 
 Output ONLY one JSON object on the last line:
-{{"label": "...", "root_cause": "...", "attack_path": "..."}}"""
+{{"label": "...", "root_cause": "...", "attack_path": "...", "cwe": "CWE-XXX"}}"""
     try:
         out = llm._call_llm(prompt)
         m = re.search(r"\{[^{}]*\"label\"[^{}]*\}", out, re.S)
@@ -330,8 +331,9 @@ Output ONLY one JSON object on the last line:
         obj = {}
     valid = set(labels)
     lab = obj.get("label") if obj.get("label") in valid else None
+    cwe = obj.get("cwe") if re.match(r"CWE-\d+$", str(obj.get("cwe") or ""), re.I) else None
     return {"label": lab, "root_cause": obj.get("root_cause"),
-            "attack_path": obj.get("attack_path")}
+            "attack_path": obj.get("attack_path"), "cwe": cwe}
 
 
 def main() -> int:
@@ -404,9 +406,11 @@ def main() -> int:
             "pre_fix_code": json.dumps(pre, ensure_ascii=False),
             "post_fix_code": json.dumps(post, ensure_ascii=False),
             "fix_commit": fix_sha, "introduced_in_commit": introduced,
+            "cwe_top25": "",
         })
         metas.append({"url": url, "layer": lyr, "files": ", ".join(files[:6]),
-                      "title": r.get("title"), "description": r.get("description")})
+                      "title": r.get("title"), "description": r.get("description"),
+                      "nocommit": not fix_sha})
         if (i + 1) % 200 == 0:
             a.diff_cache.write_text(json.dumps(dcache))
             print(f"  [labels] {i+1}/{len(df)}", file=sys.stderr)
@@ -416,8 +420,11 @@ def main() -> int:
     if a.llm:
         from concurrent.futures import ThreadPoolExecutor
         cache = json.loads(a.llm_cache.read_text()) if a.llm_cache.exists() else {}
-        todo = [i for i, row in enumerate(rows) if row["label"] == "other"]
-        print(f"[labels] LLM fallback on {len(todo)} 'other' rows "
+        # LLM on: rows the rules left 'other', PLUS no-commit advisory/CVE rows
+        # (no diff, but their advisory text is the fix info — read it from the link)
+        todo = [i for i, row in enumerate(rows)
+                if row["label"] == "other" or metas[i]["nocommit"]]
+        print(f"[labels] LLM on {len(todo)} rows (other + no-commit) "
               f"({sum(1 for i in todo if rows[i]['id'] in cache)} cached)", file=sys.stderr)
 
         def work(i):
@@ -438,6 +445,8 @@ def main() -> int:
                     rows[i]["root_cause"] = res["root_cause"]
                 if res.get("attack_path"):
                     rows[i]["attack_path"] = res["attack_path"]
+                if res.get("cwe"):
+                    rows[i]["cwe_top25"] = res["cwe"]
                 done += 1
                 if done % 50 == 0:
                     a.llm_cache.write_text(json.dumps(cache))

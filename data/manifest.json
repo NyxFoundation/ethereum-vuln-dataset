@@ -13,7 +13,6 @@
     "domain",
     "scraped_at",
     "stride",
-    "cwe_top25",
     "evidence",
     "silent_fix_prob",
     "security_score",
@@ -28,7 +27,8 @@
     "pre_fix_code",
     "post_fix_code",
     "fix_commit",
-    "introduced_in_commit"
+    "introduced_in_commit",
+    "cwe_top25"
   ],
   "build": {
     "raw_rows": 18475,
@@ -90,7 +90,7 @@
       "1.0": 167
     },
     "residual_boilerplate_fp": 0,
-    "labelled": 2113
+    "labelled": 2062
   },
   "source": "11 Ethereum execution + consensus clients (past security fixes)"
 }
