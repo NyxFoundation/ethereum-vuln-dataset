@@ -4,14 +4,21 @@
 `data/ethereum_vulns.parquet` by `scripts/make_figures.py`; n = 2,225 curated
 security fixes across the eleven production Ethereum clients.*
 
-> **Summary.** The corpus is dominated by *silently patched* fixes (≈94% ship
-> with no advisory), its vulnerability profile is **availability- and
-> consensus-centric** rather than the memory-corruption profile of generic C/C++
-> datasets, its fixes are **localized** (43% single-file), its **severe classes are the ones most often patched silently**, and it spans **six
-> languages implementing one protocol** — a diversity axis absent from prior
-> vulnerability datasets. We interpret each finding against the
-> vulnerability-dataset literature (CVEfixes, BigVul, Devign, CrossVul,
-> DiverseVul, PrimeVul, and Croft et al.'s data-quality framework).
+> **Key takeaways.** For anyone auditing Ethereum clients (or other blockchain /
+> consensus systems), the data says: (1) the **historical fix record — not the
+> CVE list — is the real map**, since ~94% of fixes ship silently; (2) the threat
+> profile is **availability- and consensus-centric** (untrusted network input
+> crashing or diverging a node), not the memory-corruption profile of generic
+> C/C++ datasets; (3) severe bugs concentrate in a few regions — **crypto, the
+> EVM, and the consensus state-transition** for chain-split/value bugs, **p2p /
+> sync / RPC** for DoS — and severity tracks **reachability × blast radius** (led
+> by integer-overflow, consensus-divergence, resource-exhaustion); (4) fixes are
+> **localized** (43% single-file); and (5) because **one spec is implemented
+> eleven ways in six languages**, a fix in one client is a variant lead for the
+> other ten. The actionable version is the audit field guide
+> ([`security_report.md`](./security_report.md)); below, each finding is
+> cross-checked against the vulnerability-dataset literature (CVEfixes, BigVul,
+> Devign, CrossVul, DiverseVul, PrimeVul, Croft et al.).
 
 ## 1. Data and method
 
@@ -112,7 +119,7 @@ across implementations. It is the diversity dimension DiverseVul and CrossVul
 argue reduces overfitting, obtained here **within a single well-specified
 domain**.
 
-## 7. A security-researcher reading — what raises severity
+## 7. What raises severity
 
 Severity here is the **Ethereum Foundation bug-bounty** grade (network-scale
 impact × single-packet/tx reachability), not CVSS. Only **6.4%** of rows were
