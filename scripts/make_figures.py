@@ -191,3 +191,34 @@ ax.set_title("Attack surface — where the adversary's input enters the node",lo
 ax.text(ch.max()*0.55,0.1,"red/orange = remotely reachable\n(bounty-severity eligible)",fontsize=8.5,color="#555")
 plt.tight_layout(); plt.savefig(f"{FG}/fig8_attack_surface.png",bbox_inches="tight"); plt.close()
 print("fig8 written")
+
+# ---- FIG 9: audit priority map — where the severe bugs concentrate ----------
+se=d.severity_estimated.fillna("") if "severity_estimated" in d.columns else d.severity
+d['_hi']=se.isin(['Critical','High'])
+skip={'other','build-ci','test','cli','metrics-observability'}
+areas=[a for a in d.label.value_counts().index if a not in skip][:16]
+import numpy as np
+X=[];Y=[];S=[];L=[];C=[]
+CONS={'lighthouse','lodestar','nimbus','prysm','teku','grandine'}
+for a in areas:
+    sub=d[d.label==a]
+    X.append(len(sub)); Y.append(100*sub['_hi'].mean()); S.append(int(sub['_hi'].sum())); L.append(a)
+    # colour: consensus-layer areas vs execution vs cross-cutting
+    C.append(ORANGE if a.startswith('beacon-chain') or a in('fork-choice','validator','kzg-commitments','builder','p2p-interface') else (TEAL if a in('crypto','serialization','database') else BLUE))
+fig,ax=plt.subplots(figsize=(9.6,5.6))
+for x,y,s,l,c in zip(X,Y,S,L,C):
+    ax.scatter(x,y,s=40+s*22,color=c,alpha=0.75,edgecolor="white",linewidth=1,zorder=2)
+    ax.annotate(l,(x,y),fontsize=8.3,color="#222",xytext=(4,4),textcoords="offset points")
+ax.set_xscale("log"); ax.set_xlabel("number of fixes  (audit volume, log scale)")
+ax.set_ylabel("% High/Critical  (severity density)")
+ax.axhline(np.mean(Y),color="#bbb",ls="--",lw=1); ax.axvline(np.median(X),color="#bbb",ls="--",lw=1)
+ax.text(0.98,0.96,"PRIORITY:\nhigh volume + high severity",transform=ax.transAxes,ha="right",va="top",fontsize=8.5,color=RED)
+ax.set_title("Where to look — audit priority map",loc="left",fontsize=13,color=INK,fontweight="bold")
+from matplotlib.lines import Line2D
+leg=[Line2D([0],[0],marker='o',color='w',markerfacecolor=ORANGE,markersize=9,label='consensus-layer'),
+     Line2D([0],[0],marker='o',color='w',markerfacecolor=BLUE,markersize=9,label='execution-layer'),
+     Line2D([0],[0],marker='o',color='w',markerfacecolor=TEAL,markersize=9,label='cross-cutting')]
+ax.legend(handles=leg,loc="lower right",frameon=False,fontsize=9)
+ax.grid(True,alpha=0.4)
+plt.tight_layout(); plt.savefig(f"{FG}/fig9_priority_map.png",bbox_inches="tight"); plt.close()
+print("fig9 written")

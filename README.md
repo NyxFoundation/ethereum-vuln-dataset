@@ -218,7 +218,7 @@ docs/            BUILD_REPORT · IMPROVEMENT_LOG · silent_fix_detection · mode
 
 ## Documentation
 
-- [`docs/security_report.md`](docs/security_report.md) — 🔎 **Field guide for security researchers** — the bug-bounty severity model as premise, the severity-realization map (what pays → where to look), recurring anti-patterns, cross-client variant analysis, case studies, and a hunting playbook
+- [`docs/security_report.md`](docs/security_report.md) — 🔎 **Audit field guide** — where to look (the priority map: which source-code regions concentrate severe bugs), the attack surface, the recurring vulnerability patterns, cross-implementation variant hunting, and lessons transferable to any blockchain / consensus system
 - [`docs/analysis.md`](docs/analysis.md) — **what the data says** (silent-fix majority, availability-first vuln profile, cross-language diversity), read through the dataset-research literature
 - [`docs/limitations.md`](docs/limitations.md) — **honest inventory of coverage gaps & caveats** (read before relying on the data)
 - [`docs/severity_labeling.md`](docs/severity_labeling.md) — **methodology**: LLM severity estimation against the bug-bounty model (decompose → map → calibrate)
