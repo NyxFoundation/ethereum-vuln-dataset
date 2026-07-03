@@ -128,9 +128,9 @@ The bounty's **scope is exactly this corpus** — the eleven clients plus
 `c-kzg-4844` and the deposit contract. Three consequences shape the `severity`
 column:
 
-- **~94% of rows are `Unrated`.** Clients patch silently, so the bug was never
-  submitted or graded. **Unrated ≠ low impact** — see
-  [`security_report.md`](docs/security_report.md) §7.
+- **~94% of rows are `Unrated`.** Most fixes ship with no CVE or advisory, so the
+  bug was never graded. **Unrated ≠ low impact** — the fix record, not the CVE
+  list, is the map (see [`security_report.md`](docs/security_report.md)).
 - **Two severity models coexist.** A minority of rated rows are *upstream
   dependency CVEs* (log4j, Netty, `golang.org/x/crypto`) carrying **CVSS**
   severity — a dependency bug does not split the Ethereum network, so it is out of
@@ -218,7 +218,7 @@ docs/            BUILD_REPORT · IMPROVEMENT_LOG · silent_fix_detection · mode
 
 ## Documentation
 
-- [`docs/security_report.md`](docs/security_report.md) — 🔎 **Audit field guide** — where to look (the priority map: which source-code regions concentrate severe bugs), the attack surface, the recurring vulnerability patterns, cross-implementation variant hunting, and lessons transferable to any blockchain / consensus system
+- [`docs/security_report.md`](docs/security_report.md) — 🔎 **Auditing Ethereum clients: where the bugs actually live** — a field guide for client devs, audit firms, and white-hats: where to look, the six recurring bug patterns, the attack surface, and the cross-implementation variant hunting that turns one client's fix into a lead on another's live bug
 - [`docs/analysis.md`](docs/analysis.md) — **what the data says** (silent-fix majority, availability-first vuln profile, cross-language diversity), read through the dataset-research literature
 - [`docs/limitations.md`](docs/limitations.md) — **honest inventory of coverage gaps & caveats** (read before relying on the data)
 - [`docs/severity_labeling.md`](docs/severity_labeling.md) — **methodology**: LLM severity estimation against the bug-bounty model (decompose → map → calibrate)

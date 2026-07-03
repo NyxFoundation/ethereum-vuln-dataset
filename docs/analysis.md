@@ -119,28 +119,23 @@ across implementations. It is the diversity dimension DiverseVul and CrossVul
 argue reduces overfitting, obtained here **within a single well-specified
 domain**.
 
-## 7. Severity — what the bounty counts, and what we can honestly say
+## 7. Severity
 
-Severity here is the **Ethereum Foundation bug-bounty** grade: an impact reachable
-by a single packet / on-chain tx that splits the chain, takes the network down,
-corrupts value, or slashes validators (not CVSS). Two honest caveats bound what
-this dataset supports:
+Severity follows the **Ethereum Foundation bug bounty**, not CVSS: the grade
+reflects how much of the network a single packet or transaction could split, halt,
+or corrupt. That impact model is what makes crypto, the EVM, and the consensus
+state transition the regions to watch for critical bugs, and p2p / sync / RPC the
+regions to watch for denial of service (audit guide,
+[`security_report.md`](./security_report.md)).
 
-- **Remote reachability is part of the *definition*, not a finding.** Because a
-  bug is only graded when it is remotely triggerable, "reachable bugs are the
-  severe ones" is true *by construction* — not an empirical result. What the data
-  adds is *where the impactful code is*: consensus / EVM / crypto for
-  chain-split/value bugs, p2p / sync / RPC for DoS (the audit priority map,
-  [`security_report.md`](./security_report.md) §2).
-- **Only 6.4% of rows were bounty-graded.** The rest are LLM-*estimated*
-  ([`severity_labeling.md`](./severity_labeling.md)), and that estimate is derived
-  partly from `root_cause` / `attack_path` — so we deliberately draw **no**
-  "root-cause X raises severity" conclusion from it, which would be circular.
-  Treat `severity_estimated` as a triage prior and filter to
-  `severity_source == bounty-graded` for ground truth. Note also that a graded row
-  reflects **disclosure policy** (which clients publish advisories), not relative
-  security posture, and fix size does **not** separate severity (median ~51 LOC
-  high vs 45 overall) — you cannot spot a critical bug by diff size.
+Only 6.4% of rows carry a real bounty grade; the rest are estimated
+([`severity_labeling.md`](./severity_labeling.md), about 60% exact and 80% within
+one tier on known-severe bugs). Take the graded slice
+(`severity_source == bounty-graded`) as ground truth and the estimates as a triage
+prior. Two things the graded slice does *not* tell you: it tracks which teams
+publish advisories more than which clients are safer, and fix size does not track
+severity (median 51 vs 45 LOC), so neither is a shortcut to finding the severe
+bugs.
 
 ## 8. Data quality and coverage
 
