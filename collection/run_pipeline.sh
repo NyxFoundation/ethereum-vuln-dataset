@@ -162,6 +162,10 @@ stage curate PY "${CURATE[@]}"
 # columns land in the dataset. Needs the local clones (local_diffs warm/warm-prs).
 stage labels PY pipeline/enrich_labels.py \
     --in data/ethereum_vulns.parquet --out data/labels.csv
-[ -f data/labels.csv ] && stage curate_labelled PY "${CURATE[@]}" --labels-csv data/labels.csv
+LABEL_ARG=(); [ -f data/labels.csv ] && LABEL_ARG=(--labels-csv data/labels.csv)
+# optional bug-bounty severity estimates (estimate_severity.py --apply); present
+# -> joined as severity_estimated / severity_source; absent -> skipped.
+SEV_ARG=(); [ -f data/severity_est.csv ] && SEV_ARG=(--severity-csv data/severity_est.csv)
+[ -f data/labels.csv ] && stage curate_labelled PY "${CURATE[@]}" "${LABEL_ARG[@]}" "${SEV_ARG[@]}"
 
 echo "=== DONE. Curated -> data/ethereum_vulns.parquet (+ .csv / .preview.csv) ==="

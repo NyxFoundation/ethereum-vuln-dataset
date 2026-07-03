@@ -400,6 +400,9 @@ def main() -> int:
     ap.add_argument("--labels-csv", type=Path,
                     help="optional id-keyed labels from enrich_labels.py "
                          "(label / root_cause / attack_path / pre+post code / fix_commit)")
+    ap.add_argument("--severity-csv", type=Path,
+                    help="optional id-keyed severity estimates from estimate_severity.py "
+                         "(severity_estimated / severity_source / impact_type / …)")
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
 
@@ -451,6 +454,16 @@ def main() -> int:
         print(f"[dedup] removed {report['deduped_fix_commit']} same-fix-commit duplicates "
               f"-> {len(sec)} rows", file=sys.stderr)
 
+    # Optional: fold in bug-bounty severity estimates (docs/severity_labeling.md).
+    if a.severity_csv and a.severity_csv.exists():
+        svc = pd.read_csv(a.severity_csv).drop_duplicates("id")
+        keep = [c for c in ("id", "severity_estimated", "severity_source", "impact_type",
+                            "reachability", "blast_radius", "severity_why") if c in svc.columns]
+        sec = sec.merge(svc[keep], on="id", how="left")
+        report["by_severity_source"] = {k: int(v) for k, v in
+                                        sec.get("severity_source", pd.Series(dtype=str)).value_counts().items()}
+        print(f"[severity] joined estimates: {report['by_severity_source']}", file=sys.stderr)
+
     print(json.dumps(report, indent=2, ensure_ascii=False))
     assert report["residual_boilerplate_fp"] == 0, "T1 leak: boilerplate survived into the security set"
 
@@ -467,7 +480,7 @@ def main() -> int:
     csv_path = a.out.with_suffix(".csv")
     sec.to_csv(csv_path, index=False)
     prev_cols = [c for c in ("source_platform", "label", "root_cause", "attack_path",
-                             "severity", "authority_tier", "title", "source_url")
+                             "severity", "severity_estimated", "authority_tier", "title", "source_url")
                  if c in sec.columns]
     prev = sec[prev_cols].copy()
     if "title" in prev:
