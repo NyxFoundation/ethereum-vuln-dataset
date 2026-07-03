@@ -219,6 +219,7 @@ docs/            BUILD_REPORT · IMPROVEMENT_LOG · silent_fix_detection · mode
 ## Documentation
 
 - [`docs/security_report.md`](docs/security_report.md) — 🔎 **Auditing Ethereum clients: where the bugs actually live** — a field guide for client devs, audit firms, and white-hats: where to look, the six recurring bug patterns, the attack surface, and the cross-implementation variant hunting that turns one client's fix into a lead on another's live bug
+- [`docs/checklist.md`](docs/checklist.md) — ✅ **Security checklist & test plan** — per-subsystem review items and unit/e2e tests derived from the actual fixes, ordered by impact
 - [`docs/analysis.md`](docs/analysis.md) — **what the data says** (silent-fix majority, availability-first vuln profile, cross-language diversity), read through the dataset-research literature
 - [`docs/limitations.md`](docs/limitations.md) — **honest inventory of coverage gaps & caveats** (read before relying on the data)
 - [`docs/severity_labeling.md`](docs/severity_labeling.md) — **methodology**: LLM severity estimation against the bug-bounty model (decompose → map → calibrate)

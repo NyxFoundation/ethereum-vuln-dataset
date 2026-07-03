@@ -137,6 +137,19 @@ publish advisories more than which clients are safer, and fix size does not trac
 severity (median 51 vs 45 LOC), so neither is a shortcut to finding the severe
 bugs.
 
+Adding the severity axis to the breakdowns answers the practical question — *by
+severity, which areas and causes are heavy, and which are light.*
+
+![Fixes by subsystem and root cause, split by severity](figures/fig11_severity_heatmap.png)
+
+High-severity fixes cluster where the impact model predicts: the state trie, p2p,
+sync, and fork-choice by subsystem; `missing_input_validation`,
+`resource_exhaustion`, `integer_overflow`, and `consensus_divergence` by cause.
+The state trie is dominated by Medium, p2p carries a relatively high share of High.
+(The same data as a 3D bar chart is `figures/fig10_severity_3d.png` — striking,
+but the heatmap reads exact counts better.) This view drives the prioritized
+[security checklist & test plan](./checklist.md).
+
 ## 8. Data quality and coverage
 
 ![Figure 6](figures/fig6_coverage.png)

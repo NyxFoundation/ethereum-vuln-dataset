@@ -186,3 +186,47 @@ ax.legend(handles=[Patch(color=RED,label='consensus / value → chain split or i
           loc="lower right",frameon=False,fontsize=8.5)
 plt.tight_layout(); plt.savefig(f"{FG}/fig9_priority_map.png",bbox_inches="tight"); plt.close()
 print("fig9 written")
+
+# ---- FIG 10: 3D — subsystem × severity × count -----------------------------
+from mpl_toolkits.mplot3d import Axes3D  # noqa
+se=d.severity_estimated.fillna("")
+d['_tier']=se.where(se.isin(['Critical','High','Medium','Low']),'—')
+TIERS=['Low','Medium','High','Critical']
+TCOL={'Low':TEAL,'Medium':ORANGE,'High':RED,'Critical':'#7b1fa2'}
+skip={'other','build-ci','test','cli','metrics-observability','docs'}
+subs=[a for a in d.label.value_counts().index if a not in skip][:12][::-1]
+fig=plt.figure(figsize=(11,6.6)); ax=fig.add_subplot(111,projection='3d')
+for yi,t in enumerate(TIERS):
+    zs=[int(((d.label==s)&(d._tier==t)).sum()) for s in subs]
+    xs=np.arange(len(subs))
+    ax.bar3d(xs, np.full(len(subs),yi), np.zeros(len(subs)), 0.7, 0.55, zs,
+             color=TCOL[t], shade=True, alpha=0.92)
+ax.set_xticks(np.arange(len(subs))+0.35); ax.set_xticklabels(subs,rotation=40,ha='right',fontsize=7.5)
+ax.set_yticks(np.arange(len(TIERS))+0.25); ax.set_yticklabels(TIERS,fontsize=8.5)
+ax.set_zlabel("fixes",fontsize=9)
+ax.set_title("Fixes by subsystem × severity  (severity incl. estimated)",fontsize=12.5,color=INK,fontweight="bold")
+ax.view_init(elev=22,azim=-58); ax.set_box_aspect((2.0,1.0,0.8))
+plt.tight_layout(); plt.savefig(f"{FG}/fig10_severity_3d.png",bbox_inches="tight"); plt.close()
+
+# ---- FIG 11: heatmaps — subsystem×severity and root_cause×severity ---------
+def heat(ax,rows,rowlab,title):
+    M=np.array([[int(((idx==r)&(d._tier==t)).sum()) for t in TIERS] for r in rows])
+    im=ax.imshow(M,cmap="YlOrRd",aspect="auto")
+    ax.set_xticks(range(len(TIERS))); ax.set_xticklabels(TIERS,fontsize=9)
+    ax.set_yticks(range(len(rows))); ax.set_yticklabels(rowlab,fontsize=9)
+    for i in range(len(rows)):
+        for j in range(len(TIERS)):
+            v=M[i,j]
+            if v: ax.text(j,i,v,ha="center",va="center",fontsize=8,
+                          color="white" if v>M.max()*0.55 else "#333")
+    ax.set_title(title,loc="left",fontsize=12,color=INK,fontweight="bold")
+    ax.grid(False)
+    return im
+subs2=[a for a in d.label.value_counts().index if a not in skip][:12]
+rcs=[c for c in d.root_cause.value_counts().head(9).index if c!='other'][:8]
+fig,(a1,a2)=plt.subplots(1,2,figsize=(12,5.2))
+idx=d.label; heat(a1,subs2,subs2,"(a) subsystem × severity")
+idx=d.root_cause; im=heat(a2,rcs,[r.replace('_',' ') for r in rcs],"(b) root cause × severity")
+fig.colorbar(im,ax=a2,fraction=0.046,pad=0.04,label="fixes")
+plt.tight_layout(); plt.savefig(f"{FG}/fig11_severity_heatmap.png",bbox_inches="tight"); plt.close()
+print("fig10, fig11 written")

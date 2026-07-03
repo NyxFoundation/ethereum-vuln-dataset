@@ -183,6 +183,9 @@ in the consensus path, which is what turned an off-by-something into a Critical.
    present in one and missing in another is a candidate.
 5. Rank what you find by the damage one packet or transaction could do.
 
+Working from these patterns as concrete, per-subsystem review items and tests?
+See the [security checklist & test plan](./checklist.md).
+
 ## Caveats and disclosure
 
 Labels are model- and heuristic-derived (about 0.90 precision), not hand-verified.
