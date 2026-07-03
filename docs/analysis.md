@@ -6,16 +6,16 @@ security fixes across the eleven production Ethereum clients.*
 
 > **Key takeaways.** For anyone auditing Ethereum clients (or other blockchain /
 > consensus systems), the data says: (1) the **historical fix record — not the
-> CVE list — is the real map**, since ~94% of fixes ship silently; (2) the threat
-> profile is **availability- and consensus-centric** (untrusted network input
-> crashing or diverging a node), not the memory-corruption profile of generic
-> C/C++ datasets; (3) severe bugs concentrate in a few regions — **crypto, the
-> EVM, and the consensus state-transition** for chain-split/value bugs, **p2p /
-> sync / RPC** for DoS — and severity tracks **reachability × blast radius** (led
-> by integer-overflow, consensus-divergence, resource-exhaustion); (4) fixes are
-> **localized** (43% single-file); and (5) because **one spec is implemented
-> eleven ways in six languages**, a fix in one client is a variant lead for the
-> other ten. The actionable version is the audit field guide
+> CVE list — is the more complete map**, since ~94% of fixes carry no CVE or
+> advisory; (2) the threat profile is **availability- and consensus-centric**
+> (untrusted network input crashing or diverging a node), not the memory-
+> corruption profile of generic C/C++ datasets; (3) by the bounty's impact
+> definition, **consensus, EVM and crypto code is where an exploitable bug is
+> *critical*** (chain split / invalid value) while **p2p / sync / RPC is where
+> *DoS* lives**, so scope an audit accordingly; (4) fixes are **localized** (43%
+> single-file); and (5) because **one spec is implemented eleven ways in six
+> languages**, a fix in one client is a variant lead for the other ten. The
+> actionable version is the audit field guide
 > ([`security_report.md`](./security_report.md)); below, each finding is
 > cross-checked against the vulnerability-dataset literature (CVEfixes, BigVul,
 > Devign, CrossVul, DiverseVul, PrimeVul, Croft et al.).
@@ -119,51 +119,28 @@ across implementations. It is the diversity dimension DiverseVul and CrossVul
 argue reduces overfitting, obtained here **within a single well-specified
 domain**.
 
-## 7. What raises severity
+## 7. Severity — what the bounty counts, and what we can honestly say
 
-Severity here is the **Ethereum Foundation bug-bounty** grade (network-scale
-impact × single-packet/tx reachability), not CVSS. Only **6.4%** of rows were
-graded by the bounty, so we estimate the rest with an LLM decomposition
-(`impact_type` / `reachability` / `blast_radius`) calibrated against the graded
-rows (~60% exact / ~80% within ±1 tier on real severe bugs; method:
-[`severity_labeling.md`](./severity_labeling.md)). Combining graded + estimated
-tiers, **675 rows (30%) now carry a bounty tier** (176 High/Critical), enough for
-a robust reading.
+Severity here is the **Ethereum Foundation bug-bounty** grade: an impact reachable
+by a single packet / on-chain tx that splits the chain, takes the network down,
+corrupts value, or slashes validators (not CVSS). Two honest caveats bound what
+this dataset supports:
 
-![Figure 7](figures/fig7_severity_drivers.png)
-
-**(a) Reachability × blast-radius is the severity driver** (Fig, left; n=176).
-Three root causes are *over-represented* in High/Critical: **integer_overflow
-(lift ×1.71)**, **consensus_divergence (×1.60)**, and **resource_exhaustion / DoS
-(×1.26)** — precisely the classes that map to the bounty's impact categories
-(invalid-ETH / chain split / network takedown). Conversely **`race_condition` has
-lift ≈ 0.29** and `unhandled_error/nil` ≈ 0.67: common bugs, but locally-triggered
-and low-blast-radius, so out of the "single-packet/tx, network-scale" severity
-model by definition. Severity tracks *what the bounty pays for*, not code-bug
-class alone.
-
-**(b) The silent reservoir — most severe fixes were never graded** (Fig, right).
-Of the **1,552 silently-patched client fixes, ~34% (532) carry a bounty-relevant
-tier when assessed** — **110 High, 242 Medium, 180 Low** — and the estimated-High
-ones are dominated by `liveness_dos` (89) and `chain_split` (21). Only 60 fixes
-in the whole corpus were actually bounty-graded, so the public severity record
-**understates the severe population by roughly an order of magnitude**; the
-`severity_estimated` / `severity_source` columns expose the would-be-rated slice
-explicitly (never overwriting the 60 ground-truth grades).
-
-**Reporting bias, not a severity map.** Among the *graded* rows, Geth dominates —
-not because Geth is buggier, but because it publishes GitHub Security Advisories
-while most clients patch silently. The graded slice measures **disclosure policy,
-not security posture**. And fix size does **not** separate severity (median ~51
-LOC high vs 45 overall) — you cannot spot a critical bug by diff size.
-
-*Takeaways for a researcher.* (i) Prioritize by **attacker-reachability ×
-subsystem** (p2p, rpc, crypto, consensus state-transition) rather than by whether
-a CVE exists. (ii) The **unrated `consensus_divergence` / `resource_exhaustion`
-rows are a hunting ground** for under-triaged severe bugs — the corpus surfaces
-exactly the silent, high-impact fixes that CVE-anchored datasets miss. (iii)
-Because one spec is implemented eleven ways, a severe fix in one client is a lead
-to look for its **silent analogue in the others** (§6).
+- **Remote reachability is part of the *definition*, not a finding.** Because a
+  bug is only graded when it is remotely triggerable, "reachable bugs are the
+  severe ones" is true *by construction* — not an empirical result. What the data
+  adds is *where the impactful code is*: consensus / EVM / crypto for
+  chain-split/value bugs, p2p / sync / RPC for DoS (the audit priority map,
+  [`security_report.md`](./security_report.md) §2).
+- **Only 6.4% of rows were bounty-graded.** The rest are LLM-*estimated*
+  ([`severity_labeling.md`](./severity_labeling.md)), and that estimate is derived
+  partly from `root_cause` / `attack_path` — so we deliberately draw **no**
+  "root-cause X raises severity" conclusion from it, which would be circular.
+  Treat `severity_estimated` as a triage prior and filter to
+  `severity_source == bounty-graded` for ground truth. Note also that a graded row
+  reflects **disclosure policy** (which clients publish advisories), not relative
+  security posture, and fix size does **not** separate severity (median ~51 LOC
+  high vs 45 overall) — you cannot spot a critical bug by diff size.
 
 ## 8. Data quality and coverage
 

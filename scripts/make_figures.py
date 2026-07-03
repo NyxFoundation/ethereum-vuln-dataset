@@ -131,42 +131,6 @@ print("figures written to",FG)
 import os
 for f in sorted(os.listdir(FG)): print("  ",f, round(os.path.getsize(FG+"/"+f)/1024),"KB")
 
-# ---- FIG 7: what raises severity (security-researcher view) -----------------
-# combined bounty tier: real grade where present, else LLM estimate (n=675)
-se=d.severity_estimated.fillna("") if "severity_estimated" in d.columns else d.severity
-hi=d[se.isin(['Critical','High'])]
-causes=[c for c in d.root_cause.value_counts().head(8).index if c!='other']
-lift=[]
-for rc in causes:
-    p_all=(d.root_cause==rc).mean(); p_hi=(hi.root_cause==rc).mean()
-    lift.append(p_hi/p_all if p_all else 0)
-order=np.argsort(lift)
-causes=[causes[i] for i in order]; lift=[lift[i] for i in order]
-fig,(a1,a2)=plt.subplots(1,2,figsize=(11.6,4.3))
-y=np.arange(len(causes))
-cols=[RED if l>1.15 else (GRAY if l<0.85 else BLUE) for l in lift]
-a1.hlines(y,1,lift,color=cols,lw=2,zorder=1); a1.scatter(lift,y,color=cols,s=60,zorder=2)
-a1.axvline(1,color="#888",lw=1,ls="--")
-a1.set_yticks(y); a1.set_yticklabels([c.replace('_',' ') for c in causes])
-a1.set_xlabel(f"severity lift   P(cause | High+Crit) / P(cause | all)   [n={len(hi)}]")
-a1.set_title("(a) What raises severity",loc="left",fontsize=12,color=INK,fontweight="bold")
-a1.text(max(lift)*0.62,0.2,"← under        over →",color="#777",fontsize=8)
-a1.grid(axis="y",visible=False)
-# (b) the silent reservoir: estimated bounty tier of the silently-patched fixes
-llm=d[d.severity_source=='llm-estimated'] if "severity_source" in d.columns else d.iloc[:0]
-res=llm.severity_estimated.value_counts().reindex(['High','Medium','Low','not-eligible']).fillna(0)
-colmap={'High':RED,'Medium':ORANGE,'Low':TEAL,'not-eligible':GRAY}
-yy=np.arange(len(res))[::-1]
-a2.barh(yy,res.values,color=[colmap[i] for i in res.index],height=0.7)
-a2.set_yticks(yy); a2.set_yticklabels([i for i in res.index])
-for yi,v in zip(yy,res.values): a2.text(v+10,yi,f"{int(v)}",va="center",fontsize=9,color="#333")
-a2.margins(x=0.16); a2.grid(axis="y",visible=False)
-nsev=int(res[['High','Medium','Low']].sum())
-a2.set_title(f"(b) The silent reservoir — bounty tier of {len(llm)}\n     silently-patched client fixes ({100*nsev/max(len(llm),1):.0f}% would be rated)",
-             loc="left",fontsize=11.5,color=INK,fontweight="bold")
-plt.tight_layout(); plt.savefig(f"{FG}/fig7_severity_drivers.png",bbox_inches="tight"); plt.close()
-print("fig7 written")
-
 # ---- FIG 8: attack surface — where the adversary's single packet/tx enters --
 # EF bounty severity requires a *remotely reachable* trigger ("single network
 # packet or onchain transaction"). Group attack_path by entry channel.
@@ -188,37 +152,37 @@ ax.set_yticks(y); ax.set_yticklabels(ch.index)
 for yi,v in zip(y,ch.values): ax.text(v+8,yi,str(int(v)),va="center",fontsize=9,color="#333")
 ax.margins(x=0.13); ax.grid(axis="y",visible=False)
 ax.set_title("Attack surface — where the adversary's input enters the node",loc="left",fontsize=12,color=INK,fontweight="bold")
-ax.text(ch.max()*0.55,0.1,"red/orange = remotely reachable\n(bounty-severity eligible)",fontsize=8.5,color="#555")
+ax.text(ch.max()*0.55,0.1,"red/orange = remotely reachable\n(attacker-controlled input)",fontsize=8.5,color="#555")
 plt.tight_layout(); plt.savefig(f"{FG}/fig8_attack_surface.png",bbox_inches="tight"); plt.close()
 print("fig8 written")
 
 # ---- FIG 9: audit priority map — where the severe bugs concentrate ----------
-se=d.severity_estimated.fillna("") if "severity_estimated" in d.columns else d.severity
-d['_hi']=se.isin(['Critical','High'])
+# Honest "where to look": VOLUME (observed) per subsystem, coloured by the impact
+# class each maps to BY THE BOUNTY DEFINITION (consensus/value = split/invalid-
+# state = critical-if-exploitable; availability = DoS). No estimated-severity axis.
 skip={'other','build-ci','test','cli','metrics-observability'}
-areas=[a for a in d.label.value_counts().index if a not in skip][:16]
-import numpy as np
-X=[];Y=[];S=[];L=[];C=[]
-CONS={'lighthouse','lodestar','nimbus','prysm','teku','grandine'}
-for a in areas:
-    sub=d[d.label==a]
-    X.append(len(sub)); Y.append(100*sub['_hi'].mean()); S.append(int(sub['_hi'].sum())); L.append(a)
-    # colour: consensus-layer areas vs execution vs cross-cutting
-    C.append(ORANGE if a.startswith('beacon-chain') or a in('fork-choice','validator','kzg-commitments','builder','p2p-interface') else (TEAL if a in('crypto','serialization','database') else BLUE))
-fig,ax=plt.subplots(figsize=(9.6,5.6))
-for x,y,s,l,c in zip(X,Y,S,L,C):
-    ax.scatter(x,y,s=40+s*22,color=c,alpha=0.75,edgecolor="white",linewidth=1,zorder=2)
-    ax.annotate(l,(x,y),fontsize=8.3,color="#222",xytext=(4,4),textcoords="offset points")
-ax.set_xscale("log"); ax.set_xlabel("number of fixes  (audit volume, log scale)")
-ax.set_ylabel("% High/Critical  (severity density)")
-ax.axhline(np.mean(Y),color="#bbb",ls="--",lw=1); ax.axvline(np.median(X),color="#bbb",ls="--",lw=1)
-ax.text(0.98,0.96,"PRIORITY:\nhigh volume + high severity",transform=ax.transAxes,ha="right",va="top",fontsize=8.5,color=RED)
-ax.set_title("Where to look — audit priority map",loc="left",fontsize=13,color=INK,fontweight="bold")
-from matplotlib.lines import Line2D
-leg=[Line2D([0],[0],marker='o',color='w',markerfacecolor=ORANGE,markersize=9,label='consensus-layer'),
-     Line2D([0],[0],marker='o',color='w',markerfacecolor=BLUE,markersize=9,label='execution-layer'),
-     Line2D([0],[0],marker='o',color='w',markerfacecolor=TEAL,markersize=9,label='cross-cutting')]
-ax.legend(handles=leg,loc="lower right",frameon=False,fontsize=9)
-ax.grid(True,alpha=0.4)
+areas=[a for a in d.label.value_counts().index if a not in skip][:14]
+CONSENSUS_VALUE={'evm','opcodes','precompiles','fork-choice','transactions','crypto',
+                 'kzg-commitments','serialization','state-trie'}
+def impact_class(a):
+    if a.startswith('beacon-chain') or a in CONSENSUS_VALUE: return ('consensus / value  (→ chain split or invalid state)',RED)
+    if a in {'p2p','p2p-interface','sync','rpc','txpool','database','engine-api'}: return ('availability  (→ DoS)',BLUE)
+    return ('other',GRAY)
+vol=[len(d[d.label==a]) for a in areas]
+cls=[impact_class(a) for a in areas]
+o=np.argsort(vol)
+areas=[areas[i] for i in o]; vol=[vol[i] for i in o]; cls=[cls[i] for i in o]
+fig,ax=plt.subplots(figsize=(9.2,5.6))
+y=np.arange(len(areas))
+ax.barh(y,vol,color=[c for _,c in cls],height=0.72)
+ax.set_yticks(y); ax.set_yticklabels(areas)
+for yi,v in zip(y,vol): ax.text(v+2,yi,str(v),va="center",fontsize=9,color="#333")
+ax.margins(x=0.13); ax.grid(axis="y",visible=False)
+ax.set_xlabel("number of fixes  (audit volume — observed)")
+ax.set_title("Where to look — fixes per subsystem, by impact class",loc="left",fontsize=13,color=INK,fontweight="bold")
+from matplotlib.patches import Patch
+ax.legend(handles=[Patch(color=RED,label='consensus / value → chain split or invalid state (critical if exploitable)'),
+                   Patch(color=BLUE,label='availability → denial of service')],
+          loc="lower right",frameon=False,fontsize=8.5)
 plt.tight_layout(); plt.savefig(f"{FG}/fig9_priority_map.png",bbox_inches="tight"); plt.close()
 print("fig9 written")

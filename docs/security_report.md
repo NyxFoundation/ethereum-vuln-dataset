@@ -14,82 +14,85 @@ languages, both layers). Numbers and examples are drawn from
 
 ## 1. What matters — the impact model that sets priorities
 
-Prioritize by **blast radius × remote reachability**, per the
+Rank findings by the **impact they could realize**, per the
 [Ethereum Foundation bug bounty](https://ethereum.org/en/bug-bounty/): a finding
-is severe if a **single network packet or on-chain transaction** can **split the
-chain**, **take the network down**, **create/steal ETH**, or **slash validators**.
-Everything below is ranked against that model — not CVSS, and not code-bug class
-in isolation. (Note: clients patch ~94% of issues *silently*, so **the historical
-fix record — not the CVE list — is the real map**; this guide is that map.)
+is Critical/High if a **single network packet or on-chain transaction** can
+**split the chain**, **take the network down**, **create/steal ETH**, or **slash
+validators**. This is the lens for everything below — not CVSS, and not code-bug
+class in isolation. (Most fixes carry **no CVE or public advisory**, so the
+historical **fix record — not the CVE list — is the more complete map** of where
+clients break; this guide is that map.)
 
-## 2. Where to look — the audit priority map
+## 2. Where to look — by volume and impact class
 
-![Figure 1 — audit priority map](figures/fig9_priority_map.png)
+![Figure 1 — where fixes concentrate, by impact class](figures/fig9_priority_map.png)
 
-Plotting every subsystem by **audit volume** (how many bugs it has produced) and
-**severity density** (share rated High/Critical) yields three actionable groups:
+Two *observed* facts scope an audit: **where fixes concentrate** (volume — where
+bugs historically occur) and **which impact class each subsystem maps to** by the
+bounty definition (a consensus- or value-affecting bug is Critical/High *if
+exploitable*; an availability bug is a DoS).
 
-**① Deep-audit first — low volume, high severity density.** Few fixes, but a bug
-here is disproportionately *critical* because it sits on consensus-critical or
-cryptographic paths:
+**Highest volume — most bugs land here.** `state-trie` (210), `p2p-interface`
+(181), `rpc` (147), `sync` (140), `beacon-chain:attestation` (106), `transactions`
+(99), `fork-choice` (93). Audit breadth first where the churn is.
 
-| Subsystem | fixes | %High/Crit | why it's severe |
-|---|---:|---:|---|
-| `crypto` | 40 | **15%** | signature/curve/hash errors → forgery, DoS, or divergence |
-| `evm` / `opcodes` / `precompiles` | ~80 | **12%** | any semantic disagreement = **chain split** |
+**Consensus- and value-critical — where an exploitable bug is *critical* by
+definition** (semantic disagreement → chain split; bad arithmetic → invalid
+value): the **EVM / opcodes / precompiles**, **gas & balance arithmetic**
+(`transactions`), **fork-choice**, the **beacon-chain state-transition**
+(`block-processing`, `attestation`), **state-trie**, and **crypto / KZG**. Note
+`crypto` and `evm` are **low-volume but consensus-critical** — few historical
+fixes, but a bug there is critical by definition, so deep-audit them.
 
-**② Highest priority — high volume *and* high severity.** The consensus and
-network core; audit breadth *and* depth here:
+**Availability — audit for DoS:** `p2p`, `p2p-interface`, `sync`, `rpc`, `txpool`,
+`database` — dominated by resource-exhaustion and missing input validation; audit
+for resource bounds on peer-controlled work.
 
-| Subsystem | fixes | %High/Crit | dominant cause → entry |
-|---|---:|---:|---|
-| `p2p` | 82 | **17%** | resource_exhaustion ← malicious p2p message |
-| `fork-choice` | 93 | **13%** | missing validation ← crafted state |
-| `sync` | 140 | **11%** | resource_exhaustion ← malformed input |
-| `beacon-chain:block-processing` | 84 | **10%** | **consensus_divergence** ← malformed input |
-| `beacon-chain:attestation` | 106 | **9%** | missing validation ← malicious attestation |
+Per-subsystem **dominant cause → entry point** (observed labels):
 
-**③ Highest volume, mostly availability.** Most churn and most bugs, but they
-skew toward liveness/DoS rather than consensus — audit for resource limits and
-input validation:
-
-| Subsystem | fixes | %High/Crit | dominant cause |
-|---|---:|---:|---|
-| `state-trie` | 210 | 7% | improper_state_update |
-| `p2p-interface` | 181 | 7% | missing_input_validation |
-| `rpc` | 147 | 5% | resource_exhaustion |
-
-**One-line takeaway:** *audit `crypto`, the `EVM`, and the consensus state-
-transition for **critical** (chain-split/value) bugs; audit `p2p`, `sync`, and
-`RPC` for **availability** (DoS) bugs.*
+| Subsystem | fixes | dominant cause → entry |
+|---|---:|---|
+| `state-trie` | 210 | improper_state_update ← malformed input |
+| `p2p-interface` | 181 | missing_input_validation ← malformed input |
+| `rpc` | 147 | resource_exhaustion ← malformed input |
+| `sync` | 140 | resource_exhaustion ← malformed input |
+| `beacon-chain:attestation` | 106 | missing_input_validation ← malicious attestation |
+| `fork-choice` | 93 | missing_input_validation ← crafted state |
+| `beacon-chain:block-processing` | 84 | consensus_divergence ← malformed input |
+| `p2p` | 82 | resource_exhaustion ← malicious p2p message |
+| `evm` | 40 | integer_overflow_underflow ← crafted state |
+| `crypto` | 40 | missing_input_validation ← malformed input |
 
 ## 3. The attack surface — where untrusted input enters
 
 ![Figure 2 — attack surface](figures/fig8_attack_surface.png)
 
-Severity requires a remotely-reachable trigger, so your taint sources are the
-places a node ingests adversary-controlled data. In order of exposure: **p2p /
-gossip** (messages, attestations, blocks, peers), the **untrusted-parsing** layer
-(RLP / SSZ / JSON decoders that run *before* validation), **on-chain transactions
-/ the EVM**, and **crafted chain state** (snap-sync, historical data). Start taint
-analysis here; the `internal_only` slice is not bounty-reachable.
+A remotely-triggerable bug originates where a node ingests adversary-controlled
+data — your taint sources. In order of exposure: **p2p / gossip** (messages,
+attestations, blocks, peers), the **untrusted-parsing** layer (RLP / SSZ / JSON
+decoders that run *before* validation), **on-chain transactions / the EVM**, and
+**crafted chain state** (snap-sync, historical data). Start taint analysis here.
 
-## 4. What raises severity — rank findings by class
+## 4. Rank a finding by the impact it could realize
 
-![Figure 3 — what raises severity](figures/fig7_severity_drivers.png)
+The bounty's impact categories map to concrete bug classes and code regions — use
+this to weight a finding by *what it could actually cause*, not by whether it
+carries a CVE:
 
-Three root causes are over-represented among High/Critical fixes and should raise
-your priority on a finding: **integer overflow/underflow (×1.71)** — gas/balance/
-slot arithmetic that can mint invalid value or diverge; **consensus divergence
-(×1.60)** — the chain-split class; and **resource exhaustion / DoS (×1.26)**.
-Conversely, `race_condition` (×0.29) and `unhandled_error/nil` (×0.67) are common
-but usually *locally* triggered and low-blast-radius — real bugs, lower priority
-under this model. (Fig 3b: most such severe bugs were **never publicly graded** —
-another reason to trust the fix record over the CVE list.)
+| Impact (bounty) | Realized by | Where it lives |
+|---|---|---|
+| **Chain split** | consensus_divergence | EVM opcodes/precompiles, gas accounting, fork-choice, beacon-chain state-transition |
+| **Invalid value / ETH** | integer_overflow, improper_state_update | gas & balance arithmetic, precompiles, state-trie |
+| **Network takedown (DoS)** | resource_exhaustion | p2p, rpc, sync, crypto |
+| **Validator slashing** | attestation / slashing validation | beacon-chain state-transition |
+
+*(Remote reachability is part of the severity **definition**, not a separate
+finding — a bug is only in scope if a single packet/tx can trigger it, which is
+exactly why §3's entry points matter.)*
 
 ## 5. The recurring vulnerability patterns — what to look for
 
-![Figure 4 — root cause & trigger](figures/fig2_rootcause_attack.png)
+![Figure 3 — root cause & trigger](figures/fig2_rootcause_attack.png)
 
 Six archetypes cover most of the corpus. Each is a hunting hypothesis: a
 mechanism, a trigger, and a **code smell** to grep for.
@@ -125,9 +128,9 @@ key. Subsystems fixed in *many* clients are the best variant-hunting grounds:
 
 **The method (N-day / variant analysis):** take a fix in client *A*, find the
 analogous code in *B…K* by `label`, and check whether the same guard exists.
-Because fixes are usually silent, a fix that landed in one client is frequently
-**not yet** mirrored in the others — a repeatable path to fresh findings unique to
-a multi-implementation ecosystem. Its sharpest form is **spec-divergence testing**
+Because fixes usually ship without an advisory, a fix that landed in one client is
+frequently **not yet** mirrored in the others — a repeatable path to fresh findings
+unique to a multi-implementation ecosystem. Its sharpest form is **spec-divergence testing**
 (P5): where clients implement the same pyspec/EELS function (EVM opcodes,
 precompiles, SSZ, epoch processing), fuzz edge cases for behavioural disagreement
 — the direct route to chain-split severity.
@@ -165,8 +168,9 @@ precompiles, SSZ, epoch processing), fuzz edge cases for behavioural disagreemen
    bug shared by clients with >33% combined share is a network-level event; a bug
    in one client is a lead to check the others. Diversity both mitigates and
    *reveals* bugs (variant hunting).
-5. **Prioritize by reachability × blast radius, not by CVE existence.** The
-   highest-impact bugs here were patched silently; a CVE-only view misses them.
+5. **Prioritize by the impact a bug could realize** (chain split / DoS / value /
+   slashing), not by whether it carries a CVE. Most fixes here have no CVE, so a
+   CVE-only view misses them.
 
 ## 9. Audit playbook (checklist)
 
