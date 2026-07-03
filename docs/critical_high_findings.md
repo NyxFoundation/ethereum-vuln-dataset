@@ -1,0 +1,259 @@
+# Critical / High severity vulnerabilities, by protocol area
+
+Ethereum client vulnerabilities rated Critical or High severity, drawn from
+across Geth, Besu, Erigon, Reth, Nethermind, Lighthouse, Teku, Nimbus, Lodestar,
+and Grandine. Three are rated Critical; the rest High. Each entry states the
+root cause, the attacker action, and the resulting impact.
+
+---
+
+## Critical
+
+- **[Besu] CALL / DELEGATECALL gas accounting.** A 32-bit signed/unsigned type
+  conversion error in the gas calculation for `CALL` and `DELEGATECALL` meant
+  that whenever the amount of gas passed to an inner call affected its
+  success or failure, an attacker who submitted a transaction shaped to hit
+  that boundary could make Besu compute a `stateRoot` different from other
+  clients, splitting the chain (`GHSA-4456-w38r-m53x`, CVE-2022-36025). On a
+  single-implementation network, the same bug let a transaction run with far
+  more gas than it should have been granted. Found by differential fuzzing
+  (goevmlab); no exploitation on a production network was confirmed.
+
+- **[Geth] Go runtime dependency.** Nodes built with Go `<1.15.5` or
+  `<1.14.12` inherited a Go standard-library denial-of-service flaw
+  (CVE-2020-28362, `GHSA-m6gx-rhvj-fh52`): certain inputs could crash the
+  process. The fix required no Geth code change, only a rebuild against a
+  patched Go toolchain — a supply-chain-style risk rather than a client bug.
+
+- **[Teku] Bundled log4j (Log4Shell).** Teku shipped a log4j version
+  vulnerable to JNDI-lookup remote code execution: an attacker who got a
+  string like `${jndi:ldap://...}` logged could achieve RCE and, in the worst
+  case, reach a validator's signing key (CVE-2021-44228, `GHSA-mwfw-vm54-g3p7`).
+  Teku's actual use of the logging library was judged to limit real-world
+  exploitability, but an emergency patch (21.12.1) shipped immediately.
+
+---
+
+## p2p — devp2p / `eth` wire protocol
+
+- **[Geth] Unbounded header-request count.** `GetBlockHeadersRequest` did not
+  reject a `count` of `0`. An attacker who sent one such message triggered an
+  integer underflow on `count-1`, driving the node to allocate excessive
+  memory and crash (CWE-190).
+
+- **[Geth] Unbounded goroutine spawn on ping.** Every incoming `ping` request
+  spawned a new goroutine to reply. An attacker who flooded a node with ping
+  requests could grow the goroutine count without bound, exhausting memory
+  and crashing the process (fixed in v1.12.1).
+
+- **[Reth] Unbounded libp2p stream opens.** libp2p imposed no limit on new
+  stream creation. An attacker node that kept opening connections and streams
+  could accumulate enough small allocations to have the victim process killed
+  by the OS for out-of-memory (CWE-770). The same class of gap was found
+  independently in the libp2p stacks of Grandine and Lighthouse.
+
+- **[Geth] Integer overflow in WebSocket frame length.** A length-overflow bug
+  in the `gorilla/websocket` dependency let an attacker send a WebSocket frame
+  with a crafted length field to trigger denial of service (CWE-190).
+
+- Two further entries — "high CPU usage via a crafted p2p message" (CWE-400)
+  and "crash via a crafted p2p message" (CWE-248) — were reported through the
+  Ethereum Foundation bug bounty. Both advisories shipped a patch with
+  technical details withheld ("more details to be released later").
+
+---
+
+## rpc — JSON-RPC / GraphQL surface
+
+- **[Geth] Unbounded GraphQL query cost.** The GraphQL endpoint had no query
+  complexity or cost limit. With `--http --graphql` enabled, an attacker who
+  sent a crafted GraphQL query could exhaust memory and hang the daemon
+  (CWE-400). The vendor's stated position: the GraphQL endpoint was not
+  designed to withstand hostile clients.
+
+- **[Erigon] Out-of-bounds read in the JSON parser dependency.** A bounds
+  check gap in the `jsonparser` dependency let a crafted JSON input trigger an
+  out-of-bounds read (CVE-2026-32285, CVSS 7.5, CWE-125).
+
+- **[Geth] Missing block-range validation.** `TraceChain` (now
+  `debug_traceChain`) did not verify that the end block came after the start
+  block. A caller who requested an inverted range could trigger excessive
+  load or abnormal behavior (CWE-20, geth < 1.8.14).
+
+- **[Reth] Sync-time panic / bad state.** A specific state transition during
+  live sync could panic the node or leave it in a bad state; the release note
+  does not specify the trigger (v0.1.0-alpha.21).
+
+---
+
+## crypto — hashing, signatures, secp256k1 / BLS
+
+- **[Geth] Missing field-element bounds check.** `IsOnCurve` and the
+  underlying secp256k1 field-element setter did not verify that a point's `x`
+  and `y` coordinates were below the field prime `P`. An attacker who sent a
+  public key or signature with an out-of-range coordinate — over the p2p
+  handshake or wherever the value is verified — broke an invariant the
+  downstream field-element code relied on, triggering undefined behavior
+  (panic or crash) and taking the whole node process down
+  (`GHSA-2gjw-fg97-vg3r`). The fix added bounds checks in both the Go
+  implementation (`curve.go`, `signature_nocgo.go`) and the C wrapper
+  (`ext.h`), which had also ignored a failed return value. Fixed in v1.16.9 /
+  v1.17.0.
+
+- Five further entries are CVEs in `golang.org/x/crypto/ssh` (host-key
+  verification bypass enabling MITM, a nil-pointer panic on the GSSAPI path,
+  a panic on an empty-plaintext packet, and related issues). Geth does not
+  run an SSH server itself; these surfaced through dependency scanning
+  (govulncheck) and their reachability from an actual Ethereum node's attack
+  surface is unconfirmed.
+
+---
+
+## p2p-interface — gossipsub / req-resp (consensus layer)
+
+- **[Reth / Grandine / Lighthouse] Unbounded libp2p stream opens.** Same
+  class of bug as the p2p entry above: no cap on new stream creation let an
+  attacker node exhaust memory through repeated small allocations and get the
+  victim process OOM-killed (CWE-770), independently in three clients'
+  libp2p stacks.
+
+- **[Teku] Netty HTTP/2 resource-management gaps.** The bundled Netty
+  dependency had HTTP/2 resource-limit flaws (CVE-2021-37136,
+  CVE-2021-37137); a crafted p2p message / HTTP/2 frame could exhaust
+  resources and cause denial of service.
+
+- **[Lighthouse] Outdated `blst` cryptography library.** Nodes still on
+  `<v1.2.0` carried a known vulnerability in `blst`, the core BLS-signature
+  library shared by several consensus clients, tied to the April 2021
+  "Finalized #25" incident. The advisory does not spell out the exact
+  reproduction steps.
+
+---
+
+## EVM / opcodes
+
+- **[Geth] Memory-corruption bug in RETURNDATA handling.** A memory-handling
+  bug in the interpreter's return-data path let an attacker who chained
+  specific call and memory operations in one transaction cause Geth to
+  compute a `stateRoot` different from spec-compliant clients
+  (`GHSA-9856-9gg9-qcmq`). This was exploited on Ethereum mainnet at block
+  13107518 on 2021-08-22, causing a minority chain split. Fixed in v1.10.8.
+
+- **[Geth] Missing zero-modulus check in `MULMOD`.** The `uint256` library
+  backing the `MULMOD` opcode did not handle a modulus of `0`. An attacker
+  who called a contract executing `mulmod(a, b, 0)` triggered an
+  out-of-bounds access (index `-1`) in the library's internal buffer,
+  panicking the node and dropping it off the network (`GHSA-jm5c-rv3w-w83m`).
+
+- **[Besu] Signed-type coercion in SHL / SHR / SAR.** A 32-bit signed-integer
+  coercion error meant a shift amount in the roughly 2–4 billion range —
+  meaningless but formally valid — made execution abort instead of failing
+  validation cleanly. On a network mixing patched and unpatched clients, this
+  produced a fork (CVE-2021-41272).
+
+- **[Geth] Missing bytecode bounds check in `cmd/evm`.** The standalone
+  EVM runner/debugging tool did not bounds-check input bytecode; crafted
+  bytecode could trigger a SEGV and crash the process (CWE-119). This affects
+  the standalone tool, not a production node's live execution path.
+
+- **[Geth] Insufficient dynamic array-length validation (CVE-2018-20421).**
+  An attacker who used `assembly { mstore }` to rewrite an array's length and
+  then wrote to a large index could force a large memory allocation, causing
+  denial of service.
+
+---
+
+## gas — gas accounting / fee market
+
+- Same underlying bug as the Besu CALL/DELEGATECALL gas-accounting entry
+  above (CVE-2022-36025).
+
+---
+
+## transactions
+
+- **[Geth] Incorrect balance carry-over after self-destruct.** A change to
+  `createObject`'s handling of a destructed account's balance meant an
+  attacker who submitted a transaction sequence that self-destructed an
+  account and then sent it further value within the same transaction could
+  make Geth compute a different balance than spec-compliant clients,
+  splitting the chain (`GHSA-xw37-57qp-9mm4`, reported 2020-08-11, fixed in
+  v1.9.20). The minimal fix was a single added check for `prev.deleted`.
+
+- **[Nethermind / Juno] Integer overflow in Sierra bytecode decompression.**
+  An overflow in the `cairo-lang-starknet-classes` library's decompression
+  logic let an attacker submit a crafted `Declare v2/v3` transaction to
+  trigger an infinite loop and high CPU usage, denying service to affected
+  Starknet full nodes (CVE-2025-29072).
+
+---
+
+## sync — snap-sync / LES
+
+- **[Geth] Signedness error in LES header-request skip value.** The
+  `GetBlockHeadersMsg` handler in the LES protocol converted the `Skip`
+  field incorrectly. An attacker who sent a single packet with
+  `query.Skip = -1` triggered an out-of-bounds array access, crashing the
+  node immediately (geth < 1.8.11). Known as the "Ethereum Packet of Death."
+
+---
+
+## beacon-chain:sync-committee — Electra epoch processing
+
+- **[Lighthouse] Incorrect effective-balance computation in `process_epoch`.**
+  A bug in Electra epoch processing meant that as an Electra-enabled network
+  simply advanced through normal epoch transitions, affected Lighthouse
+  versions (`v7.0.0-beta.0`–`beta.4`) computed a different effective balance
+  than the rest of the network, risking a fork away from the canonical chain
+  (`GHSA-wm9c-xvqq-5c28`). Since Lighthouse runs roughly a third of
+  validators, exploitation could have stalled finality. Found during the
+  Ethereum Foundation / Cantina Pectra security competition and fixed before
+  Electra reached mainnet.
+
+---
+
+## beacon-chain:slashing
+
+- **[Lodestar] `uint64` slashing values represented as JS `number`.**
+  Because slashing amounts were stored as native JavaScript numbers rather
+  than a true 64-bit integer type, an attacker who included an
+  `AttesterSlashing` or `ProposerSlashing` with a value above 2^53 in a block
+  could cause rounding errors that made some clients reject it as invalid
+  while others accepted it, splitting consensus (CWE-190, fixed in v0.36.0).
+
+---
+
+## precompiles
+
+- **[Geth] Shallow copy in the `dataCopy` precompile (0x04).** The
+  precompile at `0x00...04` performed a shallow copy on invocation. An
+  attacker could deploy a contract that writes a value `X` to memory region
+  `R`, calls `0x04` with `R` as its argument, overwrites `R` with `Y`, and
+  then calls `RETURNDATACOPY` — causing Geth alone to push the wrong value
+  `Y` onto the stack instead of `X`, splitting the chain
+  (`GHSA-69v6-xc2j-r2jf`, fixed in v1.9.17).
+
+---
+
+## txpool
+
+- **[Geth] No cap on future-transaction submissions.** The mempool did not
+  bound the number of "future" (not-yet-executable) transactions accepted in
+  one batch. An attacker who sent 5,120 future transactions with a high gas
+  price in a single message could purge a victim node's entire pending
+  transaction pool, denying service (geth ≤ 1.10.12).
+
+---
+
+## database
+
+- **[Geth] 2016 Shanghai DoS attacks.** Opcodes such as `EXTCODESIZE` and
+  `SLOAD` were underpriced relative to their I/O and storage-growth cost.
+  Attackers exploited this with a sustained flood of cheap transactions to
+  bloat state and degrade node performance across the network. v1.4.13
+  shipped as a hotfix mitigation while longer-term fixes (cache journaling,
+  cache-miss mitigation) followed.
+
+---
+
+Source: `data/ethereum_vulns.csv`.
