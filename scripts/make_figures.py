@@ -163,3 +163,28 @@ a2.set_title("(b) …yet the severe classes are patched silently",loc="left",fon
 a2.grid(axis="y",visible=False)
 plt.tight_layout(); plt.savefig(f"{FG}/fig7_severity_drivers.png",bbox_inches="tight"); plt.close()
 print("fig7 written")
+
+# ---- FIG 8: attack surface — where the adversary's single packet/tx enters --
+# EF bounty severity requires a *remotely reachable* trigger ("single network
+# packet or onchain transaction"). Group attack_path by entry channel.
+CH={'malicious_p2p_message':'network: p2p / gossip','malicious_attestation':'network: p2p / gossip',
+    'peer':'network: p2p / gossip','malicious_block':'network: block gossip',
+    'malicious_tx':'on-chain: transaction / EVM','malformed_input':'parsing untrusted input',
+    'large_input':'parsing untrusted input','crafted_state':'crafted chain state',
+    'internal_only':'internal (not attacker-reachable)'}
+ch=d.attack_path.map(CH).fillna('other').value_counts()
+ch=ch[ch.index!='other']
+order=['network: p2p / gossip','network: block gossip','on-chain: transaction / EVM',
+       'parsing untrusted input','crafted chain state','internal (not attacker-reachable)']
+ch=ch.reindex([o for o in order if o in ch.index])
+fig,ax=plt.subplots(figsize=(8.4,3.6))
+cols=[RED if 'network' in c else (ORANGE if ('on-chain' in c or 'parsing' in c or 'crafted' in c) else GRAY) for c in ch.index]
+y=np.arange(len(ch))[::-1]
+ax.barh(y,ch.values,color=cols,height=0.7)
+ax.set_yticks(y); ax.set_yticklabels(ch.index)
+for yi,v in zip(y,ch.values): ax.text(v+8,yi,str(int(v)),va="center",fontsize=9,color="#333")
+ax.margins(x=0.13); ax.grid(axis="y",visible=False)
+ax.set_title("Attack surface — where the adversary's input enters the node",loc="left",fontsize=12,color=INK,fontweight="bold")
+ax.text(ch.max()*0.55,0.1,"red/orange = remotely reachable\n(bounty-severity eligible)",fontsize=8.5,color="#555")
+plt.tight_layout(); plt.savefig(f"{FG}/fig8_attack_surface.png",bbox_inches="tight"); plt.close()
+print("fig8 written")

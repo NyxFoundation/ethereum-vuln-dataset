@@ -185,6 +185,7 @@ docs/            BUILD_REPORT · IMPROVEMENT_LOG · silent_fix_detection · mode
 
 ## Documentation
 
+- [`docs/security_report.md`](docs/security_report.md) — 🔎 **Field guide for security researchers** — the bug-bounty severity model as premise, the severity-realization map (what pays → where to look), recurring anti-patterns, cross-client variant analysis, case studies, and a hunting playbook
 - [`docs/analysis.md`](docs/analysis.md) — **what the data says** (silent-fix majority, availability-first vuln profile, cross-language diversity), read through the dataset-research literature
 - [`docs/limitations.md`](docs/limitations.md) — **honest inventory of coverage gaps & caveats** (read before relying on the data)
 - [`docs/label_design.md`](docs/label_design.md) — the `label` / `root_cause` / `attack_path` / pre+post-code design, tied to the specs
