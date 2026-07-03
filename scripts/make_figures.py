@@ -132,35 +132,38 @@ import os
 for f in sorted(os.listdir(FG)): print("  ",f, round(os.path.getsize(FG+"/"+f)/1024),"KB")
 
 # ---- FIG 7: what raises severity (security-researcher view) -----------------
-sev=d.severity.str.lower()
-hi=d[sev.isin(['critical','high'])]
+# combined bounty tier: real grade where present, else LLM estimate (n=675)
+se=d.severity_estimated.fillna("") if "severity_estimated" in d.columns else d.severity
+hi=d[se.isin(['Critical','High'])]
 causes=[c for c in d.root_cause.value_counts().head(8).index if c!='other']
-lift=[]; silent=[]
+lift=[]
 for rc in causes:
     p_all=(d.root_cause==rc).mean(); p_hi=(hi.root_cause==rc).mean()
     lift.append(p_hi/p_all if p_all else 0)
-    sub=d[d.root_cause==rc]
-    silent.append(100*(~sub.severity.str.lower().isin(['critical','high','medium','low'])).mean())
 order=np.argsort(lift)
-causes=[causes[i] for i in order]; lift=[lift[i] for i in order]; silent=[silent[i] for i in order]
-fig,(a1,a2)=plt.subplots(1,2,figsize=(11.5,4.3))
+causes=[causes[i] for i in order]; lift=[lift[i] for i in order]
+fig,(a1,a2)=plt.subplots(1,2,figsize=(11.6,4.3))
 y=np.arange(len(causes))
 cols=[RED if l>1.15 else (GRAY if l<0.85 else BLUE) for l in lift]
-a1.hlines(y,1,lift,color=cols,lw=2,zorder=1)
-a1.scatter(lift,y,color=cols,s=60,zorder=2)
+a1.hlines(y,1,lift,color=cols,lw=2,zorder=1); a1.scatter(lift,y,color=cols,s=60,zorder=2)
 a1.axvline(1,color="#888",lw=1,ls="--")
 a1.set_yticks(y); a1.set_yticklabels([c.replace('_',' ') for c in causes])
-a1.set_xlabel("severity lift   P(cause | Crit+High) / P(cause | all)")
+a1.set_xlabel(f"severity lift   P(cause | High+Crit) / P(cause | all)   [n={len(hi)}]")
 a1.set_title("(a) What raises severity",loc="left",fontsize=12,color=INK,fontweight="bold")
-a1.text(1.02,len(causes)-0.5,"over-\nrepresented →",color=RED,fontsize=8,va="top")
+a1.text(max(lift)*0.62,0.2,"← under        over →",color="#777",fontsize=8)
 a1.grid(axis="y",visible=False)
-a2.barh(y,silent,color=[ORANGE if s>85 else TEAL for s in silent],height=0.7)
-a2.set_yticks(y); a2.set_yticklabels([c.replace('_',' ') for c in causes])
-a2.set_xlabel("% shipped silently (no rated severity)")
-a2.xaxis.set_major_formatter(PercentFormatter()); a2.set_xlim(0,100)
-for yi,s in zip(y,silent): a2.text(s-3,yi,f"{s:.0f}%",va="center",ha="right",color="white",fontsize=8.5,fontweight="bold")
-a2.set_title("(b) …yet the severe classes are patched silently",loc="left",fontsize=12,color=INK,fontweight="bold")
-a2.grid(axis="y",visible=False)
+# (b) the silent reservoir: estimated bounty tier of the silently-patched fixes
+llm=d[d.severity_source=='llm-estimated'] if "severity_source" in d.columns else d.iloc[:0]
+res=llm.severity_estimated.value_counts().reindex(['High','Medium','Low','not-eligible']).fillna(0)
+colmap={'High':RED,'Medium':ORANGE,'Low':TEAL,'not-eligible':GRAY}
+yy=np.arange(len(res))[::-1]
+a2.barh(yy,res.values,color=[colmap[i] for i in res.index],height=0.7)
+a2.set_yticks(yy); a2.set_yticklabels([i for i in res.index])
+for yi,v in zip(yy,res.values): a2.text(v+10,yi,f"{int(v)}",va="center",fontsize=9,color="#333")
+a2.margins(x=0.16); a2.grid(axis="y",visible=False)
+nsev=int(res[['High','Medium','Low']].sum())
+a2.set_title(f"(b) The silent reservoir — bounty tier of {len(llm)}\n     silently-patched client fixes ({100*nsev/max(len(llm),1):.0f}% would be rated)",
+             loc="left",fontsize=11.5,color=INK,fontweight="bold")
 plt.tight_layout(); plt.savefig(f"{FG}/fig7_severity_drivers.png",bbox_inches="tight"); plt.close()
 print("fig7 written")
 
