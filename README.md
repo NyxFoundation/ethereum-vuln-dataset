@@ -111,6 +111,37 @@ methods recover them (full write-up: [`docs/silent_fix_detection.md`](docs/silen
   rate-limit-free from bare git clones by `collection/local_diffs.py`. This pass
   admitted **+453** silent fixes the deterministic gate had missed.
 
+## Severity & scope — the bug-bounty model
+
+Severity here follows the **[Ethereum Foundation bug bounty](https://ethereum.org/en/bug-bounty/)**,
+**not CVSS**. A severity reflects **network-scale impact reachable by a single
+network packet or on-chain transaction**:
+
+| Tier | Representative definition (reward) |
+|---|---|
+| **Critical** | create/finalize infinite ETH · steal/burn ETH from all EOAs · take down the **entire** network with one tx · slash >50% of validators (up to \$1,000,000) |
+| **High** | chain split or takedown affecting **>33%** · slash >33% (up to \$50,000) |
+| **Medium** | >5% split/takedown · slash >1% (up to \$10,000) |
+| **Low** | >0.01% split/takedown by a single packet/tx (up to \$2,000) |
+
+The bounty's **scope is exactly this corpus** — the eleven clients plus
+`c-kzg-4844` and the deposit contract. Three consequences shape the `severity`
+column:
+
+- **~94% of rows are `Unrated`.** Clients patch silently, so the bug was never
+  submitted or graded. **Unrated ≠ low impact** — see
+  [`security_report.md`](docs/security_report.md) §7.
+- **Two severity models coexist.** A minority of rated rows are *upstream
+  dependency CVEs* (log4j, Netty, `golang.org/x/crypto`) carrying **CVSS**
+  severity — a dependency bug does not split the Ethereum network, so it is out of
+  bounty scope. These are kept distinct from real client-bug (EF-bounty) grades.
+- **`severity_estimated` (optional LLM pass)** fills the gap by decomposing each
+  fix into `impact_type` / `reachability` / `blast_radius` and mapping to the
+  bounty tier, calibrated against the graded rows (exact-tier ~60% / ±1 ~80% on
+  real severe bugs). It **never overwrites** the graded `severity`;
+  `severity_source` marks each row `bounty-graded` · `upstream-cvss` ·
+  `llm-estimated`. Method & calibration: [`docs/severity_labeling.md`](docs/severity_labeling.md).
+
 ## Clients
 
 Fixes are sourced from each client's own public repository.
@@ -140,7 +171,9 @@ spec-divergence fixes.
 | `id` | stable row id |
 | `source_platform` | client slug (`geth`, `lighthouse`, …) |
 | `issue_id` | PR / issue / commit / advisory id |
-| `severity` | `Critical` / `High` / `Medium` / `Low` / `Info` / `Unrated` |
+| `severity` | bug-bounty grade `Critical` / `High` / `Medium` / `Low` / `Info` / `Unrated` (see [Severity & scope](#severity--scope--the-bug-bounty-model)) |
+| `severity_estimated` · `severity_source` | LLM-estimated bounty tier + its provenance (`bounty-graded` / `upstream-cvss` / `llm-estimated`); when the severity pass has run |
+| `impact_type` · `reachability` · `blast_radius` | the severity decomposition (chain_split / liveness_dos / … · remote / local · spec_level / client_specific) |
 | `title`, `description` | fix text (verbatim from the client's public repo) |
 | `source_url` | link to the upstream fix |
 | `label` | **protocol area of the bug** (e.g. `fork-choice`, `beacon-chain:attestation`, `precompiles`, `blobs`) — see [`docs/label_design.md`](docs/label_design.md) |
