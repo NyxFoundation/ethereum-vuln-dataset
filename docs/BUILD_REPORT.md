@@ -87,4 +87,6 @@ Critical** (geth, besu, teku). Severities preserved through the canonical path.
 | `fix_commit` / `introduced_in_commit` | **88.0%** | `/commit/` + `/pull/` URLs, GHSA advisory patch-releases, and **inline `#PR` / commit refs parsed from CHANGELOG/release text** (author-linked, high precision) |
 | `pre_fix_code` / `post_fix_code` (inline) | **86.3%** | **98.1% of the 1,959 rows that have a resolved commit** — only 38 committed rows lack a diff (huge/edge-case). The remaining ~266 no-code rows have no single fix commit (advisory/NVD/release) — no code exists to inline. |
 | `silent_fix_prob` (LLM classifier) | 38.5% | classified rows (C_candidate + plausible gate-dropped) |
-| `severity` (rated Critical–Low) | 6.3% | most fixes are silently patched, unrated |
+| `severity` (bounty-graded, rated) | 6.4% | the EF bug-bounty grades; most fixes are silently patched, unrated |
+| `severity_estimated` (bounty-tier) | **30.3%** | a Low/Medium/High/Critical tier via: 60 `bounty-graded` (ground truth) + 83 `upstream-cvss` (dependency CVEs) + **532 `llm-estimated`** (from the client-code fixes; 1,020 more judged `not-eligible` = not remotely network-impacting). `severity_source` flags provenance. See `docs/severity_labeling.md`. |
+

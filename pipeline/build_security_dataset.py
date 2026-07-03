@@ -460,6 +460,10 @@ def main() -> int:
         keep = [c for c in ("id", "severity_estimated", "severity_source", "impact_type",
                             "reachability", "blast_radius", "severity_why") if c in svc.columns]
         sec = sec.merge(svc[keep], on="id", how="left")
+        if "severity_estimated" in sec.columns:      # normalize tier casing
+            cap = {"critical": "Critical", "high": "High", "medium": "Medium", "low": "Low"}
+            sec["severity_estimated"] = sec["severity_estimated"].map(
+                lambda x: cap.get(str(x).lower(), x) if pd.notna(x) else x)
         report["by_severity_source"] = {k: int(v) for k, v in
                                         sec.get("severity_source", pd.Series(dtype=str)).value_counts().items()}
         print(f"[severity] joined estimates: {report['by_severity_source']}", file=sys.stderr)

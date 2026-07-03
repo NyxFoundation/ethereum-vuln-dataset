@@ -28,7 +28,13 @@
     "post_fix_code",
     "fix_commit",
     "introduced_in_commit",
-    "cwe_top25"
+    "cwe_top25",
+    "severity_estimated",
+    "severity_source",
+    "impact_type",
+    "reachability",
+    "blast_radius",
+    "severity_why"
   ],
   "build": {
     "raw_rows": 18475,
@@ -91,7 +97,13 @@
     },
     "residual_boilerplate_fp": 0,
     "labelled": 2184,
-    "deduped_fix_commit": 108
+    "deduped_fix_commit": 108,
+    "by_severity_source": {
+      "llm-estimated": 1552,
+      "upstream-cvss": 612,
+      "bounty-graded": 60,
+      "unassessed": 1
+    }
   },
   "source": "11 Ethereum execution + consensus clients (past security fixes)"
 }
