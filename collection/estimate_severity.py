@@ -104,15 +104,33 @@ def guardrail(o, client):
     return est or "not-eligible"
 
 
-def classify(row):
+DEP_RE = re.compile(
+    r"upgrade|update|bump|dependab|netty|log4j|spring|jackson|guava|protobuf"
+    r"|golang\.org/x|rustsec|jsonparser|libp2p|discv5|openssl|zlib|\bcrate\b",
+    re.IGNORECASE)
+
+
+def is_dependency(r) -> bool:
+    """Upstream dependency / tooling CVE — carries CVSS, not EF-bounty severity."""
+    if DEP_RE.search(str(r.get("title") or "")):
+        return True
+    return bool(re.search(r"CHANGELOG|/releases/|nvd\.nist\.gov|rustsec",
+                          str(r.get("source_url") or "")))
+
+
+def classify(row, retries=1):
     r, diff = row
-    try:
-        out = llm._call_llm(build_prompt(r, diff))
-        m = re.search(r"\{[^{}]*\"severity_est\"[^{}]*\}", out, re.S)
-        o = json.loads(m.group(0)) if m else {}
-    except Exception as e:
-        o = {"error": str(e)}
-    o["severity_final"] = guardrail(o, r["source_platform"]) if "error" not in o else ""
+    o = {}
+    for _ in range(retries + 1):
+        try:
+            out = llm._call_llm(build_prompt(r, diff))
+            m = re.search(r"\{[^{}]*\"severity_est\"[^{}]*\}", out, re.S)
+            o = json.loads(m.group(0)) if m else {}
+        except Exception as e:
+            o = {"error": str(e)}
+        if o.get("severity_est"):            # got a usable answer
+            break
+    o["severity_final"] = guardrail(o, r["source_platform"]) if o.get("severity_est") else ""
     return r["id"], o
 
 
@@ -123,6 +141,7 @@ def main():
     ap.add_argument("--apply", action="store_true")
     ap.add_argument("--out", default=Path("data/severity_est.csv"), type=Path)
     ap.add_argument("--cache", default=Path("scratchpad_crawl/diff_cache.json"), type=Path)
+    ap.add_argument("--sev-cache", default=Path("scratchpad_crawl/severity_cache.json"), type=Path)
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--workers", type=int, default=6)
     import os
@@ -135,21 +154,32 @@ def main():
 
     d = pd.read_parquet(a.inp)
     dcache = json.loads(a.cache.read_text()) if a.cache.exists() else {}
+    scache = json.loads(a.sev_cache.read_text()) if a.sev_cache.exists() else {}
     sev = d.severity.str.lower()
-    sub = d[sev.isin(["critical", "high", "medium", "low"])] if a.validate else d
+    graded = sev.isin(["critical", "high", "medium", "low"])
+    dep = d.apply(is_dependency, axis=1)
+
+    if a.validate:
+        sub = d[graded & ~dep]                       # calibrate on client-code grades only
+    else:                                            # --apply: estimate client-code UNRATED rows
+        sub = d[~dep & ~graded & d.source_platform.isin(ld.CLIENT_REPOS)]
     if a.limit:
         sub = sub.head(a.limit)
-    rows = []
-    for r in sub.to_dict("records"):
-        diff = ld.get_diff_cached(str(r["source_url"]), r["source_platform"], dcache) \
-            if r["source_platform"] in ld.CLIENT_REPOS else None
-        rows.append((r, diff))
-    print(f"[severity] {len(rows)} rows (validate={a.validate})", file=sys.stderr)
-    res = {}
+
+    todo = [r for r in sub.to_dict("records") if r["id"] not in scache]
+    print(f"[severity] {len(sub)} target rows, {len(todo)} to run "
+          f"({len(sub)-len(todo)} cached)  validate={a.validate}", file=sys.stderr)
+    rows = [(r, ld.get_diff_cached(str(r["source_url"]), r["source_platform"], dcache))
+            for r in todo]
+    done = 0
     with ThreadPoolExecutor(max_workers=a.workers) as ex:
         for rid, o in ex.map(classify, rows):
-            res[rid] = o
-    a.cache.write_text(json.dumps(dcache))
+            scache[rid] = o; done += 1
+            if done % 25 == 0:
+                a.sev_cache.write_text(json.dumps(scache)); a.cache.write_text(json.dumps(dcache))
+                print(f"  [severity] {done}/{len(todo)}", file=sys.stderr)
+    a.sev_cache.write_text(json.dumps(scache)); a.cache.write_text(json.dumps(dcache))
+    res = {r["id"]: scache.get(r["id"], {}) for r in sub.to_dict("records")}
 
     if a.validate:
         exact = within1 = neel = tot = 0
@@ -177,17 +207,24 @@ def main():
             print(f"    {t:9s} -> {p:12s} {c}")
     if a.apply:
         import csv
-        real = {r["id"]: r["severity"] for r in d.to_dict("records")}
-        with a.out.open("w", newline="") as fh:
+        n_est = n_bg = n_dep = 0
+        with a.out.open("w", newline="", encoding="utf-8") as fh:
             w = csv.writer(fh); w.writerow(["id", "severity_estimated", "severity_source",
                                             "impact_type", "reachability", "blast_radius", "severity_why"])
-            for rid, o in res.items():
-                graded = real.get(rid, "Unrated").lower() in ("critical", "high", "medium", "low")
-                w.writerow([rid, real[rid] if graded else o.get("severity_final", ""),
-                            "bounty-graded" if graded else "llm-estimated",
-                            o.get("impact_type", ""), o.get("reachability", ""),
+            for r in d.to_dict("records"):
+                rid = r["id"]; g = str(r["severity"]).lower() in ("critical", "high", "medium", "low")
+                dpp = is_dependency(r); o = scache.get(rid, {})
+                if g and not dpp:                    # real client bug, graded by the bounty
+                    src, est = "bounty-graded", r["severity"]; n_bg += 1
+                elif dpp:                            # upstream dependency CVE -> keep CVSS, out of scope
+                    src, est = "upstream-cvss", (r["severity"] if g else "not-eligible"); n_dep += 1
+                elif o.get("severity_final"):        # client-code, LLM-estimated
+                    src, est = "llm-estimated", o["severity_final"]; n_est += 1
+                else:
+                    src, est = "unassessed", ""
+                w.writerow([rid, est, src, o.get("impact_type", ""), o.get("reachability", ""),
                             o.get("blast_radius", ""), str(o.get("why", ""))[:200]])
-        print(f"wrote {a.out}")
+        print(f"wrote {a.out} — bounty-graded {n_bg}, llm-estimated {n_est}, upstream-cvss {n_dep}")
 
 
 if __name__ == "__main__":
