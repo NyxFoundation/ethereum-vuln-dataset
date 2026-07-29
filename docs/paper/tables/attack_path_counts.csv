@@ -1,0 +1,12 @@
+attack_path,count,percent
+malformed_input,926,41.618
+crafted_state,415,18.652
+malicious_p2p_message,241,10.831
+internal_only,195,8.764
+malicious_attestation,174,7.82
+peer,109,4.899
+malicious_block,57,2.562
+large_input,52,2.337
+malicious_tx,43,1.933
+other,12,0.539
+resource_exhaustion,1,0.045

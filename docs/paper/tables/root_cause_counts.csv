@@ -1,0 +1,14 @@
+root_cause,count,percent
+missing_input_validation,522,23.461
+resource_exhaustion,340,15.281
+other,300,13.483
+race_condition,217,9.753
+unhandled_error_or_nil,208,9.348
+integer_overflow_underflow,185,8.315
+consensus_divergence,174,7.82
+improper_state_update,90,4.045
+missing_bounds_check,90,4.045
+incorrect_gas_accounting,48,2.157
+crypto_misuse,31,1.393
+serialization_bug,19,0.854
+reentrancy,1,0.045

@@ -1,0 +1,5 @@
+severity_source,info_or_unrated,rated,total
+bounty-graded,0,60,60
+llm-estimated,1552,0,1552
+unassessed,1,0,1
+upstream-cvss,529,83,612
