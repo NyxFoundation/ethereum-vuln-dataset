@@ -10,9 +10,22 @@ once fix dates are recovered, the explicitly anchored cases show no propagation 
 
 ## 1. One limit fixed, one removed
 
-**Records rarely name their specification surface.** Naming an EIP, a consensus-spec
-function, or an opcode is the only way a record states the shared surface it sits on.
-Only 181 of 2,225 records (8.1%) name any of them, fork names included.
+**An anchor has to be readable off the record.** A record states its shared surface by
+naming an EIP, a consensus-spec function, or an opcode. Prose alone does so on 181 of
+2,225 rows (8.1%), so the captured `post_fix_code` is scanned as well: a spec function
+appears in the code that implements it whether or not the author mentioned it. That
+raises coverage to **438 rows (19.7%)** and multi-client anchors from 31 to 114.
+
+Two choices make that scan trustworthy rather than merely larger, and both changed the
+result. Spec function names are **enumerated** from the consensus specs rather than
+pattern-matched, because a generic `(process|get|is)_\w+` pattern is dominated by
+language idiom — its most frequent hits across this corpus are `is_empty` (38),
+`is_none` (23) and `is_some` (20), which are Rust `Option` methods, not spec surfaces.
+And matching is **naming-convention agnostic**: the specs are snake_case and Rust and Nim
+keep it, but Java and TypeScript write `processAttestation` and Go writes
+`ProcessAttestation`. A snake_case-only match is not merely incomplete — it decides which
+*languages* are able to appear in a cross-client result at all, and under it Teku and
+Prysm never surfaced. After the fix all eleven clients do.
 
 **Precedence is testable after all.** The Parquet snapshot has no fix date —
 `fix_commit` is a SHA, `scraped_at` is crawl time — which initially made "a fix in
@@ -83,46 +96,75 @@ marks where that aid stops being sufficient.
 ## 3. Explicit anchors, and what fork names are not
 
 Anchors a record names itself are much closer to "the same specification text". There
-are 130 distinct ones across the 181 records that name any, and 31 appear in two or
-more clients — but 12 of those 31 are fork names, which mark a release cycle rather
-than a defect surface: `electra` in seven clients means seven clients did Electra work,
-not that they shared a bug. Fork anchors are excluded from everything below.
+are 187 distinct ones across the 438 records that name any, and 114 appear in two or more
+clients:
 
-That leaves **18 dated anchors present in two or more independent implementations** —
-EIP-4844 across erigon, geth, lighthouse and reth, spanning both layers; EIP-1559 across
-three execution clients; `DELEGATECALL` and `CREATE2` across besu, geth and nethermind;
-`process_attestation`, `process_epoch` and `get_beacon_proposer_index` across lighthouse
-and nimbus.
+| Anchor kind | In ≥2 clients |
+|---|---:|
+| consensus-spec function | 63 |
+| EIP | 22 |
+| fork name | 20 |
+| opcode | 9 |
+
+The 20 fork names are excluded from everything below. A fork marks a release cycle, not a
+defect surface: `electra` appearing in seven clients means seven clients did Electra work,
+not that they shared a bug. Of the 94 non-fork multi-client anchors, two have no dated
+record on one side, leaving 92 for the precedence analysis.
+
+That leaves **92 dated anchors present in two or more independent implementations** —
+EIP-4844 spanning both layers, EIP-1559 across three execution clients, `DELEGATECALL`
+and `CREATE2` across besu, geth and nethermind, and the consensus state-transition
+functions (`process_attestation`, `process_epoch`, `get_beacon_proposer_index`,
+`compute_epoch_at_slot`) across the consensus clients.
 
 ## 4. With dates, there is still no propagation
 
-Ordering each of the 18 anchors by author date
+Ordering each of the 92 anchors by author date
 ([`tables/cross_client_anchor_precedence.csv`](tables/cross_client_anchor_precedence.csv)):
 
 | Measure | Value |
 |---|---:|
-| Median span between first and last client | **1,051 days** (2.9 years) |
-| Anchors spanning over 2 years | **10 / 18** |
-| Anchors spanning ≤ 90 days | 4 / 18 |
-| Distinct clients appearing first | **8** |
-| Most times first by any single client | **4** (lighthouse, nimbus) |
+| Median span between first and last client | **1,688 days** (4.6 years) |
+| Anchors spanning over 2 years | **72 / 92** |
+| Anchors spanning ≤ 90 days | 4 / 92 |
+| Distinct clients appearing first | **11** (all of them) |
+| Most times first by any single client | 29 (nimbus) |
 
 Two things rule out the propagation reading.
 
-**No client leads.** If a dominant implementation's fixes indicated latent variants
-elsewhere, one client would appear first repeatedly. Instead eight different clients take
-the first position across 18 anchors, and the maximum is four — lighthouse and nimbus,
-not the largest execution client. Geth is first twice.
+**No client leads once volume is controlled.** Raw first-mover counts are not evidence:
+a client appearing in more anchors gets more chances to be first. Normalising by each
+client's share of all positions across the 92 anchors
+([`tables/cross_client_anchor_first_mover.csv`](tables/cross_client_anchor_first_mover.csv)):
 
-**The gaps are too long to be propagation.** `CREATE2` spans 2,848 days between Geth
-and Besu; `get_total_active_balance` spans 2,097 days; EIP-1559 spans 1,602. At that
-scale "both clients touched this surface" is close to guaranteed for any long-lived
-specification, and says nothing about one fix indicating another.
+| Client | Positions | Position share | First share | Ratio |
+|---|---:|---:|---:|---:|
+| nimbus | 190 | 24.9% | 31.5% | 1.27 |
+| lodestar | **292** | **38.2%** | 22.8% | **0.60** |
+| lighthouse | 91 | 11.9% | 14.1% | 1.18 |
+| teku | 48 | 6.3% | 5.4% | 0.86 |
+| erigon | 47 | 6.2% | 5.4% | 0.87 |
+| besu | 24 | 3.1% | 3.3% | 1.06 |
+| grandine | 21 | 2.7% | 2.2% | 0.81 |
+| reth | 17 | 2.2% | 5.4% | 2.45 |
+| geth | 16 | 2.1% | 6.5% | 3.10 |
+| nethermind | 12 | 1.6% | 1.1% | 0.69 |
+| prysm | 6 | 0.8% | 2.2% | 2.75 |
+
+Nimbus's 29 first positions track its 24.9% share of positions, and the client holding
+the *most* positions — lodestar, at 38.2% — is first **less** often than its share
+predicts. The three ratios above 2 (geth, reth, prysm) rest on 16, 17 and 6 positions,
+which is noise. No client is first more often than simply showing up explains.
+
+**The gaps are too long to be propagation.** The median span between first and last
+client is 4.6 years and 72 of 92 anchors exceed two years. At that scale "both clients
+touched this surface" is close to guaranteed for any long-lived specification and says
+nothing about one fix indicating another.
 
 The four short-span anchors do not rescue it, because they are the opposite phenomenon:
 EIP-7732 (54 days), EIP-7928 (48), EIP-8037 (17) and `get_head` (2) are all
-current-fork development, where several clients implement a new EIP concurrently by
-design. That is coordinated engineering, not variant discovery.
+current-fork development, where several clients implement new specification text
+concurrently by design. That is coordinated engineering, not variant discovery.
 
 **Do not claim.** Neither long nor short spans support "a fix in one implementation
 predicts variants in another". Long spans are independent work on a durable surface;
@@ -135,26 +177,26 @@ short spans are simultaneous implementation of new specification text.
 > across no more clients than surfaces that are each implementation's own business
 > (stratified permutation p = 0.63, with the effect changing sign under a narrower
 > reading of "specified"). Recovering fix dates for all 1,959 rows with a fix commit
-> makes precedence testable and does not rescue the claim either: across the 18
-> explicitly anchored multi-client cases, eight different clients appear first, no
-> client leads more than four times, and the median gap between first and last is 2.9
-> years. Cross-implementation recurrence is not demonstrated by this corpus at either
-> granularity.
+> makes precedence testable and does not rescue the claim either: across the 92
+> explicitly anchored multi-client cases, all eleven clients appear first, first-mover
+> counts are proportional to each client's share of positions — the highest-volume
+> client is first *less* often than its share predicts — and the median gap between
+> first and last is 4.6 years. Cross-implementation recurrence is not demonstrated by
+> this corpus at either granularity.
 
 The contribution is a demonstration that both candidate units fail, and a dated,
 per-anchor candidate list for anyone who wants to attempt the pairing manually.
 
 ## 6. What would make this answerable
 
-1. **Specification-text anchors on more records.** Extraction currently relies on the
-   record naming an EIP, spec function, or opcode, which 8.1% do. Diff-derived anchors —
-   the opcode constant, precompile address, or spec function a hunk touches — would raise
-   coverage substantially without asking humans for labels, and would let the precedence
-   analysis run on hundreds of anchors instead of 18.
-2. **Manual pairing of the 18 dated anchor sets.** For each, decide whether the records
+1. **Anchors on the remaining 80% of records.** Scanning post-fix code took coverage from
+   8.1% to 19.7%; the rest needs anchors the code does not name literally — the precompile
+   address or gas-schedule constant a hunk touches, or the SSZ container it serialises.
+2. **Manual pairing of the 92 dated anchor sets.** For each, decide whether the records
    describe the same defect, independent defects on a shared surface, or ordinary
    parallel feature work. Only that converts the candidate list into a measured rate
-   with a stated denominator.
+   with a stated denominator. At 92 anchors this is now a feasible review, which it was
+   not at 18.
 3. **A propagation-shaped hypothesis.** If variant propagation exists it should appear
    as a short-span, same-defect pair *outside* a shared fork-development window. That is
    a testable prediction, and the dated table is what it should be tested against.

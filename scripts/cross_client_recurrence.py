@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stage 7: does a defect surface recur across independent implementations?
+r"""Stage 7: does a defect surface recur across independent implementations?
 
 The paper's novelty claim is cross-implementation analysis, so the question is whether
 a fix in one client indicates variants in another. Two things must be said up front
@@ -12,10 +12,18 @@ that have a fix commit, from the bare clones the crawler already maintains; pass
 resulting overlay via ``--fix-dates`` and section 4 orders each multi-client anchor in
 time. Without it, everything here is co-occurrence only.
 
-**Explicit specification anchors are sparse.** Naming an EIP, a consensus-spec
-function, an opcode, or a fork is the only way a record states its shared-spec surface
-directly, and fewer than one row in ten does. Section 2 reports that as a finding about
-description quality rather than working around it.
+**An anchor must be readable from the record.** A record states its shared-spec surface
+by naming an EIP, a consensus-spec function, or an opcode. Prose alone does so on 8.1%
+of rows, so the captured ``post_fix_code`` is scanned too: a spec function appears in the
+code that implements it whether or not the author mentioned it.
+
+Two things make that scan trustworthy rather than merely larger. Spec function names are
+**enumerated**, because a generic ``(process|get|is)_\w+`` pattern is dominated by
+language idiom -- its most frequent corpus hits are ``is_empty``, ``is_none`` and
+``is_some``. And matching is **naming-convention agnostic**: the specs are snake_case and
+Rust and Nim keep it, but Java and TypeScript write ``processAttestation`` and Go writes
+``ProcessAttestation``, so a snake_case-only match would decide which *languages* are
+able to appear in a cross-client result at all.
 
 The primary analysis therefore uses the dataset's own normalised coordinates
 (``label`` x ``root_cause``) and asks a contrast question with an internal control: do
@@ -97,11 +105,92 @@ def classify_surface(label: str, narrow: bool = False) -> str:
 # Explicit specification anchors. A record that names one of these states its shared
 # surface directly, so co-occurrence across clients is much closer to "the same spec
 # text" than a taxonomy match is.
+#
+# Consensus-spec function names are enumerated rather than pattern-matched. A generic
+# `(process|get|is|compute)_\w+` pattern looks attractive but is dominated by language
+# idiom -- across the corpus its most frequent hits are `is_empty`, `is_none`, `is_some`
+# and `get_state`, which are Rust Option methods and ordinary accessors, not spec
+# surfaces.
+CONSENSUS_SPEC_FUNCTIONS = (
+    # phase0 state transition
+    "process_slots", "process_slot", "process_block", "process_epoch",
+    "process_block_header", "process_randao", "process_eth1_data",
+    "process_operations", "process_proposer_slashing", "process_attester_slashing",
+    "process_attestation", "process_deposit", "process_voluntary_exit",
+    "process_justification_and_finalization", "process_rewards_and_penalties",
+    "process_registry_updates", "process_slashings", "process_eth1_data_reset",
+    "process_effective_balance_updates", "process_slashings_reset",
+    "process_randao_mixes_reset", "process_historical_roots_update",
+    "process_participation_record_updates",
+    # altair and later
+    "process_sync_aggregate", "process_participation_flag_updates",
+    "process_sync_committee_updates", "process_inactivity_updates",
+    "process_execution_payload", "process_withdrawals",
+    "process_bls_to_execution_change", "process_deposit_request",
+    "process_withdrawal_request", "process_consolidation_request",
+    "process_pending_deposits", "process_pending_consolidations",
+    "process_execution_requests",
+    # accessors
+    "get_current_epoch", "get_previous_epoch", "get_block_root",
+    "get_block_root_at_slot", "get_randao_mix", "get_active_validator_indices",
+    "get_validator_churn_limit", "get_seed", "get_committee_count_per_slot",
+    "get_beacon_committee", "get_beacon_proposer_index", "get_total_balance",
+    "get_total_active_balance", "get_domain", "get_indexed_attestation",
+    "get_attesting_indices", "get_next_sync_committee", "get_sync_committee_indices",
+    "get_unslashed_participating_indices", "get_flag_index_deltas",
+    "get_inactivity_penalty_deltas", "get_eligible_validator_indices",
+    "get_finality_delay", "get_expected_withdrawals", "get_balance_churn_limit",
+    "get_activation_exit_churn_limit", "get_consolidation_churn_limit",
+    "get_pending_balance_to_withdraw", "get_base_reward",
+    "get_base_reward_per_increment", "get_proposer_reward",
+    "get_attestation_participation_flag_indices",
+    # fork choice
+    "get_head", "get_ancestor", "get_weight", "get_checkpoint_block",
+    "get_voting_source", "get_filtered_block_tree", "get_proposer_score",
+    "on_block", "on_attestation", "on_tick", "on_attester_slashing",
+    # predicates
+    "is_active_validator", "is_eligible_for_activation",
+    "is_eligible_for_activation_queue", "is_slashable_validator",
+    "is_slashable_attestation_data", "is_valid_indexed_attestation",
+    "is_valid_merkle_branch", "is_aggregator", "is_sync_committee_aggregator",
+    "is_merge_transition_complete", "is_merge_transition_block",
+    "is_execution_block", "is_valid_genesis_state", "is_previous_epoch_justified",
+    "is_optimistic_candidate_block", "is_fully_withdrawable_validator",
+    "is_partially_withdrawable_validator", "is_valid_deposit_signature",
+    "is_compounding_validator",
+    # signature checks
+    "verify_block_signature", "verify_deposit_signature",
+    "verify_sync_committee_signature", "verify_merkle_branch",
+    # helpers
+    "compute_epoch_at_slot", "compute_start_slot_at_epoch", "compute_shuffled_index",
+    "compute_proposer_index", "compute_committee", "compute_activation_exit_epoch",
+    "compute_fork_digest", "compute_domain", "compute_signing_root",
+    "compute_subscribed_subnets", "compute_timestamp_at_slot",
+    "compute_sync_committee_period", "compute_weak_subjectivity_period",
+    "compute_exit_epoch_and_update_churn",
+    "compute_consolidation_epoch_and_update_churn",
+)
+
+
+def _naming_convention_agnostic(name: str) -> str:
+    """Match a spec name across the conventions the eleven clients actually use.
+
+    The specs are written in snake_case and Rust and Nim keep it, but Java and
+    TypeScript render `process_attestation` as `processAttestation` and Go as
+    `ProcessAttestation`. Matching snake_case alone would make an anchor findable only
+    in some languages, which for a cross-client analysis is not a coverage gap but a
+    bias: it decides which implementations are *able* to appear at all.
+    """
+    return r"\b" + r"_?".join(re.escape(part) for part in name.split("_")) + r"\b"
+
+
+CONSENSUS_FN_RE = re.compile(
+    "|".join(f"({_naming_convention_agnostic(name)})" for name in CONSENSUS_SPEC_FUNCTIONS),
+    re.IGNORECASE,
+)
+
 ANCHOR_PATTERNS = {
     "eip": re.compile(r"\bEIP[-\s]?(\d{1,4})\b", re.IGNORECASE),
-    "consensus_fn": re.compile(
-        r"\b((?:process|compute|verify|is|get)_[a-z][a-z0-9_]{3,})\b"
-    ),
     "opcode": re.compile(
         r"\b(MULMOD|ADDMOD|EXP|SHL|SHR|SAR|CALLDATACOPY|RETURNDATACOPY|EXTCODECOPY"
         r"|CREATE2|SELFDESTRUCT|DELEGATECALL|STATICCALL|BLOBHASH|MCOPY|TSTORE|TLOAD"
@@ -116,13 +205,37 @@ ANCHOR_PATTERNS = {
 
 
 def extract_anchors(text: str) -> list[str]:
-    """Return normalised ``kind:value`` anchors named in a record's own text."""
+    """Return normalised ``kind:value`` anchors named in a record's own text or code."""
+    text = text or ""
     found = []
     for kind, pattern in ANCHOR_PATTERNS.items():
-        for match in pattern.findall(text or ""):
+        for match in pattern.findall(text):
             value = match if isinstance(match, str) else match[0]
             found.append(f"{kind}:{value.lower()}")
+    # Report the canonical snake_case spec name whatever convention the client used, so
+    # a Java and a Rust record land on the same anchor.
+    for match in CONSENSUS_FN_RE.finditer(text):
+        if match.lastindex is None:  # alternation always captures; guard for clarity
+            continue
+        canonical = CONSENSUS_SPEC_FUNCTIONS[match.lastindex - 1]
+        found.append(f"consensus_fn:{canonical}")
     return sorted(set(found))
+
+
+def anchor_source_text(data: pd.DataFrame, code_chars: int = 20000) -> pd.Series:
+    """Text an anchor may be named in: the record's prose plus its post-fix code.
+
+    Prose alone names an anchor on 8.1% of records. The captured post-fix code names one
+    on far more, because a spec function or opcode appears in the code that implements
+    it whether or not the author mentioned it in the title.
+    """
+    return (
+        data["title"].fillna("").astype(str)
+        + " "
+        + data["description"].fillna("").astype(str).str.slice(0, 4000)
+        + " "
+        + data["post_fix_code"].fillna("").astype(str).str.slice(0, code_chars)
+    )
 
 
 def build_clusters(data: pd.DataFrame) -> pd.DataFrame:
@@ -252,15 +365,10 @@ def stratified_permutation_test(
     )
 
 
-def anchor_spread(data: pd.DataFrame) -> pd.DataFrame:
+def anchor_spread(data: pd.DataFrame, per_row: pd.Series) -> pd.DataFrame:
     """Client spread for every explicitly named specification anchor."""
-    text = (
-        data["title"].fillna("").astype(str)
-        + " "
-        + data["description"].fillna("").astype(str).str.slice(0, 4000)
-    )
     rows = []
-    for idx, anchors in text.map(extract_anchors).items():
+    for idx, anchors in per_row.items():
         for anchor in anchors:
             rows.append({"anchor": anchor, "id": data.at[idx, "id"],
                          "client": data.at[idx, "source_platform"],
@@ -283,7 +391,7 @@ def anchor_spread(data: pd.DataFrame) -> pd.DataFrame:
 
 
 def anchor_precedence(
-    data: pd.DataFrame, anchors: pd.DataFrame, dates: pd.DataFrame
+    data: pd.DataFrame, anchors: pd.DataFrame, dates: pd.DataFrame, per_row: pd.Series
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Order each multi-client anchor in time and report who was first.
 
@@ -301,13 +409,8 @@ def anchor_precedence(
     stamped = dates[dates["fix_author_date"].notna() & dates["fix_author_date"].ne("")]
     when = dict(zip(stamped["id"], stamped["fix_author_date"]))
 
-    text = (
-        data["title"].fillna("").astype(str)
-        + " "
-        + data["description"].fillna("").astype(str).str.slice(0, 4000)
-    )
     rows = []
-    for idx, found in text.map(extract_anchors).items():
+    for idx, found in per_row.items():
         row_id = data.at[idx, "id"]
         stamp = when.get(row_id)
         if not stamp:
@@ -359,7 +462,27 @@ def anchor_precedence(
         .reset_index()
         .sort_values("times_first", ascending=False)
     )
-    return detail, leaders
+
+    # Raw first-mover counts are not evidence of leadership: a client that appears in
+    # more anchors gets more chances to be first. Normalise by each client's share of
+    # all positions across the multi-client anchors, so a ratio near 1 means "first as
+    # often as it shows up at all" -- that is, no information beyond volume.
+    positions = detail["client_order"].str.split(";").explode()
+    position_share = positions.value_counts()
+    position_counts = pd.DataFrame(
+        {"first_client": position_share.index, "positions": position_share.to_numpy()}
+    )
+    leaders = leaders.merge(position_counts, on="first_client", how="left")
+    leaders["position_share_pct"] = (
+        100 * leaders["positions"] / int(position_share.sum())
+    ).round(1)
+    leaders["first_share_pct"] = (
+        100 * leaders["times_first"] / int(leaders["times_first"].sum())
+    ).round(1)
+    leaders["first_to_position_ratio"] = (
+        leaders["first_share_pct"] / leaders["position_share_pct"]
+    ).round(2)
+    return detail, leaders.sort_values("times_first", ascending=False)
 
 
 def main() -> int:
@@ -385,21 +508,22 @@ def main() -> int:
         ],
         ignore_index=True,
     )
-    anchors = anchor_spread(data)
+    # Extraction scans up to 20k characters per row against a large alternation, so it
+    # runs once here and every consumer reuses the result.
+    anchors_per_row = anchor_source_text(data).map(extract_anchors)
+    anchors = anchor_spread(data, anchors_per_row)
     dates = (
         pd.read_csv(args.fix_dates, dtype=str)
         if args.fix_dates.exists()
         else pd.DataFrame()
     )
-    precedence, leaders = anchor_precedence(data, anchors, dates)
+    precedence, leaders = anchor_precedence(data, anchors, dates, anchors_per_row)
 
     usable = clusters[clusters["records"] >= 2]
     anchored = anchors[anchors["clients"] >= 2] if not anchors.empty else anchors
     anchor_rows = 0
     if not anchors.empty:
-        text = (data["title"].fillna("").astype(str) + " "
-                + data["description"].fillna("").astype(str).str.slice(0, 4000))
-        anchor_rows = int(text.map(lambda t: bool(extract_anchors(t))).sum())
+        anchor_rows = int(anchors_per_row.map(bool).sum())
 
     summary = pd.DataFrame(
         [
@@ -430,6 +554,15 @@ def main() -> int:
              int(precedence["span_days"].median()) if not precedence.empty else 0),
             ("most_times_first_by_any_single_client",
              int(leaders["times_first"].max()) if not leaders.empty else 0),
+            # After controlling for how often each client appears at all, a leader would
+            # show a ratio well above 1 on a non-trivial number of anchors.
+            ("clients_first_more_often_than_volume_predicts",
+             int((leaders["first_to_position_ratio"] > 1.2).sum())
+             if not leaders.empty else 0),
+            ("largest_volume_client_first_to_position_ratio",
+             float(leaders.sort_values("positions", ascending=False)
+                   .iloc[0]["first_to_position_ratio"])
+             if not leaders.empty else 0.0),
             ("distinct_clients_appearing_first",
              int(len(leaders)) if not leaders.empty else 0),
         ],
