@@ -95,6 +95,28 @@ def apply_high_review(ef: pd.DataFrame) -> pd.DataFrame:
             + (required[dependent].astype(str) if required is not None else "the EF threshold")
             + ", which this corpus does not evidence."
         )
+
+        # A `bounded` tier is one the share arithmetic cannot reduce, so it would enter
+        # the analysis as an exact tier. Every such row in practice rests on a
+        # `client_conditional_reach` of `all_nodes`, and that is precisely the assessment
+        # that failed source review: all three reviewable `all_nodes` judgements were
+        # over-permissive (see paper/client_conditional_severity.md section 6). The tier
+        # is kept -- the arithmetic really does hold *if* the reach is right -- but the
+        # status names the dependency so it cannot be quoted as confirmed unnoticed.
+        if "client_conditional_reach" in reviewed.columns:
+            unreviewed = (
+                reviewed["severity_source"].eq("llm-estimated")
+                & reviewed["severity_certainty"].eq("bounded")
+                & reviewed["client_conditional_reach"].eq("all_nodes")
+            )
+            reviewed.loc[unreviewed, "severity_review_status"] = (
+                "bounded_on_unreviewed_reach"
+            )
+            reviewed.loc[unreviewed, "severity_review_reason"] = (
+                "Tier survives the share bound, but only because reach was assessed as "
+                "all_nodes, the judgement that was over-permissive on every reviewable "
+                "case. Validate the reach before treating this as an exact tier."
+            )
     return reviewed
 
 
