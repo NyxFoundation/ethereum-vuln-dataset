@@ -183,7 +183,38 @@ invalidated. The honest statement at 22 anchors is *underpowered*, not *null*.
 **Do not claim.** The span evidence argues against propagation. The ordering evidence is
 absent, in either direction.
 
-## 5. Defensible claim
+## 5. Pairing all 22 anchors: zero shared defects
+
+The candidate list is small enough to review exhaustively, which converts it from a queue
+into a rate with a stated denominator
+([`tables/cross_client_anchor_pairing.csv`](tables/cross_client_anchor_pairing.csv)):
+
+| Verdict | Anchors |
+|---|---:|
+| The same defect in two implementations | **0** |
+| Independent defects on a shared surface | 9 |
+| Parallel fork or feature work | 3 |
+| No shared defect (co-location or a false positive) | 10 |
+
+**Not one of the 22 anchors pairs two clients on the same defect.** The nine
+shared-surface cases are the interesting residue — Lodestar's justification-balance bug
+beside Lighthouse's `total_effective_balance=0`; Besu's CVE-2022-36025 CALL gas-allocation
+error beside Nethermind's EVM memory-size overflow; Erigon's `GetHead` fast-path data race
+beside Lighthouse's bogus `InvalidBestNode` — but in every one the two records are separate
+defects that happen to sit on the same specification surface, often years apart.
+
+The ten `no_shared_defect` anchors show what survives even prose-only matching: the
+`process_attestation` anchor pairs a Lodestar benchmark-test fix with a Lighthouse commit
+that adds a `SECURITY.md` reporting section, and `create2` pairs a Geth mobile-framework
+crash with a Besu Guava-to-Caffeine cache swap.
+
+**Limitation.** This is one reviewer judging from titles, protocol labels and dates, not a
+source review of 60-odd records, and "the same defect" is the strictest of the four
+verdicts. A second reviewer might move cases between `independent_on_shared_surface` and
+`no_shared_defect`; moving any of them *into* `same_defect` would require finding a shared
+root cause the titles do not suggest.
+
+## 6. Defensible claim
 
 > Cross-client co-occurrence measured on a normalised protocol-and-cause taxonomy is
 > explained by cluster size alone: surfaces bound by a shared specification spread
@@ -202,7 +233,7 @@ absent, in either direction.
 The contribution is a demonstration that both candidate units fail, and a dated,
 per-anchor candidate list for anyone who wants to attempt the pairing manually.
 
-## 6. Why code-derived anchoring cannot work here
+## 7. Why code-derived anchoring cannot work here
 
 An anchor at specification-text granularity is readable off 7.8% of records, and five
 attempts to raise that all failed. Their outcomes are checked in as
@@ -240,13 +271,9 @@ mentions.
 
 What remains worth doing:
 
-1. **Manual pairing of the 22 dated anchor sets.** For each, decide whether the records
-   describe the same defect, independent defects on a shared surface, or ordinary parallel
-   feature work. Only that converts the candidate list into a measured rate with a stated
-   denominator, and at 22 anchors it is a short review. The audits already done suggest most
-   pairs will be co-location: even the best case found,
-   `process_bls_to_execution_change` across Teku and Nimbus 84 days apart, has the two
-   records addressing different concerns on a shared operation.
+1. **A second reviewer on the pairing in section 5.** The 0/22 result is one reviewer
+   working from titles, labels and dates. Independent verdicts with reported agreement would
+   settle it, and it is a short task.
 2. **Normalise anchors against the EIP registry.** Two records here reach the same surface
    only because both authors made the same typo (EIP-7521 for 7251). Validating extracted
    numbers against the published EIP list would merge misspellings and drop numbers that are
@@ -281,5 +308,6 @@ count.
 - [`tables/cross_client_anchor_precision_audit.csv`](tables/cross_client_anchor_precision_audit.csv)
 - [`tables/cross_client_diff_anchor_diagnostic.csv`](tables/cross_client_diff_anchor_diagnostic.csv)
 - [`tables/cross_client_anchor_strategy_audit.csv`](tables/cross_client_anchor_strategy_audit.csv)
+- [`tables/cross_client_anchor_pairing.csv`](tables/cross_client_anchor_pairing.csv)
 - [`tables/cross_client_recurrence_summary.csv`](tables/cross_client_recurrence_summary.csv)
 - [`tables/fix_date_coverage.csv`](tables/fix_date_coverage.csv)

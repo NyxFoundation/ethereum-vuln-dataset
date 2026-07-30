@@ -64,8 +64,10 @@ artifact contains. Stages 4c and 4d are where that is traced and repaired.
    fix commit make precedence partly testable: across the 22 dated multi-client anchors
    the median gap between first and last client is four years, which argues against
    propagation, while the anchor set is too small to test whether any client leads.
-   Anchors are readable off only 7.8% of records — two attempts to raise that by reading
-   code were adopted and then killed by audit, because presence in a file is not
+   Reviewing all 22 anchor sets exhaustively, **none pairs two clients on the same
+   defect** — nine are independent defects on a shared surface, three parallel fork work,
+   ten co-location. Anchors are readable off only 7.8% of records; five ways of raising
+   that by reading code were measured and all fail, because presence in a file is not
    aboutness.
 
 ## Reproduce the checked-in tables

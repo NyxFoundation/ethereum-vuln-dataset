@@ -1,0 +1,23 @@
+anchor,span_days,pairing_verdict,reviewer_note
+eip:8037,17,parallel_fork_work,"Erigon's title actually names EIP-7928 and Besu's separates gas dimensions; both are upcoming-EIP implementation, not one defect"
+eip:7928,48,no_shared_defect,"The two genuine BAL records are both Erigon, so there is no cross-client pair; the third is Besu pinning Dockerfile digests, a prose false positive"
+eip:7732,54,parallel_fork_work,Three clients doing gloas/ePBS implementation concurrently by design
+consensus_fn:get_pending_balance_to_withdraw,88,independent_on_shared_surface,"Lodestar reverts a change to the function; Teku fixes an ArithmeticException in builder-indexed exits. Same accounting surface, different defects"
+eip:7521,145,independent_on_shared_surface,Both are EIP-7251 (MaxEB) work via the shared author typo: a Prysm validator-REST panic and a Lighthouse effective-balance defect
+opcode:delegatecall,166,independent_on_shared_surface,Besu's CVE-2022-36025 CALL gas-allocation error and Nethermind's EVM memory-size overflow are both EVM resource accounting; the third record is a Guava-to-Caffeine cache swap
+consensus_fn:get_beacon_proposer_index,215,no_shared_defect,Nimbus genuinely changes the function's return type; Lighthouse fixes a validator-client race. Co-location only
+consensus_fn:on_attestation,878,independent_on_shared_surface,"Erigon fixes a crash in OnAttestation, Nimbus routes gloas attestation votes. Same fork-choice surface, different defects"
+eip:4844,1027,parallel_fork_work,"Geth and Erigon build blob transaction pools, Reth fixes an assertion in one; feature implementation across the fork"
+eip:8,1076,no_shared_defect,Neither record concerns devp2p forward compatibility; the Besu one is a jackson-databind bump
+consensus_fn:process_block,1397,no_shared_defect,A Lodestar refactor of processBlock signatures beside Nimbus gloas work
+consensus_fn:process_inactivity_updates,1498,independent_on_shared_surface,Nimbus reward-calculation bug and Lighthouse effective-balance defect are both epoch processing; the two Lodestar records are benchmark-test fixes
+eip:1559,1602,no_shared_defect,"A Geth JS-tracer change, an Erigon header-download race and a Reth assertion fix; none concerns the fee market"
+opcode:shr,1641,no_shared_defect,Besu's CVE-2021-41272 is genuinely SHL/SHR/SAR; Erigon's is an Aura syscall panic. Co-location only
+consensus_fn:process_registry_updates,1683,independent_on_shared_surface,Lodestar's OOM in processRegistryUpdates and Lighthouse's effective-balance defect are both epoch registry processing; the Grandine record is release notes
+consensus_fn:process_attestation,1732,no_shared_defect,The Lighthouse record adds a SECURITY.md reporting section; two Lodestar records are benchmark tests
+consensus_fn:get_head,2095,independent_on_shared_surface,"Erigon's GetHead fast-path data race, Lighthouse's bogus InvalidBestNode error and Nimbus's proto_array sibling support are separate defects in head selection"
+consensus_fn:get_total_active_balance,2097,independent_on_shared_surface,Lodestar's justification-balance bug and Lighthouse's total_effective_balance=0 are both active-balance accounting; one of the cleaner pairs
+consensus_fn:process_epoch,2148,no_shared_defect,"Nimbus finalization verification, Lighthouse Electra balances and a Lodestar benchmark test do not converge"
+consensus_fn:on_block,2173,independent_on_shared_surface,"Teku's fork-choice race and Erigon's gossip mutex leak are both concurrency defects around block handling, loosely on one surface"
+consensus_fn:process_rewards_and_penalties,2401,no_shared_defect,Nimbus sanity-check tests and two Lodestar benchmark fixes beside one real Lighthouse defect
+opcode:create2,2848,no_shared_defect,A Geth mobile-framework crash and a Besu cache-library swap; neither concerns CREATE2
