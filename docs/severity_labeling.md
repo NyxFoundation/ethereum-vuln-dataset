@@ -51,6 +51,12 @@ A deterministic **guardrail** then corrects the tier:
 The components are the reliable, reusable output; the tier is a **calibrated
 estimate**, never presented as a bounty grade.
 
+The checked-in downstream analysis is
+[`paper/ef_severity_analysis.md`](./paper/ef_severity_analysis.md). It excludes
+`upstream-cvss`, separates eligibility from tier, and treats client-level
+severity differences as estimator diagnostics because the prompt includes
+historical client-share classes.
+
 ## Calibration (validated against the bounty grades)
 
 Run `estimate_severity.py --validate`. Key results and what they mean:

@@ -4,7 +4,9 @@
 Severity in the bounty is NETWORK-SCALE IMPACT x REMOTE REACHABILITY (a single
 packet / on-chain tx). Asking an LLM for "Critical?" directly over-rates. Instead
 we DECOMPOSE into the bounty's own axes and let a deterministic guardrail cap the
-tier, then CALIBRATE against the 143 rows the bounty actually graded.
+tier, then CALIBRATE against rows classified as client-code bounty grades. In
+the current snapshot, 60 rows are marked ``bounty-graded``; rated upstream-CVSS
+rows are a separate population.
 
 Per row the LLM emits:
   impact_type   chain_split | liveness_dos | value_integrity | validator_slashing

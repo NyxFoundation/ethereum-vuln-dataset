@@ -24,6 +24,15 @@ MINEBLOCK_AXES = ROOT / "docs" / "paper" / "tables" / "mineblock_type_axes.csv"
 MINEBLOCK_ALIGNMENT = (
     ROOT / "docs" / "paper" / "tables" / "mineblock_taxonomy_alignment.csv"
 )
+EF_SEVERITY_POPULATION = (
+    ROOT / "docs" / "paper" / "tables" / "ef_severity_population.csv"
+)
+EF_SEVERITY_TIERS = (
+    ROOT / "docs" / "paper" / "tables" / "ef_severity_tier_counts.csv"
+)
+EF_SEVERITY_HIGH_QUEUE = (
+    ROOT / "docs" / "paper" / "tables" / "ef_severity_high_review_queue.csv"
+)
 
 BOILERPLATE = re.compile(r"critical update required|urgency guidelines|high-urgency", re.I)
 REQUIRED_COLS = {
@@ -181,3 +190,29 @@ def test_mineblock_semantic_axes_and_alignment():
     assert int(alignment.loc["Go Panic", "matched_current_rows"]) == 23
     assert int(alignment.loc["Go Panic", "distinct_current_root_causes"]) == 6
     assert float(alignment.loc["Overflow", "expected_root_cause_percent"]) == 80.0
+
+
+def test_ef_severity_population_and_tiers():
+    population = pd.read_csv(EF_SEVERITY_POPULATION).set_index("metric")
+    assert int(population.loc["ef_comparable_rows", "count"]) == 1612
+    assert int(population.loc["excluded_upstream_cvss", "count"]) == 612
+    assert int(population.loc["ef_bounty_eligible", "count"]) == 592
+    assert int(population.loc["ef_not_eligible", "count"]) == 1020
+    assert int(population.loc["ef_critical_or_high", "count"]) == 128
+
+    tiers = pd.read_csv(EF_SEVERITY_TIERS).set_index(["population", "tier"])
+    assert int(tiers.loc[("llm_estimated", "Critical"), "rows"]) == 0
+    assert int(tiers.loc[("llm_estimated", "High"), "rows"]) == 110
+    assert int(tiers.loc[("bounty_graded", "Critical"), "rows"]) == 2
+    assert int(tiers.loc[("bounty_graded", "High"), "rows"]) == 16
+
+
+def test_ef_high_queue_provenance_and_client_prior_diagnostic():
+    queue = pd.read_csv(EF_SEVERITY_HIGH_QUEUE)
+    assert len(queue) == 128
+    assert set(queue["severity_source"]) == {"bounty-graded", "llm-estimated"}
+    assert not queue["severity_source"].eq("upstream-cvss").any()
+
+    llm_high = queue[queue["severity_source"].eq("llm-estimated")]
+    assert len(llm_high) == 110
+    assert int(llm_high["source_platform"].isin(["geth", "lighthouse"]).sum()) == 107

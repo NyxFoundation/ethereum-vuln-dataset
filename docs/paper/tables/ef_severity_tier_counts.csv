@@ -1,0 +1,16 @@
+population,tier,rows,denominator,percent
+bounty_graded,Critical,2,60,3.333
+bounty_graded,High,16,60,26.667
+bounty_graded,Medium,39,60,65.0
+bounty_graded,Low,3,60,5.0
+bounty_graded,not-eligible,0,60,0.0
+llm_estimated,Critical,0,1552,0.0
+llm_estimated,High,110,1552,7.088
+llm_estimated,Medium,242,1552,15.593
+llm_estimated,Low,180,1552,11.598
+llm_estimated,not-eligible,1020,1552,65.722
+combined_ef,Critical,2,1612,0.124
+combined_ef,High,126,1612,7.816
+combined_ef,Medium,281,1612,17.432
+combined_ef,Low,183,1612,11.352
+combined_ef,not-eligible,1020,1612,63.275

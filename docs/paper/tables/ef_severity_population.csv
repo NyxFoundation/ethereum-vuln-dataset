@@ -1,0 +1,8 @@
+metric,count,denominator,definition,percent
+snapshot_rows,2225,2225,all frozen snapshot records,100.0
+ef_comparable_rows,1612,2225,severity_source is bounty-graded or llm-estimated,72.449
+excluded_upstream_cvss,612,2225,not comparable with the EF-bounty scale,27.506
+excluded_unassessed,1,2225,no severity assessment,0.045
+ef_bounty_eligible,592,1612,Critical/High/Medium/Low among EF-comparable rows,36.725
+ef_not_eligible,1020,1612,"not-eligible is a scope decision, not a Low tier",63.275
+ef_critical_or_high,128,592,Critical/High among bounty-eligible EF-comparable rows,21.622

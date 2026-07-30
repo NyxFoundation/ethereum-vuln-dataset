@@ -1,0 +1,6 @@
+dimension,category,high_rows,high_denominator,percent
+impact_type,liveness_dos,89,110,80.909
+impact_type,chain_split,21,110,19.091
+reachability,remote_single_message_or_tx,110,110,100.0
+blast_radius,spec_level,55,110,50.0
+blast_radius,client_specific,55,110,50.0
