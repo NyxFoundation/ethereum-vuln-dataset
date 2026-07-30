@@ -150,6 +150,12 @@ High candidates. Only nine contain direct evidence of a consensus-sensitive
 defect, and zero establish a chain split or the EF >33% threshold. See
 [`chain_split_candidate_audit.md`](chain_split_candidate_audit.md).
 
+The liveness audit has also begun. The 89 liveness candidates contain 87
+distinct diff artifacts; only seven source descriptions contain both
+availability and remote-trigger vocabulary. A source review of all five
+`label=test` rows found four unique production fixes but zero confirmed High
+records. See [`liveness_candidate_audit.md`](liveness_candidate_audit.md).
+
 ## Generated evidence
 
 - [`tables/ef_severity_population.csv`](tables/ef_severity_population.csv)
@@ -160,3 +166,6 @@ defect, and zero establish a chain split or the EF >33% threshold. See
 - [`tables/ef_severity_high_review_queue.csv`](tables/ef_severity_high_review_queue.csv)
 - [`tables/chain_split_candidate_audit.csv`](tables/chain_split_candidate_audit.csv)
 - [`tables/chain_split_audit_summary.csv`](tables/chain_split_audit_summary.csv)
+- [`tables/liveness_candidate_summary.csv`](tables/liveness_candidate_summary.csv)
+- [`tables/liveness_candidate_triage.csv`](tables/liveness_candidate_triage.csv)
+- [`tables/liveness_test_label_audit.csv`](tables/liveness_test_label_audit.csv)

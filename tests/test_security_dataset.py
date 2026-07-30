@@ -48,6 +48,15 @@ CHAIN_SPLIT_AUDIT = (
 CHAIN_SPLIT_SUMMARY = (
     ROOT / "docs" / "paper" / "tables" / "chain_split_audit_summary.csv"
 )
+LIVENESS_TRIAGE = (
+    ROOT / "docs" / "paper" / "tables" / "liveness_candidate_triage.csv"
+)
+LIVENESS_SUMMARY = (
+    ROOT / "docs" / "paper" / "tables" / "liveness_candidate_summary.csv"
+)
+LIVENESS_TEST_AUDIT = (
+    ROOT / "docs" / "paper" / "tables" / "liveness_test_label_audit.csv"
+)
 
 BOILERPLATE = re.compile(r"critical update required|urgency guidelines|high-urgency", re.I)
 REQUIRED_COLS = {
@@ -305,3 +314,40 @@ def test_chain_split_candidate_source_audit_is_complete():
     summary = pd.read_csv(CHAIN_SPLIT_SUMMARY).set_index("audit_verdict")
     assert int(summary["rows"].sum()) == 21
     assert int(summary["confirmed_chain_split_rows"].sum()) == 0
+
+
+def test_liveness_candidate_screen_and_first_audit_stratum():
+    triage = pd.read_csv(LIVENESS_TRIAGE)
+    assert len(triage) == 89
+    assert triage["evidence_screen"].value_counts().to_dict() == {
+        "availability_term_only": 60,
+        "neither_term": 19,
+        "both_terms": 7,
+        "remote_term_only": 3,
+    }
+    assert int(triage["exact_diff_duplicate"].sum()) == 4
+    assert triage.loc[triage["exact_diff_duplicate"], "duplicate_group"].nunique() == 2
+    assert triage["source_platform"].value_counts().to_dict() == {
+        "geth": 55,
+        "lighthouse": 34,
+    }
+
+    summary = pd.read_csv(LIVENESS_SUMMARY).set_index("metric")
+    assert int(summary.loc["distinct_diff_artifacts", "rows"]) == 87
+    assert int(summary.loc["source_has_availability_term", "rows"]) == 67
+    assert int(summary.loc["source_has_remote_trigger_term", "rows"]) == 10
+    assert int(summary.loc["source_has_both_term_classes", "rows"]) == 7
+
+    audit = pd.read_csv(LIVENESS_TEST_AUDIT)
+    assert len(audit) == 5
+    assert not audit["confirmed_high"].any()
+    assert audit["label"].eq("test").all()
+    assert set(audit["reviewed_protocol_label"]) == {
+        "transactions",
+        "block-processing",
+        "engine-api",
+    }
+    assert audit["fix_uniqueness"].value_counts().to_dict() == {
+        "unique_fix": 3,
+        "duplicate_fix": 2,
+    }

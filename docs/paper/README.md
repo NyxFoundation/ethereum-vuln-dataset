@@ -27,6 +27,9 @@ The working thesis is:
    labels are retained as a traceable `tier-uncertain` candidate queue.
    [`chain_split_candidate_audit.md`](chain_split_candidate_audit.md) then
    source-reviews all 21 inferred chain-split candidates.
+   [`liveness_candidate_audit.md`](liveness_candidate_audit.md) screens all 89
+   liveness candidates and source-reviews the first five suspicious
+   `label=test` rows.
 5. [`cwe_context_comparison.md`](cwe_context_comparison.md) measures how much
    Ethereum root-cause and protocol-location context remains when generic CWE
    metadata is absent.
@@ -44,6 +47,7 @@ From the repository root:
 UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/paper_analysis.py
 UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/severity_analysis.py
 UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/audit_chain_split_candidates.py
+UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/audit_liveness_candidates.py
 UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/cwe_context_analysis.py
 git diff --exit-code docs/paper/tables
 ```

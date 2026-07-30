@@ -1,0 +1,14 @@
+metric,rows,denominator,definition,percent
+candidate_rows,89,89,original LLM High liveness rows,100.0
+distinct_diff_artifacts,87,89,candidate rows after collapsing two exact-diff duplicate pairs,97.753
+source_has_availability_term,67,89,keyword screen only; not proof of availability impact,75.281
+source_has_remote_trigger_term,10,89,keyword screen only; not proof of reachability,11.236
+source_has_both_term_classes,7,89,contains both availability and remote-trigger vocabulary,7.865
+client_specific,55,89,exact High still requires dated client-share evidence,61.798
+spec_level,34,89,shared-rule label does not establish shared implementation defect,38.202
+geth_rows,55,89,candidate concentration is confounded by the prompt's client-share prior,61.798
+lighthouse_rows,34,89,candidate concentration is confounded by the prompt's client-share prior,38.202
+authority_B,80,89,"source-backed fix record, not a confirmed severity grade",89.888
+authority_C,9,89,candidate-quality evidence,10.112
+test_label_rows,5,89,first manually audited stratum; four distinct fixes,5.618
+test_label_confirmed_high,0,5,none establish the EF >33% threshold,0.0
