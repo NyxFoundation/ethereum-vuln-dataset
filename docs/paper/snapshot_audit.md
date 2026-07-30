@@ -126,6 +126,20 @@ to a common taxonomy.
 6. Reserve causal or generalizing language for manually validated labels and
    statistical tests.
 
+## Generated evidence
+
+- [`tables/snapshot_metrics.csv`](tables/snapshot_metrics.csv) — the frozen population in §1
+- [`tables/root_cause_counts.csv`](tables/root_cause_counts.csv) and
+  [`tables/attack_path_counts.csv`](tables/attack_path_counts.csv) — the baseline threat
+  profile in §5
+- [`tables/cwe_counts.csv`](tables/cwe_counts.csv) — the assigned-CWE distribution in §3
+- [`tables/authority_tier_counts.csv`](tables/authority_tier_counts.csv) — the evidence
+  tiers underlying §1
+- [`tables/severity_source_by_rating.csv`](tables/severity_source_by_rating.csv) — the
+  provenance-by-rating crosstab in §4. Note that `bounty-graded` in this snapshot is not a
+  published grade; see
+  [`bounty_graded_population_audit.md`](bounty_graded_population_audit.md)
+
 ## External definition used
 
 - MITRE, [2025 CWE Top 25 Most Dangerous Software

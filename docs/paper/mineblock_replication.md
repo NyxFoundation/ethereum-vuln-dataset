@@ -213,3 +213,8 @@ module and type counts on a differently selected sample.
 - [`tables/mineblock_type_axes.csv`](tables/mineblock_type_axes.csv)
 - [`tables/mineblock_taxonomy_alignment.csv`](tables/mineblock_taxonomy_alignment.csv)
 - [`tables/mineblock_current_root_cause_counts.csv`](tables/mineblock_current_root_cause_counts.csv)
+- [`tables/mineblock_type_counts.csv`](tables/mineblock_type_counts.csv) — the prior paper's
+  typed Geth categories, the source of the distribution in §4
+- [`tables/mineblock_overlap_summary.csv`](tables/mineblock_overlap_summary.csv) and
+  [`tables/mineblock_overlap_rows.csv`](tables/mineblock_overlap_rows.csv) — the exact
+  issue/PR and commit identity overlap behind §2
