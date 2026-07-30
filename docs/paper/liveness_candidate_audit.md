@@ -90,27 +90,68 @@ This small audit identifies two separate inflation mechanisms:
 Deduplication cannot validate severity, but failing to deduplicate would
 overweight the same underlying evidence in frequency analysis.
 
-## 5. Paper contribution
+## 5. Audit of the strongest seven-row screen
+
+All seven rows containing both availability and remote-trigger vocabulary were
+then reviewed individually.
+
+| Evidence outcome | Records |
+|---|---:|
+| Direct failure stated (panic/deadlock) | 4 |
+| Resource pressure, but no failure stated | 1 |
+| Anti-DoS mitigation, but no takedown stated | 1 |
+| Feature work with no realized failure | 1 |
+| Attacker-controlled input evidenced | 3 |
+| Single-input failure evidenced | **1** |
+| Confirmed exact High | **0** |
+
+The one source that directly establishes both attacker control and a
+single-input failure is Geth PR #195: handcrafted RLP transaction bytes could
+panic the transaction pool. GitHub PR metadata dates its merge to 2014-12-18,
+before Ethereum mainnet. It is a concrete vulnerability, but cannot establish
+live-network >33% impact at the fix date.
+
+The Lighthouse RPC deadlock is also pre-mainnet: PR #640 merged on 2019-11-29,
+before Beacon Chain mainnet, and its source does not show that a single peer
+message triggers the deadlock.
+
+The remaining five separate into:
+
+- a Verkle-only predeployment panic without a crafted-transaction path;
+- throttling for peers sending **many** invalid transactions, with no crash;
+- a local hierarchical-state-diff panic unrelated to malicious attestations;
+- resource pressure from **many parallel HTTP requests**, not one attestation;
+- a basic, non-tested PeerDAS feature whose future work included better DoS
+  protection.
+
+This falsifies the proposed monotonic shortcut for this first stratum:
+selecting records whose source text contains both vocabulary classes did not
+produce any confirmed High labels. Keyword co-occurrence improves review
+priority, but does not replace trigger, deployment, or threshold validation.
+
+## 6. Paper contribution
 
 > In 89 estimated liveness-DoS High rows, source text mentions availability in
 > 67 cases but a remote trigger in only ten, and only seven mention both.
 > Auditing the five records mislabelled as `test` found four unique production
 > fixes and three concrete availability defects, yet zero records established
-> a single-input >33% impact. Estimated reachability, protocol location, and
-> artifact identity therefore require independent validation.
+> a single-input >33% impact. Even the strongest seven-row keyword stratum
+> produced only one source-supported single-input failure, fixed before
+> mainnet, and zero confirmed High records. Estimated reachability, protocol
+> location, deployment timing, and artifact identity therefore require
+> independent validation.
 
 This is not a precision estimate for all 89 rows because the first audited
 stratum was deliberately selected for suspicious protocol labels.
 
-## 6. Next audit strata
+## 7. Next audit strata
 
 The remaining queue should be reviewed in this order:
 
-1. the seven records containing both availability and remote-trigger terms;
-2. the three remote-term-only records, where the claimed availability outcome
+1. the three remote-term-only records, where the claimed availability outcome
    needs verification;
-3. the 19 records containing neither term class;
-4. the 60 availability-term-only records, stratified by client, blast radius,
+2. the 19 records containing neither term class;
+3. the 60 availability-term-only records, stratified by client, blast radius,
    and deployed/predeployment state.
 
 ## Generated evidence
@@ -118,3 +159,4 @@ The remaining queue should be reviewed in this order:
 - [`tables/liveness_candidate_summary.csv`](tables/liveness_candidate_summary.csv)
 - [`tables/liveness_candidate_triage.csv`](tables/liveness_candidate_triage.csv)
 - [`tables/liveness_test_label_audit.csv`](tables/liveness_test_label_audit.csv)
+- [`tables/liveness_both_terms_audit.csv`](tables/liveness_both_terms_audit.csv)

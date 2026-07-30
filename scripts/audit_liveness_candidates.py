@@ -64,6 +64,78 @@ TEST_DECISIONS = {
     ),
 }
 
+BOTH_TERMS_DECISIONS = {
+    "9d281cd7385d8958": (
+        "predeployment_feature_panic",
+        "direct_failure",
+        False,
+        False,
+        "predeployment",
+        "The source reports a Verkle prefetcher panic only once Verkle is activated. "
+        "It does not identify a crafted transaction or a deployed remote trigger.",
+    ),
+    "e4eecf24a4501ff6": (
+        "anti_dos_mitigation_no_takedown",
+        "mitigation_only",
+        True,
+        False,
+        "deployed_code",
+        "The source adds throttling for peers delivering many invalid transactions. "
+        "It establishes attacker-controlled traffic and a multi-input anti-DoS measure, "
+        "but not a crash or single-input node takedown.",
+    ),
+    "geth:ethereum-go-ethereum:PR#195": (
+        "pre_mainnet_remote_transaction_panic",
+        "direct_failure",
+        True,
+        True,
+        "pre_mainnet",
+        "The source explicitly states that handcrafted RLP transaction bytes trigger "
+        "a panic. GitHub metadata dates the merge to 2014-12-18, before Ethereum "
+        "mainnet, so it cannot establish live-network >33% impact at the fix date.",
+    ),
+    "lighthouse:networking:PR#4652": (
+        "local_storage_feature_panic",
+        "direct_failure",
+        False,
+        False,
+        "deployment_unclear",
+        "The source fixes a panic when a hierarchical state diff is absent at a "
+        "requested slot during a broad storage redesign. It does not connect the panic "
+        "to a malicious attestation or other attacker-controlled input.",
+    ),
+    "lighthouse:networking:PR#4879": (
+        "multi_request_http_resource_pressure",
+        "resource_pressure",
+        True,
+        False,
+        "deployed_code",
+        "The source describes many parallel HTTP state requests and adds request "
+        "deduplication. This is externally supplied load requiring multiple requests, "
+        "not a single malicious attestation or demonstrated crash.",
+    ),
+    "lighthouse:networking:PR#5569": (
+        "predeployment_feature_no_failure",
+        "no_failure",
+        False,
+        False,
+        "predeployment",
+        "This is an explicitly basic, non-tested PeerDAS early-request feature whose "
+        "next steps include better DoS protection. It is not a vulnerability fix or "
+        "evidence of a realized availability failure.",
+    ),
+    "lighthouse:networking:PR#640": (
+        "pre_mainnet_rpc_deadlock",
+        "direct_failure",
+        False,
+        False,
+        "pre_mainnet",
+        "The source states that RPC handling had a deadlock, but does not identify the "
+        "trigger as one attacker message. GitHub metadata dates the merge to "
+        "2019-11-29, before Beacon Chain mainnet.",
+    ),
+}
+
 
 def pct(count: int, denominator: int) -> float:
     return round(100 * count / denominator, 3) if denominator else 0.0
@@ -205,6 +277,58 @@ def main() -> int:
         args.output_dir / "liveness_test_label_audit.csv", index=False
     )
 
+    both_rows = candidates[candidates["evidence_screen"].eq("both_terms")].copy()
+    actual = set(both_rows["id"])
+    expected = set(BOTH_TERMS_DECISIONS)
+    if actual != expected:
+        raise ValueError(
+            f"Both-terms decisions mismatch; "
+            f"missing={sorted(actual - expected)}, extra={sorted(expected - actual)}"
+        )
+    both_rows["audit_verdict"] = both_rows["id"].map(
+        lambda row_id: BOTH_TERMS_DECISIONS[row_id][0]
+    )
+    both_rows["availability_evidence"] = both_rows["id"].map(
+        lambda row_id: BOTH_TERMS_DECISIONS[row_id][1]
+    )
+    both_rows["attacker_controlled_input_evidenced"] = both_rows["id"].map(
+        lambda row_id: BOTH_TERMS_DECISIONS[row_id][2]
+    )
+    both_rows["single_input_failure_evidenced"] = both_rows["id"].map(
+        lambda row_id: BOTH_TERMS_DECISIONS[row_id][3]
+    )
+    both_rows["deployment_context"] = both_rows["id"].map(
+        lambda row_id: BOTH_TERMS_DECISIONS[row_id][4]
+    )
+    both_rows["audit_reason"] = both_rows["id"].map(
+        lambda row_id: BOTH_TERMS_DECISIONS[row_id][5]
+    )
+    both_rows["confirmed_high"] = False
+    both_rows[
+        [
+            "id",
+            "source_platform",
+            "title",
+            "source_url",
+            "severity_estimated",
+            "severity_analysis_label",
+            "audit_verdict",
+            "availability_evidence",
+            "attacker_controlled_input_evidenced",
+            "single_input_failure_evidenced",
+            "deployment_context",
+            "confirmed_high",
+            "audit_reason",
+            "blast_radius",
+            "authority_tier",
+            "root_cause",
+            "attack_path",
+            "label",
+        ]
+    ].sort_values(["audit_verdict", "id"]).to_csv(
+        args.output_dir / "liveness_both_terms_audit.csv", index=False
+    )
+
     exact_duplicate_rows = int(candidates["exact_diff_duplicate"].sum())
     duplicate_groups = len(duplicate_fingerprints)
     distinct_artifacts = len(candidates) - (exact_duplicate_rows - duplicate_groups)
@@ -291,6 +415,24 @@ def main() -> int:
             int(test_rows["confirmed_high"].sum()),
             len(test_rows),
             "none establish the EF >33% threshold",
+        ),
+        (
+            "both_terms_audited",
+            len(both_rows),
+            len(candidates),
+            "all rows containing both availability and remote-trigger terms",
+        ),
+        (
+            "both_terms_single_input_failure_evidenced",
+            int(both_rows["single_input_failure_evidenced"].sum()),
+            len(both_rows),
+            "one source directly states a handcrafted transaction triggers panic",
+        ),
+        (
+            "both_terms_confirmed_high",
+            int(both_rows["confirmed_high"].sum()),
+            len(both_rows),
+            "none establish deployed >33% impact at the fix date",
         ),
     ]
     summary_frame = pd.DataFrame(

@@ -57,6 +57,9 @@ LIVENESS_SUMMARY = (
 LIVENESS_TEST_AUDIT = (
     ROOT / "docs" / "paper" / "tables" / "liveness_test_label_audit.csv"
 )
+LIVENESS_BOTH_TERMS_AUDIT = (
+    ROOT / "docs" / "paper" / "tables" / "liveness_both_terms_audit.csv"
+)
 
 BOILERPLATE = re.compile(r"critical update required|urgency guidelines|high-urgency", re.I)
 REQUIRED_COLS = {
@@ -350,4 +353,22 @@ def test_liveness_candidate_screen_and_first_audit_stratum():
     assert audit["fix_uniqueness"].value_counts().to_dict() == {
         "unique_fix": 3,
         "duplicate_fix": 2,
+    }
+
+    both = pd.read_csv(LIVENESS_BOTH_TERMS_AUDIT)
+    assert len(both) == 7
+    assert both["availability_evidence"].value_counts().to_dict() == {
+        "direct_failure": 4,
+        "mitigation_only": 1,
+        "resource_pressure": 1,
+        "no_failure": 1,
+    }
+    assert int(both["attacker_controlled_input_evidenced"].sum()) == 3
+    assert int(both["single_input_failure_evidenced"].sum()) == 1
+    assert not both["confirmed_high"].any()
+    assert both["deployment_context"].value_counts().to_dict() == {
+        "predeployment": 2,
+        "pre_mainnet": 2,
+        "deployed_code": 2,
+        "deployment_unclear": 1,
     }

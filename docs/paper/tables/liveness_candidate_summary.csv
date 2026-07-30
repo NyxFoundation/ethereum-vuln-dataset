@@ -12,3 +12,6 @@ authority_B,80,89,"source-backed fix record, not a confirmed severity grade",89.
 authority_C,9,89,candidate-quality evidence,10.112
 test_label_rows,5,89,first manually audited stratum; four distinct fixes,5.618
 test_label_confirmed_high,0,5,none establish the EF >33% threshold,0.0
+both_terms_audited,7,89,all rows containing both availability and remote-trigger terms,7.865
+both_terms_single_input_failure_evidenced,1,7,one source directly states a handcrafted transaction triggers panic,14.286
+both_terms_confirmed_high,0,7,none establish deployed >33% impact at the fix date,0.0

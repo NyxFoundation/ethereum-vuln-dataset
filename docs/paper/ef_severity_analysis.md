@@ -154,7 +154,10 @@ The liveness audit has also begun. The 89 liveness candidates contain 87
 distinct diff artifacts; only seven source descriptions contain both
 availability and remote-trigger vocabulary. A source review of all five
 `label=test` rows found four unique production fixes but zero confirmed High
-records. See [`liveness_candidate_audit.md`](liveness_candidate_audit.md).
+records. All seven records containing both vocabulary classes were also
+reviewed: only one directly evidenced a single-input failure, but it was fixed
+before mainnet, and zero established High. See
+[`liveness_candidate_audit.md`](liveness_candidate_audit.md).
 
 ## Generated evidence
 
@@ -169,3 +172,4 @@ records. See [`liveness_candidate_audit.md`](liveness_candidate_audit.md).
 - [`tables/liveness_candidate_summary.csv`](tables/liveness_candidate_summary.csv)
 - [`tables/liveness_candidate_triage.csv`](tables/liveness_candidate_triage.csv)
 - [`tables/liveness_test_label_audit.csv`](tables/liveness_test_label_audit.csv)
+- [`tables/liveness_both_terms_audit.csv`](tables/liveness_both_terms_audit.csv)
