@@ -129,7 +129,39 @@ selecting records whose source text contains both vocabulary classes did not
 produce any confirmed High labels. Keyword co-occurrence improves review
 priority, but does not replace trigger, deployment, or threshold validation.
 
-## 6. Paper contribution
+## 6. Audit of the three remote-term-only records
+
+The three rows with remote-trigger vocabulary but no availability vocabulary
+were reviewed next.
+
+| Record | Remote evidence | Availability evidence | Result |
+|---|---|---|---|
+| Geth `GetBlockHeaders` overflow | Crafted `Skip` request is explicit | No crash, panic, exhaustion, or unavailability stated | Remote protocol logic defect, not demonstrated DoS |
+| Lighthouse PeerDAS persistence race | No attacker control stated | Data columns fail to persist | Predeployment internal race |
+| Lighthouse gossip amplification | Remote gossip messages are explicit | Amplification after a repeated >256-message cycle; no crash | Multi-message resource amplification, pre-mainnet |
+
+The Geth record demonstrates why “remote” alone is insufficient: one crafted
+request reaches defective arithmetic, but the source and regression tests show
+incorrect traversal handling rather than an availability failure.
+
+The gossip record merged on 2020-01-31, before Beacon Chain mainnet, explicitly
+discusses non-malicious validators, and requires a repeated cycle of more than
+256 unique messages. The LLM rationale changes this into a remote attacker
+crashing the client, which is not supported by the source.
+
+Results:
+
+- attacker-controlled input evidenced: 1/3;
+- remote input evidenced: 2/3;
+- single-input availability failure evidenced: 0/3;
+- confirmed exact High: 0/3.
+
+Across the three completed targeted strata—five `label=test` rows, seven
+both-term rows, and three remote-only rows—15 candidate rows representing 14
+distinct artifacts have now been source-reviewed. None establishes exact High.
+This remains a deliberately selected audit, not an unbiased precision estimate.
+
+## 7. Paper contribution
 
 > In 89 estimated liveness-DoS High rows, source text mentions availability in
 > 67 cases but a remote trigger in only ten, and only seven mention both.
@@ -144,14 +176,12 @@ priority, but does not replace trigger, deployment, or threshold validation.
 This is not a precision estimate for all 89 rows because the first audited
 stratum was deliberately selected for suspicious protocol labels.
 
-## 7. Next audit strata
+## 8. Next audit strata
 
 The remaining queue should be reviewed in this order:
 
-1. the three remote-term-only records, where the claimed availability outcome
-   needs verification;
-2. the 19 records containing neither term class;
-3. the 60 availability-term-only records, stratified by client, blast radius,
+1. the 19 records containing neither term class;
+2. the 60 availability-term-only records, stratified by client, blast radius,
    and deployed/predeployment state.
 
 ## Generated evidence
@@ -160,3 +190,4 @@ The remaining queue should be reviewed in this order:
 - [`tables/liveness_candidate_triage.csv`](tables/liveness_candidate_triage.csv)
 - [`tables/liveness_test_label_audit.csv`](tables/liveness_test_label_audit.csv)
 - [`tables/liveness_both_terms_audit.csv`](tables/liveness_both_terms_audit.csv)
+- [`tables/liveness_remote_only_audit.csv`](tables/liveness_remote_only_audit.csv)

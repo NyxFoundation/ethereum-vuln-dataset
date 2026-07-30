@@ -60,6 +60,9 @@ LIVENESS_TEST_AUDIT = (
 LIVENESS_BOTH_TERMS_AUDIT = (
     ROOT / "docs" / "paper" / "tables" / "liveness_both_terms_audit.csv"
 )
+LIVENESS_REMOTE_ONLY_AUDIT = (
+    ROOT / "docs" / "paper" / "tables" / "liveness_remote_only_audit.csv"
+)
 
 BOILERPLATE = re.compile(r"critical update required|urgency guidelines|high-urgency", re.I)
 REQUIRED_COLS = {
@@ -372,3 +375,18 @@ def test_liveness_candidate_screen_and_first_audit_stratum():
         "deployed_code": 2,
         "deployment_unclear": 1,
     }
+
+    remote_only = pd.read_csv(LIVENESS_REMOTE_ONLY_AUDIT)
+    assert len(remote_only) == 3
+    assert int(remote_only["attacker_controlled_input_evidenced"].sum()) == 1
+    assert int(remote_only["remote_input_evidenced"].sum()) == 2
+    assert not remote_only["single_input_failure_evidenced"].any()
+    assert not remote_only["confirmed_high"].any()
+    assert remote_only["availability_evidence"].value_counts().to_dict() == {
+        "no_failure": 1,
+        "functional_failure": 1,
+        "resource_amplification": 1,
+    }
+
+    audited_ids = set(audit["id"]) | set(both["id"]) | set(remote_only["id"])
+    assert len(audited_ids) == 15

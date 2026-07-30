@@ -158,6 +158,9 @@ records. All seven records containing both vocabulary classes were also
 reviewed: only one directly evidenced a single-input failure, but it was fixed
 before mainnet, and zero established High. See
 [`liveness_candidate_audit.md`](liveness_candidate_audit.md).
+The three remote-term-only rows were also reviewed; none connects a single
+remote input to an availability failure. In total, 15 targeted liveness rows
+(14 distinct artifacts) have been source-reviewed with zero confirmed High.
 
 ## Generated evidence
 
@@ -173,3 +176,4 @@ before mainnet, and zero established High. See
 - [`tables/liveness_candidate_triage.csv`](tables/liveness_candidate_triage.csv)
 - [`tables/liveness_test_label_audit.csv`](tables/liveness_test_label_audit.csv)
 - [`tables/liveness_both_terms_audit.csv`](tables/liveness_both_terms_audit.csv)
+- [`tables/liveness_remote_only_audit.csv`](tables/liveness_remote_only_audit.csv)

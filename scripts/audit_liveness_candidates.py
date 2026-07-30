@@ -136,6 +136,43 @@ BOTH_TERMS_DECISIONS = {
     ),
 }
 
+REMOTE_ONLY_DECISIONS = {
+    "e84e13f52af9dacd": (
+        "remote_protocol_logic_defect_no_availability_outcome",
+        "no_failure",
+        True,
+        True,
+        False,
+        "deployed_code",
+        "The source explicitly identifies crafted GetBlockHeaders Skip values and fixes "
+        "overflow/underflow traversal. It does not report crash, panic, resource "
+        "exhaustion, or node unavailability from the single request.",
+    ),
+    "6fad56ffd2f16be8": (
+        "predeployment_internal_race_no_remote_attack",
+        "functional_failure",
+        False,
+        False,
+        False,
+        "predeployment",
+        "The source establishes a PeerDAS getBlobs race that prevents data-column "
+        "persistence. It does not identify attacker control, one-message failure, or a "
+        "deployed network impact; the commit dates to 2025-01-15.",
+    ),
+    "lighthouse:networking:PR#832": (
+        "pre_mainnet_multi_message_amplification_no_crash",
+        "resource_amplification",
+        False,
+        True,
+        False,
+        "pre_mainnet",
+        "The source describes duplicate gossip loops after more than 256 unique messages "
+        "and explicitly discusses non-malicious validators. It does not report a crash, "
+        "requires a repeated multi-message cycle, and merged on 2020-01-31 before "
+        "Beacon Chain mainnet.",
+    ),
+}
+
 
 def pct(count: int, denominator: int) -> float:
     return round(100 * count / denominator, 3) if denominator else 0.0
@@ -329,6 +366,64 @@ def main() -> int:
         args.output_dir / "liveness_both_terms_audit.csv", index=False
     )
 
+    remote_only_rows = candidates[
+        candidates["evidence_screen"].eq("remote_term_only")
+    ].copy()
+    actual = set(remote_only_rows["id"])
+    expected = set(REMOTE_ONLY_DECISIONS)
+    if actual != expected:
+        raise ValueError(
+            f"Remote-only decisions mismatch; "
+            f"missing={sorted(actual - expected)}, extra={sorted(expected - actual)}"
+        )
+    remote_only_rows["audit_verdict"] = remote_only_rows["id"].map(
+        lambda row_id: REMOTE_ONLY_DECISIONS[row_id][0]
+    )
+    remote_only_rows["availability_evidence"] = remote_only_rows["id"].map(
+        lambda row_id: REMOTE_ONLY_DECISIONS[row_id][1]
+    )
+    remote_only_rows["attacker_controlled_input_evidenced"] = remote_only_rows[
+        "id"
+    ].map(lambda row_id: REMOTE_ONLY_DECISIONS[row_id][2])
+    remote_only_rows["remote_input_evidenced"] = remote_only_rows["id"].map(
+        lambda row_id: REMOTE_ONLY_DECISIONS[row_id][3]
+    )
+    remote_only_rows["single_input_failure_evidenced"] = remote_only_rows[
+        "id"
+    ].map(lambda row_id: REMOTE_ONLY_DECISIONS[row_id][4])
+    remote_only_rows["deployment_context"] = remote_only_rows["id"].map(
+        lambda row_id: REMOTE_ONLY_DECISIONS[row_id][5]
+    )
+    remote_only_rows["audit_reason"] = remote_only_rows["id"].map(
+        lambda row_id: REMOTE_ONLY_DECISIONS[row_id][6]
+    )
+    remote_only_rows["confirmed_high"] = False
+    remote_only_rows[
+        [
+            "id",
+            "source_platform",
+            "title",
+            "source_url",
+            "severity_estimated",
+            "severity_analysis_label",
+            "audit_verdict",
+            "availability_evidence",
+            "attacker_controlled_input_evidenced",
+            "remote_input_evidenced",
+            "single_input_failure_evidenced",
+            "deployment_context",
+            "confirmed_high",
+            "audit_reason",
+            "blast_radius",
+            "authority_tier",
+            "root_cause",
+            "attack_path",
+            "label",
+        ]
+    ].sort_values(["audit_verdict", "id"]).to_csv(
+        args.output_dir / "liveness_remote_only_audit.csv", index=False
+    )
+
     exact_duplicate_rows = int(candidates["exact_diff_duplicate"].sum())
     duplicate_groups = len(duplicate_fingerprints)
     distinct_artifacts = len(candidates) - (exact_duplicate_rows - duplicate_groups)
@@ -433,6 +528,24 @@ def main() -> int:
             int(both_rows["confirmed_high"].sum()),
             len(both_rows),
             "none establish deployed >33% impact at the fix date",
+        ),
+        (
+            "remote_only_audited",
+            len(remote_only_rows),
+            len(candidates),
+            "all rows containing remote-trigger but no availability vocabulary",
+        ),
+        (
+            "remote_only_single_input_failure_evidenced",
+            int(remote_only_rows["single_input_failure_evidenced"].sum()),
+            len(remote_only_rows),
+            "none connect one remote input to an availability failure",
+        ),
+        (
+            "remote_only_confirmed_high",
+            int(remote_only_rows["confirmed_high"].sum()),
+            len(remote_only_rows),
+            "none establish the EF >33% threshold",
         ),
     ]
     summary_frame = pd.DataFrame(
