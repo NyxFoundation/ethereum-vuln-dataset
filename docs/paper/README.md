@@ -61,10 +61,12 @@ artifact contains. Stages 4c and 4d are where that is traced and repaired.
    specification anchor and tests whether recurrence concentrates on shared-spec
    surfaces. It does not: cross-client spread is explained by cluster size alone
    (stratified permutation p = 0.63). Fix dates recovered for all 1,959 rows with a
-   fix commit make precedence testable, and it fails too — across the 92 dated
-   multi-client anchors all eleven clients appear first, first-mover counts track each
-   client's share of positions, and the median gap is 4.6 years. Cross-implementation
-   recurrence is not demonstrated at either granularity.
+   fix commit make precedence partly testable: across the 22 dated multi-client anchors
+   the median gap between first and last client is four years, which argues against
+   propagation, while the anchor set is too small to test whether any client leads.
+   Anchors are readable off only 7.8% of records — two attempts to raise that by reading
+   code were adopted and then killed by audit, because presence in a file is not
+   aboutness.
 
 ## Reproduce the checked-in tables
 

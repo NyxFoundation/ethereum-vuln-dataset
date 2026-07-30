@@ -261,12 +261,34 @@ def extract_consensus_fns(text: str) -> list[str]:
 
 
 def anchors_per_record(data: pd.DataFrame) -> pd.Series:
-    """All anchors for each record, applying the per-source policy above."""
-    prose = anchor_source_text(data).map(extract_anchors)
-    code = anchor_code_text(data).map(extract_consensus_fns)
-    return pd.Series(
-        [sorted(set(a) | set(b)) for a, b in zip(prose, code)], index=data.index
-    )
+    """All anchors for each record. Prose only -- code failed validation for every kind.
+
+    Reading ``post_fix_code`` was tried for EIP anchors, rejected, then kept for consensus
+    function names on the strength of one anchor that reviewed 2/2. Sampling eleven
+    consensus-function anchors covering 122 records
+    (``tables/cross_client_consensus_fn_audit.csv``) shows that was a generalisation from
+    the best case: all eleven are contaminated. ``process_block`` collected a Besu RLPx
+    deframer fix, a lodestar eslint-rule change and a chai-assertion rename;
+    ``get_ancestor`` collected "Merge devel into master" and a clippy-lint pass; one
+    Grandine release-notes record turns up under four different anchors.
+
+    Two causes, and neither has a filter:
+
+    * **Generic names collide.** ``process_block``, ``process_slot``, ``get_ancestor`` and
+      ``get_block`` are ordinary method names any client may define, and matching them
+      case- and underscore-insensitively -- which is what removed the earlier bias against
+      Java, TypeScript and Go -- makes the collision worse rather than better.
+    * **Presence is not aboutness.** Even for an unambiguous spec name, appearing anywhere
+      in 20k characters of post-fix code means the file calls it, not that the fix concerns
+      it. A specificity threshold does not help: ``get_next_sync_committee`` has four
+      components and its three records are a benchmark regression, a sim test and an
+      optimistic-sync fix.
+
+    Only the author naming a surface, or a real diff restricted to changed lines, carries
+    the aboutness signal. The snapshot has pre/post snapshots rather than a diff, so this
+    reverts to prose.
+    """
+    return anchor_source_text(data).map(extract_anchors)
 
 
 def build_clusters(data: pd.DataFrame) -> pd.DataFrame:

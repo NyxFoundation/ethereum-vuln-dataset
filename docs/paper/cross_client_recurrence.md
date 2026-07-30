@@ -11,55 +11,64 @@ once fix dates are recovered, the explicitly anchored cases show no propagation 
 ## 1. One limit fixed, one removed
 
 **An anchor has to be readable off the record.** A record states its shared surface by
-naming an EIP, a consensus-spec function, or an opcode. Prose alone does so on 181 of
-2,225 rows (8.1%). Reading the captured `post_fix_code` too raises coverage to **337 rows
-(15.1%)**, but only for one anchor kind, and getting there took three corrections that
-each changed the result.
+naming an EIP, a consensus-spec function, or an opcode. Only **174 of 2,225 rows (7.8%)**
+do, and getting to that honest figure took reverting two of my own attempts to raise it.
 
 *Enumerate spec functions, do not pattern-match them.* A generic `(process|get|is)_\w+`
 pattern is dominated by language idiom: its most frequent hits across this corpus are
 `is_empty` (38), `is_none` (23) and `is_some` (20) — Rust `Option` methods, not spec
 surfaces. The ~120 real consensus-spec function names are listed instead.
 
-*Match across naming conventions.* The specs are snake_case and Rust and Nim keep it,
-but Java and TypeScript write `processAttestation` and Go writes `ProcessAttestation`. A
+*Match across naming conventions.* The specs are snake_case and Rust and Nim keep it, but
+Java and TypeScript write `processAttestation` and Go writes `ProcessAttestation`. A
 snake_case-only match is not merely incomplete — it decides which *languages* can appear
 in a cross-client result at all, and under it Teku and Prysm never surfaced.
 
-*Read EIPs from prose only.* Scanning code for every anchor kind looked like a free
-doubling of coverage. Reviewing the shortest-span anchors record by record
-([`tables/cross_client_anchor_precision_audit.csv`](tables/cross_client_anchor_precision_audit.csv))
-showed it was not. The 18 reviewed records split by where the anchor came from:
+*Do not read anchors from code.* Scanning `post_fix_code` doubled coverage to 19.7% and
+was adopted twice before being audited. Both times the audit killed it.
+
+For EIP anchors ([`tables/cross_client_anchor_precision_audit.csv`](tables/cross_client_anchor_precision_audit.csv)),
+18 reviewed records split by where the anchor came from:
 
 | Anchor source | Concerns the anchor | Mentions it only | Does not |
 |---|---:|---:|---:|
-| Code only (now dropped) | 0 | 0 | **8** |
+| Code only | 0 | 0 | **8** |
 | Prose | **5** | 3 | 0 |
-| Post-fix code, consensus function | 2 | 0 | 0 |
 
-Three distinct contamination mechanisms turned up, and they are not the same problem:
+Consensus-function anchors were then kept from code on the strength of a single anchor
+that reviewed 2/2. Sampling eleven of them covering 122 records
+([`tables/cross_client_consensus_fn_audit.csv`](tables/cross_client_consensus_fn_audit.csv))
+showed that was a generalisation from the best case: **all eleven are contaminated.**
+`process_block` collected a Besu RLPx-deframer fix — an execution client, devp2p framing —
+plus a lodestar eslint-rule change and a chai-assertion rename; `get_ancestor` collected
+"Merge devel into master" and a clippy-lint pass; one Grandine release-notes record appears
+under four different anchors.
 
-1. **A code match inherits the file's EIP list.** `eip:2718` had collected four Reth
-   changes about RocksDB healing and p2p memory bounds, and `eip:7928` a Besu commit that
-   pins Dockerfile base images by digest. A fix touching a fork-configuration or
-   reference-test file inherits every EIP that file mentions, so the match means "this
-   file knows about the EIP", not "this fix concerns it". Dropping code as a source for
-   EIP, opcode and fork anchors removes all eight of these.
-2. **A prose mention can be a blocker or a changelog entry.** Erigon's peer-hygiene fix
-   names EIP-7975 inside release notes enumerating other authors' PRs, and its BAL fix
-   names EIP-8037 only as the reason some tests stay skipped. Three of the eight surviving
-   prose anchors are this kind. There is no mechanical filter: no record in the corpus
-   names four or more EIPs in prose, so "looks like an enumeration" is not detectable by
-   count. Separating subject from mention needs reading.
-3. **Anchors inherit author typos.** Both the Prysm and Lighthouse records write
-   *EIP-7521* for EIP-7251 (MaxEB) — Lighthouse's own markdown link resolves to
-   `eip-7251`. The two records genuinely share a surface; the anchor label is misspelled
-   identically in both, which is how the pair was found at all. Normalising anchors
-   against the EIP registry would merge them with correctly spelled EIP-7251 records.
+Three mechanisms, none of which has a filter:
 
-Consensus function names survive the code test because the function must actually be
-called by code implementing that surface. EIP, opcode and fork anchors are therefore read
-from prose only, at roughly 5-in-8 precision.
+1. **A code match inherits the file's contents.** A fix touching a fork-configuration or
+   reference-test file inherits every EIP that file mentions. The match means "this file
+   knows about it", not "this fix concerns it".
+2. **Generic names collide.** `process_block`, `process_slot`, `get_ancestor` and
+   `get_block` are ordinary method names any client may define — and the
+   naming-convention-agnostic matching that removed the language bias makes the collision
+   worse. Requiring a more specific name does not save it: `get_next_sync_committee` has
+   four components and its three records are a benchmark regression, a sim test and an
+   optimistic-sync fix.
+3. **A prose mention can still be a blocker or a changelog entry.** Erigon's peer-hygiene
+   fix names EIP-7975 inside release notes listing other authors' PRs. No record in the
+   corpus names four or more EIPs in prose, so an enumeration is not detectable by count.
+   Separating subject from mention needs reading, which is why prose runs about 5-in-8
+   rather than clean.
+
+A fourth observation is not contamination but a data-quality note: **anchors inherit
+author typos.** Both the Prysm and Lighthouse records write *EIP-7521* for EIP-7251
+(MaxEB) — Lighthouse's own markdown link resolves to `eip-7251`. Those two records do
+share a surface, and the pair exists only because the same transposition appears twice.
+
+Only the author naming a surface, or a diff restricted to changed lines, carries the
+aboutness signal. The snapshot holds pre/post code snapshots rather than a diff, so
+anchors are read from prose.
 
 **Precedence is testable after all.** The Parquet snapshot has no fix date —
 `fix_commit` is a SHA, `scraped_at` is crawl time — which initially made "a fix in
@@ -129,86 +138,50 @@ marks where that aid stops being sufficient.
 
 ## 3. Explicit anchors, and what fork names are not
 
-Anchors a record names itself are much closer to "the same specification text". After the
-corrections above there are 148 distinct ones across 337 records, and 86 appear in two or
-more clients:
+After the corrections above there are 92 distinct anchors across 174 records, and 35
+appear in two or more clients. Fork names are excluded — a fork marks a release cycle, not
+a defect surface, so `electra` in seven clients means seven clients did Electra work.
+Removing them and the anchors without a dated record on both sides leaves **22** for the
+precedence analysis.
 
-| Anchor kind | In ≥2 clients |
-|---|---:|
-| consensus-spec function | 63 |
-| fork name | 12 |
-| EIP | 8 |
-| opcode | 3 |
+## 4. With dates: the span argues against propagation, the ordering cannot be tested
 
-The 12 fork names are excluded from everything below. A fork marks a release cycle, not a
-defect surface: `electra` appearing in seven clients means seven clients did Electra work,
-not that they shared a bug. One further anchor lacks a dated record on one side, leaving
-**73** for the precedence analysis.
-
-**The anchor set skews to the consensus layer.** 63 of the 73 are consensus-spec
-functions, because that is the one anchor kind readable from code; EIP and opcode anchors
-survive only where an author named them in prose, which leaves 10. Execution-client
-precedence is therefore barely measurable here, and the section below should not be read
-as a statement about execution clients.
-
-## 4. With dates, there is still no propagation
-
-Ordering each of the 73 anchors by author date
+Ordering each of the 22 anchors by author date
 ([`tables/cross_client_anchor_precedence.csv`](tables/cross_client_anchor_precedence.csv)):
 
 | Measure | Value |
 |---|---:|
-| Median span between first and last client | **1,723 days** (4.7 years) |
-| Anchors spanning over 2 years | **62 / 73** |
-| Anchors spanning ≤ 90 days | 4 / 73 |
+| Median span between first and last client | **1,447 days** (4.0 years) |
+| Anchors spanning over 2 years | **15 / 22** |
+| Anchors spanning ≤ 90 days | 4 / 22 |
 | Distinct clients appearing first | 9 |
-| Most times first by any single client | 25 (nimbus) |
+| Most times first by any single client | 6 (lodestar) |
 
-Two things rule out the propagation reading.
-
-**No client leads once volume is controlled.** Raw first-mover counts are not evidence:
-a client appearing in more anchors gets more chances to be first. Ratios below are the
-client's share of first positions divided by its share of all positions across the 73
-anchors, so 1.0 means "first exactly as often as it turns up at all"
-([`tables/cross_client_anchor_first_mover.csv`](tables/cross_client_anchor_first_mover.csv)).
-They are only read for clients holding enough positions to mean anything — a client with
-two positions posts a ratio of 9 from a single first place.
-
-| Client | Positions | Position share | First share | Ratio |
-|---|---:|---:|---:|---:|
-| lodestar | **291** | **43.7%** | 28.8% | **0.66** |
-| nimbus | 181 | 27.2% | 34.2% | 1.26 |
-| lighthouse | 84 | 12.6% | 16.4% | 1.30 |
-| teku | 47 | 7.1% | 6.8% | 0.96 |
-| erigon | 24 | 3.6% | 2.7% | 0.75 |
-| *besu, geth, nethermind, prysm* | 2–8 each | — | — | *not read* |
-
-Among the five clients with at least twenty positions the ratio spans **0.66 to 1.30** —
-no client is first materially more often than turning up explains. The client holding the
-most positions by a wide margin, lodestar at 43.7%, is first *less* often than its share
-predicts. The nominally striking ratios (nethermind 9.00, geth 5.40) each rest on two or
-three positions and one first place.
-
-**The gaps are too long to be propagation.** The median span between first and last
-client is 4.7 years and 62 of 73 anchors exceed two years. At that scale "both clients
-touched this surface" is close to guaranteed for any long-lived specification and says
-nothing about one fix indicating another.
+**The gaps are too long to be propagation.** The median span between first and last client
+is four years and 15 of 22 anchors exceed two years. At that scale "both clients touched
+this surface" is close to guaranteed for any long-lived specification and says nothing
+about one fix indicating another. Spans need no volume control, so this part of the
+argument survives the shrunken anchor set.
 
 The four short-span anchors do not rescue it, because they are the opposite phenomenon:
-EIP-7732 (54 days), EIP-7928 (48), EIP-8037 (17) and `get_head` (2) are all
-current-fork development, where several clients implement new specification text
-concurrently by design. That is coordinated engineering, not variant discovery.
+EIP-7732 (54 days), EIP-7928 (48), EIP-8037 (17) and one consensus-function anchor at 2
+days are all current-fork development, where several clients implement new specification
+text concurrently by design. That is coordinated engineering, not variant discovery.
 
-The one reviewed anchor that does look like a genuine shared surface is
-`process_bls_to_execution_change`: Teku fixing a validator-index check in
-`verifyBlsToExecutionChanges` (2022-11-10) and Nimbus prioritising REST-supplied
-BLS-to-execution changes over gossiped ones (2023-02-02), 84 days apart. Both are on the
-same spec operation, but they address different concerns, so even the best case in this
-set is co-location rather than a shared defect.
+**Whether any client leads cannot be answered here.** A raw first-mover count is not
+evidence — a client appearing in more anchors gets more chances to be first — so it has to
+be normalised by each client's share of positions. With 22 anchors and 63 positions in
+total, **no client holds even twenty positions** (the largest, lodestar, holds sixteen), so
+the normalised ratio has no denominator worth reading and the generated table reports it as
+unavailable. The descriptive ratios sit near 1.0 for the four clients with nine or more
+positions, but on that sample that is not a finding.
 
-**Do not claim.** Neither long nor short spans support "a fix in one implementation
-predicts variants in another". Long spans are independent work on a durable surface;
-short spans are simultaneous implementation of new specification text.
+This is a change from an earlier draft of this document, which reported "no client leads"
+from 92 anchors. Those 92 rested on code-derived anchors that the audit in section 1
+invalidated. The honest statement at 22 anchors is *underpowered*, not *null*.
+
+**Do not claim.** The span evidence argues against propagation. The ordering evidence is
+absent, in either direction.
 
 ## 5. Defensible claim
 
@@ -217,38 +190,50 @@ short spans are simultaneous implementation of new specification text.
 > across no more clients than surfaces that are each implementation's own business
 > (stratified permutation p = 0.63, with the effect changing sign under a narrower
 > reading of "specified"). Recovering fix dates for all 1,959 rows with a fix commit
-> makes precedence testable and does not rescue the claim either: across the 73
-> explicitly anchored multi-client cases, first-mover counts are proportional to each
-> client's share of positions — every client holding twenty or more positions sits between
-> 0.66 and 1.30, and the highest-volume client is first *less* often than its share
-> predicts — while the median gap between first and last is 4.7 years. Cross-implementation
-> recurrence is not demonstrated by this corpus at either granularity.
+> makes precedence partly testable, and what it shows does not rescue the claim: across
+> the 22 explicitly anchored multi-client cases the median gap between first and last
+> client is four years and 15 of 22 exceed two years, while the anchor set is too small
+> — no client holds twenty positions — to test whether any implementation leads.
+> Cross-implementation recurrence is not demonstrated by this corpus, and the reason it
+> cannot be is that an anchor at specification-text granularity is readable off only 7.8%
+> of records: code-derived anchors fail validation because presence in a file is not
+> aboutness.
 
 The contribution is a demonstration that both candidate units fail, and a dated,
 per-anchor candidate list for anyone who wants to attempt the pairing manually.
 
 ## 6. What would make this answerable
 
-1. **Audit the anchor kind the analysis actually rests on.** 63 of the 73 anchors are
-   consensus-spec functions and only two records of that kind have been reviewed, both
-   correct. Prose EIP anchors were reviewed more thoroughly and came in at 5-in-8, so no
-   anchor-level precision figure should be quoted for the weight-bearing kind until it has
-   a comparable sample. This is the cheapest remaining check and it gates the rest.
-2. **Anchors on the remaining 85% of records.** Prose plus code names an anchor on 15.1%;
-   the rest needs anchors the text does not name literally — the precompile address or
-   gas-schedule constant a hunk touches, or the SSZ container it serialises.
+The blocker is now precisely located: an anchor at specification-text granularity is
+readable off 7.8% of records, and the two ways of raising that both failed validation. In
+order of value:
+
+1. **Anchor from a real diff, not a code snapshot.** Every code-derived failure in section
+   1 comes from the same cause — presence in a file is not aboutness. A diff restricted to
+   changed hunks would fix that at the root, and it would also make the naming-convention
+   matching safe again, because a generic `processBlock` call is only evidence when the fix
+   actually changed it. The snapshot stores `pre_fix_code` and `post_fix_code`, so a
+   line-level diff is derivable without new collection; anchors present in post and absent
+   from pre are the conservative starting point.
+2. **Anchors the text never names.** Beyond function names there are the precompile
+   address, gas-schedule constant, or SSZ container a hunk touches. These would raise
+   coverage well past 7.8% and, being value-level rather than name-level, do not collide
+   with ordinary method names.
 3. **Normalise anchors against the EIP registry.** Two records here reach the same surface
    only because both authors made the same typo (EIP-7521 for 7251). Validating extracted
    numbers against the published EIP list would merge misspellings and drop numbers that
    are not EIPs at all.
-4. **Manual pairing of the 73 dated anchor sets.** For each, decide whether the records
-   describe the same defect, independent defects on a shared surface, or ordinary
-   parallel feature work. Only that converts the candidate list into a measured rate
-   with a stated denominator. At 73 anchors this is a feasible review; the 18-record
-   sample already done suggests most pairs will be co-location rather than shared defects.
-5. **A propagation-shaped hypothesis.** If variant propagation exists it should appear
-   as a short-span, same-defect pair *outside* a shared fork-development window. That is
-   a testable prediction, and the dated table is what it should be tested against.
+4. **Manual pairing of the 22 dated anchor sets.** For each, decide whether the records
+   describe the same defect, independent defects on a shared surface, or ordinary parallel
+   feature work. Only that converts the candidate list into a measured rate with a stated
+   denominator, and at 22 anchors it is a short review. The audits already done suggest most
+   pairs will be co-location: even the best case found, `process_bls_to_execution_change`
+   across Teku and Nimbus 84 days apart, has the two records addressing different concerns
+   on a shared operation.
+5. **A propagation-shaped hypothesis, tested on a bigger anchor set.** If variant
+   propagation exists it should appear as a short-span, same-defect pair *outside* a shared
+   fork-development window. That is a falsifiable prediction, but testing it needs step 1
+   first — at 22 anchors, all four short-span cases are inside such a window.
 
 ## Reproduce
 
