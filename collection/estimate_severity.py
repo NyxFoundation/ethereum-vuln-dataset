@@ -105,6 +105,17 @@ REACH_BANDS = {
 EF_THRESHOLD = [("critical", 0.50), ("high", 0.33), ("medium", 0.05), ("low", 0.0001)]
 
 TIER = {"critical": 4, "high": 3, "medium": 2, "low": 1, "not-eligible": 0, "": 0}
+
+# The severity cache is keyed by row id, so it must also be keyed by prompt: a v1
+# entry has no client_conditional_reach and would silently reintroduce the
+# share-prior labels this revision removed. Bump this whenever build_prompt or the
+# guardrail changes meaning. Old entries are left in place so the frozen snapshot
+# stays reproducible.
+PROMPT_VERSION = "v2-client-conditional-reach"
+
+
+def cache_key(row_id: str) -> str:
+    return f"{row_id}@{PROMPT_VERSION}"
 DEF = """EF bug-bounty severity = network-scale impact reachable by a SINGLE network packet or on-chain transaction:
 - Critical: create/finalize infinite ETH; steal or burn ETH from all EOAs; take down the ENTIRE network with one tx; slash >50% of validators.
 - High: chain split affecting >33% of the network; bring down >33% with one tx; slash >33% of validators.
@@ -262,6 +273,7 @@ def classify(row, retries=1):
     o["severity_final"] = tier
     o["severity_certainty"] = certainty
     o["severity_required_client_share"] = "" if required is None else f"{required:g}"
+    o["prompt_version"] = PROMPT_VERSION
     return r["id"], o
 
 
@@ -275,6 +287,11 @@ def main():
     ap.add_argument("--sev-cache", default=Path("scratchpad_crawl/severity_cache.json"), type=Path)
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--workers", type=int, default=6)
+    ap.add_argument("--allow-partial", action="store_true",
+                    help="let --apply write rows with no current-prompt estimate as unassessed")
+    ap.add_argument("--only-ids", type=Path, default=None,
+                    help="newline-separated row ids to estimate; lets a prompt bump "
+                         "refresh the analysed queue before the full corpus")
     import os
     ap.add_argument("--engine", default="openai"); ap.add_argument("--model", default="")
     ap.add_argument("--base-url", default="https://ollama.com/v1")
@@ -294,23 +311,29 @@ def main():
         sub = d[graded & ~dep]                       # calibrate on client-code grades only
     else:                                            # --apply: estimate client-code UNRATED rows
         sub = d[~dep & ~graded & d.source_platform.isin(ld.CLIENT_REPOS)]
+    if a.only_ids:
+        wanted = {ln.strip() for ln in a.only_ids.read_text().splitlines() if ln.strip()}
+        sub = sub[sub["id"].isin(wanted)]
+        print(f"[severity] --only-ids: {len(wanted)} requested, {len(sub)} in this population",
+              file=sys.stderr)
     if a.limit:
         sub = sub.head(a.limit)
 
-    todo = [r for r in sub.to_dict("records") if r["id"] not in scache]
+    todo = [r for r in sub.to_dict("records") if cache_key(r["id"]) not in scache]
     print(f"[severity] {len(sub)} target rows, {len(todo)} to run "
-          f"({len(sub)-len(todo)} cached)  validate={a.validate}", file=sys.stderr)
+          f"({len(sub)-len(todo)} cached at {PROMPT_VERSION})  validate={a.validate}",
+          file=sys.stderr)
     rows = [(r, ld.get_diff_cached(str(r["source_url"]), r["source_platform"], dcache))
             for r in todo]
     done = 0
     with ThreadPoolExecutor(max_workers=a.workers) as ex:
         for rid, o in ex.map(classify, rows):
-            scache[rid] = o; done += 1
+            scache[cache_key(rid)] = o; done += 1
             if done % 25 == 0:
                 a.sev_cache.write_text(json.dumps(scache)); a.cache.write_text(json.dumps(dcache))
                 print(f"  [severity] {done}/{len(todo)}", file=sys.stderr)
     a.sev_cache.write_text(json.dumps(scache)); a.cache.write_text(json.dumps(dcache))
-    res = {r["id"]: scache.get(r["id"], {}) for r in sub.to_dict("records")}
+    res = {r["id"]: scache.get(cache_key(r["id"]), {}) for r in sub.to_dict("records")}
 
     if a.validate:
         exact = within1 = neel = tot = 0
@@ -356,6 +379,20 @@ def main():
             print(f"    {k:20s} {c}")
     if a.apply:
         import csv
+        # A prompt bump empties the cache for every row. Writing the estimate file
+        # anyway would silently downgrade 1,500+ rows to `unassessed`, so require
+        # the operator to opt into a partial file.
+        target = d[~dep & ~graded & d.source_platform.isin(ld.CLIENT_REPOS)]
+        missing = [r["id"] for r in target.to_dict("records")
+                   if not scache.get(cache_key(r["id"]), {}).get("severity_final")]
+        if missing and not a.allow_partial:
+            print(f"[severity] refusing to write {a.out}: {len(missing)}/{len(target)} "
+                  f"client-code rows have no {PROMPT_VERSION} estimate. Finish the run, "
+                  f"or pass --allow-partial to write them as unassessed.", file=sys.stderr)
+            return 1
+        if missing:
+            print(f"[severity] WARNING: partial file — {len(missing)}/{len(target)} rows "
+                  f"unassessed at {PROMPT_VERSION}", file=sys.stderr)
         n_est = n_bg = n_dep = 0
         with a.out.open("w", newline="", encoding="utf-8") as fh:
             w = csv.writer(fh); w.writerow(["id", "severity_estimated", "severity_source",
@@ -364,7 +401,7 @@ def main():
                                             "severity_required_client_share", "severity_why"])
             for r in d.to_dict("records"):
                 rid = r["id"]; g = str(r["severity"]).lower() in ("critical", "high", "medium", "low")
-                dpp = is_dependency(r); o = scache.get(rid, {})
+                dpp = is_dependency(r); o = scache.get(cache_key(rid), {})
                 if g and not dpp:                    # real client bug, graded by the bounty
                     src, est = "bounty-graded", r["severity"]; n_bg += 1
                 elif dpp:                            # upstream dependency CVE -> keep CVSS, out of scope

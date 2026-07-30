@@ -196,14 +196,14 @@ def build_frontier() -> pd.DataFrame:
 
 
 def bound_candidates(queue: pd.DataFrame) -> pd.DataFrame:
-    """Bound each tier-uncertain candidate without inventing a reach estimate.
+    """Bound each tier-uncertain candidate, using an assessed reach when present.
 
-    ``client_conditional_reach`` is not present in the current snapshot: the
-    estimator that produced these rows never asked for it.  Each row is therefore
-    bounded with ``reach=unknown`` (0.0 to 1.0), which is the most favourable
-    possible assumption for the record.  A tier that is still ``excluded`` under
-    that assumption is excluded by arithmetic alone, independent of any source
-    review.
+    ``client_conditional_reach`` is absent from the frozen snapshot: the estimator
+    that produced those rows never asked for it.  A row without one is bounded with
+    ``reach=unknown`` (0.0 to 1.0), the most favourable possible assumption, so a
+    tier that is still ``excluded`` is excluded by arithmetic alone, independent of
+    any source review.  Pass ``--severity-csv`` to join a re-estimation that does
+    carry the axis; those rows then bound with their assessed band.
 
     ``blast_radius`` decides which share enters the upper bound:
 
@@ -213,13 +213,17 @@ def bound_candidates(queue: pd.DataFrame) -> pd.DataFrame:
       the fixing client's share, since no row enumerates which other clients
       actually contained the defect.
     """
-    reach_lo = REACH_BANDS["unknown"]["low"]
-    reach_hi = REACH_BANDS["unknown"]["high"]
     rows = []
     for record in queue.to_dict("records"):
         client = str(record.get("source_platform") or "").lower()
         layer, share_lo, share_hi = SHARE_BANDS.get(client, ("unknown", 0.0, 1.0))
         blast = str(record.get("blast_radius") or "") or "unspecified"
+
+        reach_name = str(record.get("client_conditional_reach") or "").strip()
+        if reach_name not in REACH_BANDS:
+            reach_name = "unknown"
+        reach_lo = REACH_BANDS[reach_name]["low"]
+        reach_hi = REACH_BANDS[reach_name]["high"]
 
         # Upper bound on the affected network share.
         if blast == "spec_level":
@@ -230,7 +234,9 @@ def bound_candidates(queue: pd.DataFrame) -> pd.DataFrame:
             enumerated = "fixing_client_only"
 
         affected_hi = bound_share_hi * reach_hi
-        affected_lo = share_lo * reach_lo  # 0.0 while reach is unassessed
+        # Lower end stays on the fixing client's share even for spec_level, because
+        # no row enumerates which other implementations held the shared-rule defect.
+        affected_lo = share_lo * reach_lo
 
         high_at_hi = required_reach(EF_THRESHOLD["High"], share_hi)
         high_at_lo = required_reach(EF_THRESHOLD["High"], share_lo)
@@ -244,7 +250,7 @@ def bound_candidates(queue: pd.DataFrame) -> pd.DataFrame:
                 "reachability": record.get("reachability", ""),
                 "severity_estimated": record.get("severity_estimated", ""),
                 "severity_analysis_label": record.get("severity_analysis_label", ""),
-                "client_conditional_reach": "unknown",
+                "client_conditional_reach": reach_name,
                 "affected_share_low": round(affected_lo, 6),
                 "affected_share_high": round(affected_hi, 6),
                 "spec_level_client_set": enumerated,
@@ -323,10 +329,37 @@ def main() -> int:
         default=Path("docs/paper/tables/ef_severity_high_review_queue.csv"),
     )
     ap.add_argument("--out-dir", type=Path, default=Path("docs/paper/tables"))
+    ap.add_argument(
+        "--severity-csv",
+        type=Path,
+        default=None,
+        help=(
+            "optional re-estimation carrying client_conditional_reach, joined as an "
+            "overlay by id. The frozen snapshot is never modified: rows the overlay "
+            "does not cover keep reach=unknown."
+        ),
+    )
     args = ap.parse_args()
 
     queue = pd.read_csv(args.queue)
     uncertain = queue[queue["severity_analysis_label"].eq("tier-uncertain")].copy()
+
+    if args.severity_csv and args.severity_csv.exists():
+        overlay = pd.read_csv(args.severity_csv).drop_duplicates("id")
+        cols = [c for c in ("id", "client_conditional_reach") if c in overlay.columns]
+        if "client_conditional_reach" not in cols:
+            raise SystemExit(
+                f"{args.severity_csv} has no client_conditional_reach column; it "
+                "predates the revised prompt."
+            )
+        before = len(uncertain)
+        uncertain = uncertain.merge(overlay[cols], on="id", how="left")
+        assert len(uncertain) == before, "overlay join must not change row count"
+        covered = uncertain["client_conditional_reach"].isin(REACH_BANDS).sum()
+        print(
+            f"overlay {args.severity_csv}: {covered}/{before} candidates carry an "
+            f"assessed client_conditional_reach"
+        )
 
     reach_bands = build_reach_band_table()
     frontier = build_frontier()
