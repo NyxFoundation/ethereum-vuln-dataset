@@ -76,6 +76,25 @@ def apply_high_review(ef: pd.DataFrame) -> pd.DataFrame:
         "Exact High removed: the record does not independently establish the EF >33% "
         "impact threshold."
     )
+
+    # A build produced by the revised estimator states threshold dependence directly,
+    # so the blast_radius proxy above is superseded: any tier that holds only above a
+    # deployment share the corpus cannot evidence is tier-uncertain, at every tier
+    # rather than only at High. The frozen snapshot predates the column, so this is a
+    # no-op there and the proxy rule still applies.
+    if "severity_certainty" in reviewed.columns:
+        dependent = reviewed["severity_source"].eq("llm-estimated") & reviewed[
+            "severity_certainty"
+        ].eq("share_dependent")
+        reviewed.loc[dependent, "severity_analysis_label"] = UNCERTAIN_TIER
+        reviewed.loc[dependent, "severity_review_status"] = "threshold_share_dependent"
+        required = reviewed.get("severity_required_client_share")
+        reviewed.loc[dependent, "severity_review_reason"] = (
+            "Exact tier removed: it holds only where the affected client's deployment "
+            "share at the fix date reaches "
+            + (required[dependent].astype(str) if required is not None else "the EF threshold")
+            + ", which this corpus does not evidence."
+        )
     return reviewed
 
 
