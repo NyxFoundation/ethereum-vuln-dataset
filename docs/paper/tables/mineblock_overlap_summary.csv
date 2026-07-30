@@ -1,0 +1,24 @@
+metric,value,unit,definition
+mineblock_db_sha256,a827279d8abe8b44451df11f46b2be2acc589f75712a75bfff5280580b968525,,
+mineblock_public_geth_vuln_issues,367,rows,VULN_ISSUES
+mineblock_paper_final_geth_vuln_issues,365,rows,Table 2 after final invalid-code exclusion
+mineblock_geth_top20_typed_issues,212,rows,TOP20_VULN_ISSUES
+current_geth_rows,407,rows,current curated Parquet
+raw_geth_rows,746,rows,raw classified Parquet
+mineblock_unique_issue_pr_refs,367,refs,
+current_unique_geth_issue_pr_refs,488,refs,
+raw_unique_geth_issue_pr_refs,813,refs,
+shared_issue_pr_refs,63,refs,exact URL identity
+shared_issue_pr_refs_any_current_client,68,refs,sensitivity: Geth refs found anywhere in the curated corpus
+shared_raw_issue_pr_refs,88,refs,MineBlockVuln refs found before the current curation gate
+shared_raw_issue_pr_refs_any_client,93,refs,sensitivity: Geth refs found anywhere in the raw corpus
+legacy_refs_collected_but_not_curated,25,refs,present in raw snapshot but absent from curated snapshot
+legacy_refs_absent_from_collection,279,refs,not found in the raw snapshot
+legacy_issue_pr_ref_recall,0.171662,fraction,shared / MineBlockVuln refs
+current_issue_pr_ref_overlap,0.129098,fraction,shared / current refs
+raw_legacy_issue_pr_ref_recall,0.239782,fraction,shared raw / MineBlockVuln refs
+mineblock_unique_fix_commits,1008,commits,
+current_geth_unique_fix_commits,337,commits,
+shared_fix_commits,65,commits,exact SHA identity
+legacy_fix_commit_recall,0.064484,fraction,shared / MineBlockVuln commits
+current_fix_commit_overlap,0.192878,fraction,shared / current Geth fix commits

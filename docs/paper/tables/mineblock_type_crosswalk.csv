@@ -1,0 +1,40 @@
+mineblock_type,mineblock_type_name,current_root_cause,current_label,matched_current_rows
+1,Race Condition,missing_input_validation,other,1
+1,Race Condition,race_condition,p2p,1
+1,Race Condition,race_condition,txpool,1
+1,Race Condition,unhandled_error_or_nil,rlp,1
+2,Check/Validation,other,p2p,1
+4,Transaction Related,consensus_divergence,sync,1
+4,Transaction Related,race_condition,transactions,1
+5,Deadlock,race_condition,txpool,1
+6,Go Panic,unhandled_error_or_nil,p2p,3
+6,Go Panic,other,rpc,2
+6,Go Panic,other,transactions,2
+6,Go Panic,race_condition,transactions,2
+6,Go Panic,improper_state_update,state-trie,1
+6,Go Panic,other,p2p,1
+6,Go Panic,other,precompiles,1
+6,Go Panic,other,sync,1
+6,Go Panic,other,test,1
+6,Go Panic,other,txpool,1
+6,Go Panic,race_condition,metrics-observability,1
+6,Go Panic,race_condition,test,1
+6,Go Panic,resource_exhaustion,state-trie,1
+6,Go Panic,resource_exhaustion,sync,1
+6,Go Panic,serialization_bug,transactions,1
+6,Go Panic,unhandled_error_or_nil,other,1
+6,Go Panic,unhandled_error_or_nil,rpc,1
+6,Go Panic,unhandled_error_or_nil,state-trie,1
+8,Denial-of-Service,missing_bounds_check,test,1
+8,Denial-of-Service,missing_input_validation,test,1
+8,Denial-of-Service,resource_exhaustion,database,1
+11,Overflow,integer_overflow_underflow,gas,2
+11,Overflow,integer_overflow_underflow,p2p,1
+11,Overflow,integer_overflow_underflow,state-trie,1
+11,Overflow,missing_bounds_check,rlp,1
+14,RPC Related,incorrect_gas_accounting,rpc,1
+15,Out-of-Bound,missing_bounds_check,state-trie,1
+15,Out-of-Bound,race_condition,evm,1
+19,Nil Pointer Dereference,race_condition,transactions,1
+19,Nil Pointer Dereference,unhandled_error_or_nil,p2p,1
+19,Nil Pointer Dereference,unhandled_error_or_nil,sync,1

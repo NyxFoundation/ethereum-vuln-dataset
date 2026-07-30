@@ -1,0 +1,19 @@
+TYPE,type_name,mineblock_geth_issues
+1,Race Condition,48
+2,Check/Validation,14
+3,Resource Leak,12
+4,Transaction Related,9
+5,Deadlock,13
+6,Go Panic,36
+7,Block Related,21
+8,Denial-of-Service,11
+9,Peer/Node Related,11
+10,Sanity Check,3
+11,Overflow,8
+12,Wallet Key/Password,6
+14,RPC Related,5
+15,Out-of-Bound,4
+16,Off-by-One,2
+18,Memory Pool,1
+19,Nil Pointer Dereference,5
+20,Database Corruption,3

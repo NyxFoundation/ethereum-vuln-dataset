@@ -1,0 +1,64 @@
+ref,mineblock_title,current_rows,current_ids,current_titles,current_root_causes,current_labels
+issues/17637,Clef: cliui mixes extraneous and approval-specific Data,1,34e55321e6e9fe6f,"cmd/clef, signer: security fixes (#17554)",missing_input_validation,rpc
+issues/2555,geth 1.4.3 panics when calling RPC,1,geth:ethereum-go-ethereum:PR#2575,eth/filter: bugfix which can cause a nil pointer crash when parsing f…,unhandled_error_or_nil,serialization
+pull/1189,eth/downloader: handle timeouts more gracefully,1,d42c8037810c51a3,eth/downloader: handle timeouts more gracefully,missing_bounds_check,sync
+pull/1314,eth/fetcher: handle and test various DOS attacks,1,geth:ethereum-go-ethereum:PR#1314,eth/fetcher: handle and test various DOS attacks,missing_bounds_check,test
+pull/14697,swarm/storage: remove panic on invalid chunk,1,geth:ethereum-go-ethereum:PR#14697,swarm/storage: remove panic on invalid chunk,resource_exhaustion,state-trie
+pull/14718,core/vm: fix overflow in gas calculation formula,1,a84406460fceafd5,core/vm: fix overflow in gas calculation formula,integer_overflow_underflow,gas
+pull/14790,vendor: update go-stack to fix a sigpanic panic,1,geth:ethereum-go-ethereum:PR#14790,vendor: update go-stack to fix a sigpanic panic,unhandled_error_or_nil,other
+pull/1496,"xeth: fix #1485, data race in fiilter creation and event firing",1,bbea6d2b293d94bd,"xeth: fix #1485, data race in fiilter creation and event firing",race_condition,transactions
+pull/15665,ethapi: GetTransactionReceipt panic fix,1,geth:ethereum-go-ethereum:PR#15665,ethapi: GetTransactionReceipt panic fix,other,transactions
+pull/1568,core: added a running flag to prevent panics in the chainmanager,1,geth:ethereum-go-ethereum:PR#1568,core: added a running flag to prevent panics in the chainmanager,race_condition,block-processing
+pull/15714,core: fix panic when stat-ing a tx from a queue-only account,1,geth:ethereum-go-ethereum:PR#15714,core: fix panic when stat-ing a tx from a queue-only account,other,txpool
+pull/15794,internal/ethapi: ask transaction pool for pending nonce,1,4e4447c09e1da9e8,internal/ethapi: ask transaction pool for pending nonce,race_condition,transactions
+pull/15799,eth: fix tracer panic when running without configs + reexec,1,geth:ethereum-go-ethereum:PR#15799,eth: fix tracer panic when running without configs + reexec,race_condition,metrics-observability
+pull/15946,p2p/discv5: fix topic register panic at shutdown,2,ec988c375dbcf16e|geth:ethereum-go-ethereum:PR#15946,p2p/discv5: fix removeTicketRef cached ticket removal | p2p/discv5: fix topic register panic at shutdown,unhandled_error_or_nil,p2p
+pull/15995,p2p/discv5: fix removeTicketRef cached ticket removal,1,ec988c375dbcf16e,p2p/discv5: fix removeTicketRef cached ticket removal,unhandled_error_or_nil,p2p
+pull/16055,les: fix server panic when discovery disabled,1,geth:ethereum-go-ethereum:PR#16055,les: fix server panic when discovery disabled,other,p2p
+pull/16146,Fix race condition in whisperv6/peer.go,1,geth:ethereum-go-ethereum:PR#16146,Fix race condition in whisperv6/peer.go,unhandled_error_or_nil,rlp
+pull/16219,whisper: serious security issue fixed,1,geth:ethereum-go-ethereum:PR#16219,whisper: serious security issue fixed,other,metrics-observability
+pull/16630,vendor: Fix index out of range panic when size is bigger than 1 TiB,2,f0eea42c13193daa|geth:ethereum-go-ethereum:PR#16630,Geth Titanium (v1.8.7) is a hotfix release to address a leveldb crash affecting archive nodes. | vendor: Fix index out of range panic when size is bigger than 1 TiB,missing_bounds_check|race_condition,evm|state-trie
+pull/16891,les: add Skip overflow check to GetBlockHeadersMsg handler,1,2ea9db0643f8dedc,les: add Skip overflow check to GetBlockHeadersMsg handler,integer_overflow_underflow,p2p
+pull/17034,les: add announcement safety check to light fetcher,1,3a7f8432f642ca5c,A crash in the LES header fetcher is resolved ([#17034](https://github.com/ethereum/go-ethereum/pull/17034)),other,p2p
+pull/17313,swarm/storage/mru: HOTFIX - fix panic in Handler.update,1,geth:ethereum-go-ethereum:PR#17313,swarm/storage/mru: HOTFIX - fix panic in Handler.update,improper_state_update,state-trie
+pull/17338,swarm/bmt: ignore data longer then 4096 bytes in Hasher.Write,1,f4339c3f6d541bc0,swarm/bmt: ignore data longer then 4096 bytes in Hasher.Write,missing_input_validation,other
+pull/17412,cmd/puppeth: fix nil panic on disconnected stats gathering,3,5803ed65174cc05e|f2cba89aad03bb7b|geth:ethereum-go-ethereum:PR#17412,Fix a crash in the mobile framework when setting a transaction recipient to `nil` ([#17310](https://github.com/ethereum/go-ethereum/pull/17310)). | Fix a transaction chain tracing panic if an invalid parametrization was specified ([#17460](https://github.com/ethereum/go-ethereum/pull/17460)). | cmd/puppeth: fix nil panic on disconnected stats gathering,race_condition|unhandled_error_or_nil,state-trie|transactions
+pull/17460,Ensure from < to when tracing chain,2,5803ed65174cc05e|f2cba89aad03bb7b,Fix a crash in the mobile framework when setting a transaction recipient to `nil` ([#17310](https://github.com/ethereum/go-ethereum/pull/17310)). | Fix a transaction chain tracing panic if an invalid parametrization was specified ([#17460](https://github.com/ethereum/go-ethereum/pull/17460)).,race_condition,transactions
+pull/17546,"cmd, core, eth, miner, params: configurable gas floor and ceil",1,7d6f43cb4e8fc56a,"cmd, core, eth, miner, params: configurable gas floor and ceil",missing_input_validation,gas
+pull/17554,"cmd/clef, signer: security fixes",1,geth:ethereum-go-ethereum:PR#17554,"cmd/clef, signer: security fixes",missing_input_validation,rpc
+pull/17639,les: fix distReq.sentChn double close bug,2,69adc7b799e61a35|78526164e8f1b6de,Fix a rare panic in the light client on shutdown ([#17639](https://github.com/ethereum/go-ethereum/pull/17639)). | Fix nil-pointer panic when processing malicious ABIs ([#17653](https://github.com/ethereum/go-ethereum/pull/17653)).,race_condition|unhandled_error_or_nil,sync|transactions
+pull/17653,"abi,signer: fix nil dereference in #17633",2,69adc7b799e61a35|78526164e8f1b6de,Fix a rare panic in the light client on shutdown ([#17639](https://github.com/ethereum/go-ethereum/pull/17639)). | Fix nil-pointer panic when processing malicious ABIs ([#17653](https://github.com/ethereum/go-ethereum/pull/17653)).,race_condition|unhandled_error_or_nil,sync|transactions
+pull/17734,swarm/network/stream: fix DoS invalid offered hashes length,2,fd11f4cffe069eeb|geth:ethereum-go-ethereum:PR#17734,Fixed panic on ARMl6 arch (64bit struct alignment) ([17766](https://github.com/ethereum/go-ethereum/pull/17766)). | swarm/network/stream: fix DoS invalid offered hashes length,missing_input_validation|resource_exhaustion,database|test
+pull/17798,accounts/abi: fix panic in MethodById lookup. Fixes #17797,1,geth:ethereum-go-ethereum:PR#17798,accounts/abi: fix panic in MethodById lookup. Fixes #17797,other,test
+pull/18165,trie/database: fix overflow in parent tracking,1,bad60eea57269a6f,trie/database: fix overflow in parent tracking,integer_overflow_underflow,state-trie
+pull/18335,downloader: fix edgecase where returned index is OOB for downloader,1,68c6fd5ad6068940,downloader: fix edgecase where returned index is OOB for downloader,missing_bounds_check,sync
+pull/18344,cmd/puppeth: fix panic error when export aleth genesis wo/ precompile-addresses,1,geth:ethereum-go-ethereum:PR#18344,cmd/puppeth: fix panic error when export aleth genesis wo/ precompile-addresses,other,precompiles
+pull/1843,"eth/downloader: always send termination wakes, clean leftover",1,07afd7e9d31ac311,"eth/downloader: always send termination wakes, clean leftover",race_condition,sync
+pull/18487,swarm/pss: fixing race condition,1,geth:ethereum-go-ethereum:PR#18487,swarm/pss: fixing race condition,race_condition,p2p
+pull/19262,"cmd, core, eth, trie: get rid of trie cache generations",1,f2c52d056567b78e,"cmd, core, eth, trie: get rid of trie cache generations",resource_exhaustion,sync
+pull/19348,core/vm: Correct the Memory Gas Overflow condition,1,fef6b529d2c24653,core/vm: Correct the Memory Gas Overflow condition,integer_overflow_underflow,gas
+pull/19401,"eth, les, geth: implement cli-configurable global gas cap for RPC calls",1,501c3b8266695913,"eth, les, geth: implement cli-configurable global gas cap for RPC calls",incorrect_gas_accounting,rpc
+pull/1945,Argument parsing can lead to panic in rpc channel,1,geth:ethereum-go-ethereum:PR#1945,Argument parsing can lead to panic in rpc channel,other,rpc
+pull/1948,Infinite loop in filters,1,704cf5e79982771c,Infinite loop in filters,integer_overflow_underflow,rpc
+pull/195,fix panic on bad tx sender,1,geth:ethereum-go-ethereum:PR#195,fix panic on bad tx sender,serialization_bug,transactions
+pull/19562,p2p/discover: fix nil-dereference due to race,1,78dc88cabdf32dd2,p2p/discover: fix nil-dereference due to race,unhandled_error_or_nil,p2p
+pull/1966,cmd/geth: fix recover command crash if no param is supplied,1,geth:ethereum-go-ethereum:PR#1966,cmd/geth: fix recover command crash if no param is supplied,other,cli
+pull/1974,rpc/api: fix #1972 api regression (nil eth panic) in attach,1,geth:ethereum-go-ethereum:PR#1974,rpc/api: fix #1972 api regression (nil eth panic) in attach,other,rpc
+pull/19757,eth: fix sync bloom panic,1,geth:ethereum-go-ethereum:PR#19757,eth: fix sync bloom panic,resource_exhaustion,sync
+pull/19764,core: fix fast head updating logic,1,a2dc09bf5b26e0f0,core: fix fast head updating logic,race_condition,build-ci
+pull/20013,les: fix panic,1,geth:ethereum-go-ethereum:PR#20013,les: fix panic,unhandled_error_or_nil,p2p
+pull/20019,eth: disallow overwrite files via admin.exportChain,1,4b0704f57cd6516e,Fix an import crash caused by a data loss from a previous crash ([#19986](https://github.com/ethereum/go-ethereum/pull/19986)).,consensus_divergence,test
+pull/20540,core/state: add more verbosity to panic,1,geth:ethereum-go-ethereum:PR#20540,core/state: add more verbosity to panic,improper_state_update,state-trie
+pull/20612,tracers: avoid panic on invalid arguments ,1,geth:ethereum-go-ethereum:PR#20612,tracers: avoid panic on invalid arguments,race_condition,test
+pull/2399,eth: fix accidental nil panic on nil errors,1,geth:ethereum-go-ethereum:PR#2399,eth: fix accidental nil panic on nil errors,unhandled_error_or_nil,rpc
+pull/2574,eth: skip transaction handling during fast sync,1,03f0d30422e229ba,eth: skip transaction handling during fast sync,consensus_divergence,sync
+pull/2711,Fix #2710 Filter race: concurrent map read and map write,1,d783d92d9ff7045b,Fix #2710 Filter race: concurrent map read and map write,race_condition,rpc
+pull/3067,"cmd, core, tests: avoid hashing the code in the VM",1,08c1cedc48562681,"cmd, core, tests: avoid hashing the code in the VM",resource_exhaustion,sync
+pull/3412,core: bugfix state change race condition in txpool,1,geth:ethereum-go-ethereum:PR#3412,core: bugfix state change race condition in txpool,race_condition,txpool
+pull/3519,"les: fixed selectPeer deadlock, improved request distribution",1,870d7159527a8927,"les: fixed selectPeer deadlock, improved request distribution",race_condition,txpool
+pull/3591,eth/downloader: fix mutex regression causing panics on fail,1,geth:ethereum-go-ethereum:PR#3591,eth/downloader: fix mutex regression causing panics on fail,missing_input_validation,sync
+pull/687,"xeth: fix #640, panic converting nil recipient to hex.",1,geth:ethereum-go-ethereum:PR#687,"xeth: fix #640, panic converting nil recipient to hex.",other,transactions
+pull/711,rlp: input limit and other corrections,1,204dd28eca18ee54,rlp: input limit and other corrections,integer_overflow_underflow,transactions
+pull/820,rlp: fix list bounds check overflow (found by go-fuzz),1,02b6b0457e294628,rlp: fix list bounds check overflow (found by go-fuzz),missing_bounds_check,rlp
+pull/911,"rpc, xeth: fix #881, gracefully handle offline whisper",1,6d5683916ade47e2,"rpc, xeth: fix #881, gracefully handle offline whisper",unhandled_error_or_nil,rpc
+pull/954,eth/downloader: fix nil panic caused by wrong variable use,1,geth:ethereum-go-ethereum:PR#954,eth/downloader: fix nil panic caused by wrong variable use,other,sync

@@ -19,7 +19,8 @@ The working thesis is:
 3. CWE comparison: test how much protocol context adds beyond generic weakness
    labels when explaining network impact.
 4. Prior-work comparison: replicate and extend MineBlockVuln (ESEC/FSE 2022)
-   across eleven Ethereum clients and six implementation languages.
+   across eleven Ethereum clients and six implementation languages. See
+   [`mineblock_replication.md`](mineblock_replication.md).
 5. Cross-client recurrence: cluster fixes by specification anchor and measure
    whether a fix in one implementation predicts variants in another.
 
