@@ -334,6 +334,13 @@ def build_summary(frontier: pd.DataFrame, bounds: pd.DataFrame) -> pd.DataFrame:
             "candidates_with_assessed_client_conditional_reach",
             int((bounds["client_conditional_reach"] != "unknown").sum()),
         ),
+        # The point of assessing reach: a candidate whose High is arithmetically
+        # excluded is resolved, not uncertain, and needs no source review to rule the
+        # tier out. Everything else still needs a sourced deployment share.
+        ("high_excluded_arithmetically", int(bounds["high_verdict"].eq("excluded").sum())),
+        ("high_share_dependent", int(bounds["high_verdict"].eq("share_dependent").sum())),
+        ("high_supported_at_any_plausible_share",
+         int(bounds["high_verdict"].eq("supported").sum())),
     ]
     return pd.DataFrame(rows, columns=["measure", "value"])
 
