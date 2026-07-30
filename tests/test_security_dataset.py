@@ -33,6 +33,15 @@ EF_SEVERITY_TIERS = (
 EF_SEVERITY_HIGH_QUEUE = (
     ROOT / "docs" / "paper" / "tables" / "ef_severity_high_review_queue.csv"
 )
+CWE_CONTEXT_COVERAGE = (
+    ROOT / "docs" / "paper" / "tables" / "cwe_context_coverage.csv"
+)
+CWE_ROOT_CAUSE_COVERAGE = (
+    ROOT / "docs" / "paper" / "tables" / "cwe_root_cause_coverage.csv"
+)
+BOUNTY_SEVERE_CWE_AUDIT = (
+    ROOT / "docs" / "paper" / "tables" / "bounty_severe_cwe_audit.csv"
+)
 
 BOILERPLATE = re.compile(r"critical update required|urgency guidelines|high-urgency", re.I)
 REQUIRED_COLS = {
@@ -231,3 +240,40 @@ def test_ef_high_queue_provenance_and_client_prior_diagnostic():
         "spec_level": 55,
     }
     assert int(llm_high["source_platform"].isin(["geth", "lighthouse"]).sum()) == 107
+
+
+def test_cwe_context_complementarity_and_severe_audit():
+    coverage = pd.read_csv(CWE_CONTEXT_COVERAGE).set_index(
+        ["population", "metric"]
+    )
+    assert int(coverage.loc[("all_snapshot", "cwe_known"), "rows"]) == 396
+    assert int(
+        coverage.loc[("all_snapshot", "cwe_2025_top25"), "rows"]
+    ) == 130
+    assert int(
+        coverage.loc[
+            ("all_snapshot", "no_cwe_but_both_context_axes_known"), "rows"
+        ]
+    ) == 1541
+    assert int(
+        coverage.loc[
+            ("all_snapshot", "no_cwe_but_both_context_axes_known"),
+            "denominator",
+        ]
+    ) == 1829
+
+    severe = pd.read_csv(BOUNTY_SEVERE_CWE_AUDIT)
+    assert len(severe) == 18
+    assert int(severe["cwe_known"].sum()) == 3
+    assert int(severe["cwe_2025_top25"].sum()) == 0
+
+    roots = pd.read_csv(CWE_ROOT_CAUSE_COVERAGE).set_index("root_cause")
+    assert roots.loc["consensus_divergence"].to_dict() == {
+        "rows": 174,
+        "cwe_known_rows": 2,
+        "cwe_known_percent": 1.149,
+        "cwe_2025_top25_rows": 1,
+        "cwe_2025_top25_percent": 0.575,
+        "distinct_cwe_labels": 2,
+    }
+    assert int(roots.loc["incorrect_gas_accounting", "cwe_known_rows"]) == 0

@@ -25,8 +25,9 @@ The working thesis is:
    EF-bounty `severity_estimated` population without mixing upstream CVSS. Its
    primary exact-tier result uses 60 bounty grades; 110 original LLM High
    labels are retained as a traceable `tier-uncertain` candidate queue.
-5. CWE comparison: test how much protocol context adds beyond generic weakness
-   labels when explaining network impact.
+5. [`cwe_context_comparison.md`](cwe_context_comparison.md) measures how much
+   Ethereum root-cause and protocol-location context remains when generic CWE
+   metadata is absent.
 6. Prior-work comparison: replicate and extend MineBlockVuln (ESEC/FSE 2022)
    across eleven Ethereum clients and six implementation languages. See
    [`mineblock_replication.md`](mineblock_replication.md).
@@ -40,6 +41,7 @@ From the repository root:
 ```bash
 UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/paper_analysis.py
 UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/severity_analysis.py
+UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/cwe_context_analysis.py
 git diff --exit-code docs/paper/tables
 ```
 
