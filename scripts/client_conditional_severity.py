@@ -37,6 +37,7 @@ Outputs (all under ``docs/paper/tables``):
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 
 import pandas as pd
@@ -202,6 +203,68 @@ def score_reach_against_review(bounds: pd.DataFrame) -> pd.DataFrame:
             }
         )
     return pd.DataFrame(rows).sort_values(["direction", "id"])
+
+
+def reach_agreement_across_models(
+    cache_path: Path, candidate_ids: set[str]
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Inter-model agreement on the reach band, read from the severity cache.
+
+    Reach is the factor this analysis substituted for an unmeasurable one, so its
+    reproducibility across annotators is the load-bearing validity question. The cache
+    is keyed ``id@prompt@engine:model``, so every model that has assessed a row appears
+    separately and nothing is pooled.
+    """
+    empty_pairs = pd.DataFrame(
+        columns=["model_a", "model_b", "compared", "exact_agree", "exact_pct",
+                 "within_one_band", "within_one_band_pct", "a_more_permissive",
+                 "b_more_permissive"]
+    )
+    if not cache_path.exists():
+        return pd.DataFrame(), empty_pairs
+
+    order = list(REACH_BANDS)  # most to least permissive; 'unknown' sorts last
+    rows = []
+    for key, entry in json.loads(cache_path.read_text()).items():
+        if not isinstance(entry, dict):
+            continue
+        reach = entry.get("client_conditional_reach")
+        if reach not in REACH_BANDS or reach == "unknown":
+            continue
+        parts = key.split("@")
+        if len(parts) < 3 or parts[0] not in candidate_ids:
+            continue
+        rows.append({"id": parts[0], "model": parts[-1], "reach": reach})
+    if not rows:
+        return pd.DataFrame(), empty_pairs
+
+    long = pd.DataFrame(rows).drop_duplicates(["id", "model"])
+    wide = long.pivot(index="id", columns="model", values="reach").reset_index()
+    models = sorted(long["model"].unique())
+    pairs = []
+    for i, a in enumerate(models):
+        for b in models[i + 1:]:
+            both = wide[wide[a].notna() & wide[b].notna()]
+            if both.empty:
+                continue
+            rank_a = both[a].map(order.index)
+            rank_b = both[b].map(order.index)
+            gap = (rank_a - rank_b).abs()
+            pairs.append(
+                {
+                    "model_a": a,
+                    "model_b": b,
+                    "compared": len(both),
+                    "exact_agree": int((gap == 0).sum()),
+                    "exact_pct": round(100 * (gap == 0).sum() / len(both), 1),
+                    "within_one_band": int((gap <= 1).sum()),
+                    "within_one_band_pct": round(100 * (gap <= 1).sum() / len(both), 1),
+                    # lower rank index == more permissive band
+                    "a_more_permissive": int((rank_a < rank_b).sum()),
+                    "b_more_permissive": int((rank_b < rank_a).sum()),
+                }
+            )
+    return wide, pd.DataFrame(pairs) if pairs else empty_pairs
 
 
 def required_reach(threshold: float, share: float) -> float | None:
@@ -427,6 +490,15 @@ def main() -> int:
     )
     ap.add_argument("--out-dir", type=Path, default=Path("docs/paper/tables"))
     ap.add_argument(
+        "--sev-cache",
+        type=Path,
+        default=Path("scratchpad_crawl/severity_cache.json"),
+        help=(
+            "severity cache used only to measure inter-model agreement on reach; the "
+            "reach values entering the bounds still come from --severity-csv"
+        ),
+    )
+    ap.add_argument(
         "--severity-csv",
         type=Path,
         default=None,
@@ -463,6 +535,9 @@ def main() -> int:
     bounds = bound_candidates(uncertain)
     distribution = build_reach_distribution(bounds)
     reach_review = score_reach_against_review(bounds)
+    reach_by_model, reach_pairs = reach_agreement_across_models(
+        args.sev_cache, set(uncertain["id"])
+    )
     summary = build_summary(frontier, bounds)
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
@@ -477,6 +552,13 @@ def main() -> int:
     if not reach_review.empty:
         reach_review.to_csv(
             args.out_dir / "client_conditional_reach_vs_review.csv", index=False
+        )
+    if not reach_pairs.empty:
+        reach_by_model.to_csv(
+            args.out_dir / "client_conditional_reach_by_model.csv", index=False
+        )
+        reach_pairs.to_csv(
+            args.out_dir / "client_conditional_reach_model_agreement.csv", index=False
         )
     summary.to_csv(args.out_dir / "client_conditional_summary.csv", index=False)
 
@@ -496,6 +578,9 @@ def main() -> int:
             ["id", "model_reach", "reviewed_reach", "direction", "model_high_verdict"]
         ].to_string(index=False))
         print("  " + reach_review["direction"].value_counts().to_string().replace("\n", "\n  "))
+    if not reach_pairs.empty:
+        print("\n=== inter-model agreement on the reach band ===")
+        print(reach_pairs.to_string(index=False))
     print("\n=== summary ===")
     for row in summary.to_dict("records"):
         print(f"  {row['measure']}: {row['value']}")
