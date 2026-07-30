@@ -56,7 +56,8 @@ UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/paper_analysis.py
 UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/severity_analysis.py
 UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/audit_chain_split_candidates.py
 UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/audit_liveness_candidates.py
-UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/client_conditional_severity.py
+UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/client_conditional_severity.py \
+  --severity-csv data/severity_est_v2.csv
 UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/audit_bounty_graded_population.py
 UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/cwe_context_analysis.py
 git diff --exit-code docs/paper/tables
@@ -65,6 +66,12 @@ git diff --exit-code docs/paper/tables
 The generated CSV files are deliberately checked in. A paper claim should cite
 a generated table, identify its population and denominator, and state whether
 the underlying label is authoritative, heuristic, or LLM-derived.
+
+`data/severity_est_v2.csv` is a re-estimation overlay, checked in because the
+`client_conditional_*` tables are generated from it. It covers only the rows the paper
+analysis consumes, so its other rows read `unassessed`; the frozen Parquet snapshot is
+never rebuilt from it. See
+[`../severity_labeling.md`](../severity_labeling.md) for how to regenerate it.
 
 ## Claim status
 

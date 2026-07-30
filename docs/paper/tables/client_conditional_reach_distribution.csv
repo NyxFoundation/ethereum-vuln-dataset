@@ -1,3 +1,12 @@
 client_conditional_reach,blast_radius,high_verdict,records
-unknown,client_specific,share_dependent,55
-unknown,spec_level,share_dependent,55
+all_nodes,spec_level,share_dependent,22
+all_nodes,client_specific,supported,18
+all_nodes,spec_level,supported,15
+narrow_config,client_specific,excluded,14
+all_nodes,client_specific,share_dependent,12
+narrow_config,spec_level,excluded,9
+default_role_subset,client_specific,share_dependent,8
+operator_self_only,spec_level,excluded,5
+default_role_subset,spec_level,share_dependent,4
+operator_self_only,client_specific,excluded,2
+unknown,client_specific,share_dependent,1

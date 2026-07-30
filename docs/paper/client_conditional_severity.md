@@ -93,23 +93,30 @@ Nethermind at the top of its band still needs 110% reach.
 
 ## 5. Applying the bound to the existing 110-row queue
 
-The current snapshot has no `client_conditional_reach` value, because the estimator
-that produced it never asked. Each candidate is therefore bounded with
-`reach=unknown`, i.e. the most favourable assumption available to the record.
+The frozen snapshot has no `client_conditional_reach` value, because the estimator
+that produced it never asked. Re-running the revised prompt with `glm-5.2` supplied
+one for 109 of the 110 candidates; the remaining row keeps `reach=unknown`, which is
+the most favourable assumption available to it.
 
-| Measure | Records |
-|---|---:|
-| Tier-uncertain candidates | 110 |
-| `client_specific` | 55 |
-| `spec_level` | 55 |
-| `client_specific` needing >50% reach even at the top of the share band | **55** |
-| `client_specific` for which High is infeasible at the bottom of the share band | **21** |
-| Candidates with an assessed `client_conditional_reach` | **0** |
+| Measure | Reach unassessed | Reach measured |
+|---|---:|---:|
+| Tier-uncertain candidates | 110 | 110 |
+| `client_specific` / `spec_level` | 55 / 55 | 55 / 55 |
+| `client_specific` needing >50% reach at the top of the share band | 55 | 55 |
+| Candidates with an assessed reach | 0 | **109** |
+| High **excluded arithmetically** | 0 | **30** |
+| High still **share-dependent** | 110 | **47** |
+| High **supported at any plausible share** | 0 | **33** |
 
-Every one of the 55 client-specific candidates requires that the defect affect
-more than half of that client's entire operator population before High becomes
-arithmetically available. The 21 infeasible-at-band-bottom rows are the Lighthouse
-client-specific candidates, which need 110% reach at a 30% share.
+Measuring reach resolves 30 candidates without any source review: their assessed reach
+is `narrow_config` (23) or `operator_self_only` (7), so the product cannot reach 33%
+of the network at any share in the band. That is the payoff of the decomposition — a
+third of the queue is ruled out of High by arithmetic rather than by argument.
+
+The 33 supported records are all Geth with `all_nodes` reach (18 `client_specific`,
+15 `spec_level`): at Geth's band, full client coverage clears 33% even at the bottom
+of the band. Section 6 shows why that bucket must not be read as 33 confirmed High
+records.
 
 For `spec_level` rows the lower bound is still only the fixing client's share,
 because no row enumerates which *other* implementations actually contained the
@@ -117,24 +124,42 @@ shared-rule defect. That asymmetry — upper bound the whole network, lower boun
 client — is the formal statement of the objection already recorded in
 [`chain_split_candidate_audit.md`](chain_split_candidate_audit.md).
 
-## 6. What this changes for the audits already done
+## 6. Scoring the measurement against source review
 
-The completed source reviews can be reread as reach assessments, and they line up
-with the bands rather than with High:
+Moving the uncertainty onto reach is only progress if reach can actually be measured,
+so the model's assessment is scored against the completed source reviews in
+[`liveness_candidate_audit.md`](liveness_candidate_audit.md). Eight audited rows state
+a configuration, platform, endpoint, or lifecycle restriction, which is what reach
+describes. Rows whose audit faulted the *trigger* or *impact* evidence are excluded
+from this comparison: that says nothing about how many operators the code path covers,
+and reach must not be lowered for it.
 
-- the reorg-log OOM explicitly mentions a 32-bit-host condition → `narrow_config`;
-- the Ethash cache/dataset lifetime crash is a local cache and finalizer lifecycle
-  → `operator_self_only` to `narrow_config`;
-- the Verkle predeployment panic and the PeerDAS rows touch unreleased features →
-  `narrow_config`;
-- the HTTP-request resource pressure needs many parallel requests against an
-  endpoint an operator chose to expose → `default_role_subset`;
-- the Engine API `logsBloom` panic sits behind an authenticated local endpoint →
-  `narrow_config` at most.
+| Row | Model | Source review | Direction | Model's High verdict |
+|---|---|---|---|---|
+| PeerDAS `getBlobs` race | `narrow_config` | `narrow_config` | agree | excluded |
+| Verkle trie prefetcher | `narrow_config` | `narrow_config` | agree | excluded |
+| Tree states per-slot diffs | `narrow_config` | `narrow_config` | agree | excluded |
+| PeerDAS early sampling | `narrow_config` | `narrow_config` | agree | excluded |
+| Parallel HTTP request cache | `narrow_config` | `default_role_subset` | more restrictive | excluded |
+| Reorg-log OOM (32-bit host) | `all_nodes` | `narrow_config` | **more permissive** | **supported** |
+| Ethash cache/dataset lifetime | `all_nodes` | `operator_self_only` | **more permissive** | **supported** |
+| Engine API `logsBloom` panic | `all_nodes` | `narrow_config` | **more permissive** | **supported** |
 
-None of these reaches the 60% reach that a Geth client-specific High would need,
-which is consistent with the audits finding zero confirmed High and gives that
-negative result a quantitative form instead of a verdict per record.
+The asymmetry is the result. Every reviewable `excluded` verdict is confirmed by the
+audit or is more conservative than it. Every reviewable `supported` verdict is
+over-permissive: the reorg OOM is conditioned on a 32-bit host, the Ethash crash is
+local cache and finalizer lifecycle with no attacker input crossing operators, and the
+Engine API sits behind an authenticated CL-to-EL endpoint rather than the public
+network.
+
+**Observation.** A single model's reach assessment is trustworthy when it says
+"narrow" and unreliable when it says `all_nodes`, and the unreliable direction is the
+one that produces the consequential verdict.
+
+**Do not claim.** The 33 `supported` records are not 33 records meeting the EF >33%
+threshold. Their error rate is unmeasured, but all three reviewable members of that
+bucket were over-permissive, so it must be treated as a review queue ordered by
+arithmetic, not as a result. The 30 `excluded` records are the defensible output.
 
 ## 7. Paper contribution
 
@@ -145,11 +170,17 @@ negative result a quantitative form instead of a verdict per record.
 > reach High for 8 of 11 clients even at complete client-conditional reach, and all
 > 55 client-specific High candidates in the corpus require that a defect affect
 > more than half of their client's operator population before the tier is
-> arithmetically available. The corpus therefore reports the deployment share a
-> tier would require, not a tier that silently assumes one.
+> arithmetically available. Measuring reach then rules 30 of 110 candidates out of
+> High by arithmetic alone. Scoring the measurement against source review shows the
+> decomposition also localises its own error: exclusions are confirmed on every
+> reviewable record, while every reviewable record the model rated at full client
+> coverage was over-permissive. The corpus therefore reports the deployment share a
+> tier would require, and reports which half of that judgement it can defend.
 
 This converts `tier-uncertain` from an admission into a measurement: each record
-carries a falsifiable share requirement that a sourced deployment series can test.
+carries a falsifiable share requirement that a sourced deployment series can test,
+and the reach factor is itself auditable against the fix rather than being an
+irreducible prior.
 
 ## 8. Limits
 
@@ -159,11 +190,17 @@ carries a falsifiable share requirement that a sourced deployment series can tes
   is the next data dependency, and until it exists no row may present a
   `share_dependent` tier as final.
 - Reach bands are ordinal ranges chosen for auditability, not measured
-  distributions. Two reviewers should assign them independently and report
-  agreement before any reach figure enters a headline claim.
-- `client_conditional_reach` is not yet populated: it requires an estimator re-run
-  with the revised prompt. The 110-row bounds above assume `unknown`, which is
-  deliberately the most generous assumption for each record.
+  distributions.
+- Reach is populated by **one model on one prompt** (`glm-5.2`). Section 6 scores it
+  against source review on the eight rows where that is possible and finds it
+  over-permissive on three. A second independent model, and human assignment on a
+  stratified sample with reported agreement, are both still required before any reach
+  figure enters a headline claim. In particular the `supported` bucket is a review
+  queue, not a finding.
+- One of the 110 candidates has no assessed reach and remains bounded at `unknown`.
+- The audit-derived reach values in `REVIEWED_REACH` are read from the audit prose by
+  a single reviewer. They are versioned in the script so a second reviewer can dispute
+  a specific entry, but they are not an independent annotation study.
 - The Critical tier is only partly share-shaped. The value-integrity forms
   ("create or finalize infinite ETH", "steal or burn ETH from all EOAs") are exempt
   from the cap, so a Critical value-integrity estimate is not constrained by this
@@ -172,8 +209,22 @@ carries a falsifiable share requirement that a sourced deployment series can tes
 ## Reproduce
 
 ```bash
+# arithmetic only, no reach
 UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/client_conditional_severity.py
+
+# with the measured reach overlay (does not touch the frozen snapshot)
+UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/client_conditional_severity.py \
+  --severity-csv data/severity_est_v2.csv
 git diff --exit-code docs/paper/tables
+```
+
+`data/severity_est_v2.csv` is produced by re-running the estimator over the queue:
+
+```bash
+UV_CACHE_DIR=/tmp/uv-cache uv run python collection/estimate_severity.py --apply \
+  --engine openai --model glm-5.2 --base-url https://ollama.com/v1 \
+  --api-key-env OLLAMA_API_KEY --workers 2 \
+  --only-ids queue_ids.txt --out data/severity_est_v2.csv --allow-partial
 ```
 
 ## Generated evidence
@@ -181,4 +232,6 @@ git diff --exit-code docs/paper/tables
 - [`tables/client_conditional_reach_bands.csv`](tables/client_conditional_reach_bands.csv)
 - [`tables/client_conditional_frontier.csv`](tables/client_conditional_frontier.csv)
 - [`tables/client_conditional_candidate_bounds.csv`](tables/client_conditional_candidate_bounds.csv)
+- [`tables/client_conditional_reach_distribution.csv`](tables/client_conditional_reach_distribution.csv)
+- [`tables/client_conditional_reach_vs_review.csv`](tables/client_conditional_reach_vs_review.csv)
 - [`tables/client_conditional_summary.csv`](tables/client_conditional_summary.csv)

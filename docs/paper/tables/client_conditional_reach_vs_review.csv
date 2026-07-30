@@ -1,0 +1,9 @@
+id,client,model_reach,reviewed_reach,direction,model_high_verdict,review_basis
+6fad56ffd2f16be8,lighthouse,narrow_config,narrow_config,agree,excluded,unreleased PeerDAS feature
+9d281cd7385d8958,geth,narrow_config,narrow_config,agree,excluded,requires Verkle activation
+lighthouse:networking:PR#4652,lighthouse,narrow_config,narrow_config,agree,excluded,hierarchical state diffs are part of an opt-in storage redesign
+lighthouse:networking:PR#5569,lighthouse,narrow_config,narrow_config,agree,excluded,unreleased PeerDAS feature
+b1c9a13d15ccd608,geth,all_nodes,narrow_config,model_more_permissive,supported,OOM conditioned on a 32-bit host
+eceadd9c7892558a,geth,all_nodes,operator_self_only,model_more_permissive,supported,local cache and finalizer lifecycle; no attacker input crosses operators
+geth:ethereum-go-ethereum:PR#24946,geth,all_nodes,narrow_config,model_more_permissive,supported,"Engine API is an authenticated CL-to-EL endpoint, not the public network"
+lighthouse:networking:PR#4879,lighthouse,narrow_config,default_role_subset,model_more_restrictive,excluded,HTTP state endpoint exposure is an operator choice

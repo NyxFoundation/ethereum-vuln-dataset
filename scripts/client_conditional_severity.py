@@ -131,6 +131,79 @@ SHARE_BANDS_PROVENANCE = (
 )
 
 
+# Reach values established by the source reviews in liveness_candidate_audit.md, used
+# to score the model's reach assessment. Only rows whose audit text states a
+# configuration, platform, endpoint, or lifecycle restriction are listed: an audit that
+# faulted a record's *trigger* or *impact* evidence says nothing about how many of the
+# client's operators the code path covers, and reach must not be lowered for it.
+REVIEWED_REACH = {
+    # "an observed OOM ... explicitly noting a possible 32-bit-host condition"
+    "b1c9a13d15ccd608": ("narrow_config", "OOM conditioned on a 32-bit host"),
+    # "proves the panic but not unauthenticated public network reachability"
+    "geth:ethereum-go-ethereum:PR#24946": (
+        "narrow_config",
+        "Engine API is an authenticated CL-to-EL endpoint, not the public network",
+    ),
+    # "cache/finalizer lifecycle behavior rather than an evidenced attacker trigger"
+    "eceadd9c7892558a": (
+        "operator_self_only",
+        "local cache and finalizer lifecycle; no attacker input crosses operators",
+    ),
+    # "panic only once Verkle is activated"
+    "9d281cd7385d8958": ("narrow_config", "requires Verkle activation"),
+    # "a broad storage redesign", diff absent at a requested slot
+    "lighthouse:networking:PR#4652": (
+        "narrow_config",
+        "hierarchical state diffs are part of an opt-in storage redesign",
+    ),
+    # "many parallel HTTP state requests" against an endpoint the operator exposes
+    "lighthouse:networking:PR#4879": (
+        "default_role_subset",
+        "HTTP state endpoint exposure is an operator choice",
+    ),
+    # "explicitly basic, non-tested PeerDAS early-request feature"
+    "lighthouse:networking:PR#5569": ("narrow_config", "unreleased PeerDAS feature"),
+    # PeerDAS getBlobs race
+    "6fad56ffd2f16be8": ("narrow_config", "unreleased PeerDAS feature"),
+}
+
+
+def score_reach_against_review(bounds: pd.DataFrame) -> pd.DataFrame:
+    """Compare the model's reach with the source-reviewed reach, where one exists.
+
+    This is the validity check the reframing needs: it moved the unmeasurable factor
+    (historical deployment share) onto a measurable one (reach), so the measurement has
+    to be scored against human source review rather than trusted.
+    """
+    rows = []
+    for row_id, (reviewed, why) in REVIEWED_REACH.items():
+        match = bounds[bounds["id"].eq(row_id)]
+        if match.empty:
+            continue
+        record = match.iloc[0]
+        model = str(record["client_conditional_reach"])
+        rank = list(REACH_BANDS)  # ordered most to least permissive
+        direction = "agree"
+        if model != reviewed:
+            direction = (
+                "model_more_permissive"
+                if rank.index(model) < rank.index(reviewed)
+                else "model_more_restrictive"
+            )
+        rows.append(
+            {
+                "id": row_id,
+                "client": record["client"],
+                "model_reach": model,
+                "reviewed_reach": reviewed,
+                "direction": direction,
+                "model_high_verdict": record["high_verdict"],
+                "review_basis": why,
+            }
+        )
+    return pd.DataFrame(rows).sort_values(["direction", "id"])
+
+
 def required_reach(threshold: float, share: float) -> float | None:
     """Minimum client-conditional reach that meets ``threshold`` at ``share``."""
     if share <= 0:
@@ -389,6 +462,7 @@ def main() -> int:
     frontier = build_frontier()
     bounds = bound_candidates(uncertain)
     distribution = build_reach_distribution(bounds)
+    reach_review = score_reach_against_review(bounds)
     summary = build_summary(frontier, bounds)
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
@@ -400,6 +474,10 @@ def main() -> int:
     distribution.to_csv(
         args.out_dir / "client_conditional_reach_distribution.csv", index=False
     )
+    if not reach_review.empty:
+        reach_review.to_csv(
+            args.out_dir / "client_conditional_reach_vs_review.csv", index=False
+        )
     summary.to_csv(args.out_dir / "client_conditional_summary.csv", index=False)
 
     print(f"tier-uncertain candidates: {len(bounds)}")
@@ -412,6 +490,12 @@ def main() -> int:
             f"  min reach {row['min_reach_at_share_high'] or 'n/a'}"
             f" (at share low: {row['min_reach_at_share_low'] or 'n/a'})  {state}"
         )
+    if not reach_review.empty:
+        print("\n=== model reach vs source-reviewed reach ===")
+        print(reach_review[
+            ["id", "model_reach", "reviewed_reach", "direction", "model_high_verdict"]
+        ].to_string(index=False))
+        print("  " + reach_review["direction"].value_counts().to_string().replace("\n", "\n  "))
     print("\n=== summary ===")
     for row in summary.to_dict("records"):
         print(f"  {row['measure']}: {row['value']}")
