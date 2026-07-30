@@ -1,0 +1,19 @@
+population,dimension,rows,categories,chi_square,cramers_v,note
+A_only,root_cause,235,13,27.519022,0.342202,descriptive only: authority tier is partly defined by advisory evidence
+A_only,attack_path,235,10,29.605685,0.354939,descriptive only: authority tier is partly defined by advisory evidence
+A_only,label,235,38,100.404392,0.653646,descriptive only: authority tier is partly defined by advisory evidence
+A_only,source_platform,235,12,56.497182,0.49032,descriptive only: authority tier is partly defined by advisory evidence
+A_only,layer,235,2,13.417214,0.238945,descriptive only: authority tier is partly defined by advisory evidence
+A_only,language,233,6,45.267081,0.440771,descriptive only: authority tier is partly defined by advisory evidence
+A_or_B,root_cause,1808,13,75.835246,0.204803,
+A_or_B,attack_path,1808,11,81.278379,0.212026,
+A_or_B,label,1808,45,272.243125,0.388042,
+A_or_B,source_platform,1808,12,64.806799,0.189326,
+A_or_B,layer,1808,2,3.010869,0.040808,
+A_or_B,language,1806,6,43.149506,0.154571,
+all_tiers,root_cause,2225,13,74.05094,0.182432,
+all_tiers,attack_path,2225,11,79.329347,0.188822,
+all_tiers,label,2225,45,320.601238,0.379592,
+all_tiers,source_platform,2225,12,58.555147,0.162225,
+all_tiers,layer,2225,2,2.230295,0.03166,
+all_tiers,language,2223,6,25.056946,0.106168,

@@ -13,8 +13,9 @@ The working thesis is:
 
 1. [`snapshot_audit.md`](snapshot_audit.md) freezes the current dataset and
    resolves definition and documentation mismatches before hypothesis testing.
-2. Advisory-selection bias: compare advisory-linked and non-advisory records
-   across protocol area, root cause, attack path, client, language, and layer.
+2. [`advisory_bias_preliminary.md`](advisory_bias_preliminary.md) runs the
+   first advisory-selection analysis and identifies dependency/tooling
+   contamination that must be reviewed before interpreting protocol labels.
 3. CWE comparison: test how much protocol context adds beyond generic weakness
    labels when explaining network impact.
 4. Prior-work comparison: replicate and extend MineBlockVuln (ESEC/FSE 2022)
