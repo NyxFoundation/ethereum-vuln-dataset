@@ -119,6 +119,38 @@ is subtle from the diff. Treat Critical estimates as a floor, not a ceiling.
   is materially better than the 6-wide batch.
 - Engine is pluggable (`--engine openai|claude|ollama`); gemma4:31b via Ollama
   Cloud is the default. A Claude pass would likely raise exact-tier further.
+- **The cache is keyed by prompt, not only by row id.** `PROMPT_VERSION` in
+  `estimate_severity.py` namespaces every entry, so changing `build_prompt` or the
+  guardrail invalidates the cache instead of silently returning labels built from
+  the old question. Bump it whenever either changes meaning; old entries stay on
+  disk so an earlier snapshot remains reproducible.
+- **A prompt bump empties the cache for every row**, so `--apply` refuses to write
+  a file in which the bump left rows unassessed. Finish the run, or pass
+  `--allow-partial` to write the uncovered rows as `unassessed` deliberately.
+- `--only-ids <file>` estimates a specific row set. Use it to refresh the rows an
+  analysis actually consumes before committing to the full corpus; via the
+  `claude` engine a row costs roughly a minute of wall clock, so 1,552 rows is a
+  multi-hour run while a 110-row analysis queue is well under one hour.
+
+## Re-estimating without unfreezing the snapshot
+
+`docs/paper` pins a frozen Parquet snapshot, so a re-estimation must not rebuild
+it. Write to a separate file and join it as an overlay:
+
+```bash
+# refresh only the rows the paper analysis consumes
+UV_CACHE_DIR=/tmp/uv-cache uv run python collection/estimate_severity.py --apply \
+  --engine claude --model claude-sonnet-5 --workers 8 \
+  --only-ids queue_ids.txt --out data/severity_est_v2.csv --allow-partial
+
+# join the assessed reach onto the analysis; uncovered rows keep reach=unknown
+UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/client_conditional_severity.py \
+  --severity-csv data/severity_est_v2.csv
+```
+
+Only a full-corpus run should overwrite `data/severity_est.csv` and trigger a
+dataset rebuild, and that changes the snapshot hash recorded in
+[`paper/snapshot_audit.md`](./paper/snapshot_audit.md).
 
 ## Output contract (honest columns)
 `--apply` writes `data/severity_est.csv` keyed by `id`, joined like the other

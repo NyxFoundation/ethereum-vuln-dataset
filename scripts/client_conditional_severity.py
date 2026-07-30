@@ -273,6 +273,23 @@ def bound_candidates(queue: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def build_reach_distribution(bounds: pd.DataFrame) -> pd.DataFrame:
+    """Reach x blast radius x High verdict, once a re-estimation supplies reach.
+
+    This is the table that shows whether the assessed reach actually moves records
+    off ``share_dependent``, rather than only widening the bound.
+    """
+    grouped = (
+        bounds.groupby(
+            ["client_conditional_reach", "blast_radius", "high_verdict"], dropna=False
+        )
+        .size()
+        .reset_index(name="records")
+        .sort_values(["records", "client_conditional_reach"], ascending=[False, True])
+    )
+    return grouped
+
+
 def build_summary(frontier: pd.DataFrame, bounds: pd.DataFrame) -> pd.DataFrame:
     high = frontier[frontier["tier"].eq("High")]
     feasible = high[high["client_specific_tier_feasible"]]
@@ -364,6 +381,7 @@ def main() -> int:
     reach_bands = build_reach_band_table()
     frontier = build_frontier()
     bounds = bound_candidates(uncertain)
+    distribution = build_reach_distribution(bounds)
     summary = build_summary(frontier, bounds)
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
@@ -371,6 +389,9 @@ def main() -> int:
     frontier.to_csv(args.out_dir / "client_conditional_frontier.csv", index=False)
     bounds.sort_values(["client", "blast_radius", "id"]).to_csv(
         args.out_dir / "client_conditional_candidate_bounds.csv", index=False
+    )
+    distribution.to_csv(
+        args.out_dir / "client_conditional_reach_distribution.csv", index=False
     )
     summary.to_csv(args.out_dir / "client_conditional_summary.csv", index=False)
 
