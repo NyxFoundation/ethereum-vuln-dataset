@@ -29,22 +29,37 @@ in a cross-client result at all, and under it Teku and Prysm never surfaced.
 *Read EIPs from prose only.* Scanning code for every anchor kind looked like a free
 doubling of coverage. Reviewing the shortest-span anchors record by record
 ([`tables/cross_client_anchor_precision_audit.csv`](tables/cross_client_anchor_precision_audit.csv))
-showed it was not:
+showed it was not. The 18 reviewed records split by where the anchor came from:
 
-| Anchor kind and source | Concerns the anchor | Unclear | Does not |
+| Anchor source | Concerns the anchor | Mentions it only | Does not |
 |---|---:|---:|---:|
-| EIP, from prose | 2 | 0 | 0 |
-| EIP, from post-fix code | **0** | 2 | **12** |
-| Consensus function, from post-fix code | 2 | 0 | 0 |
+| Code only (now dropped) | 0 | 0 | **8** |
+| Prose | **5** | 3 | 0 |
+| Post-fix code, consensus function | 2 | 0 | 0 |
 
-`eip:7928` had collected a Besu commit that pins Dockerfile base images by digest;
-`eip:2718` had collected four Reth changes about RocksDB healing and p2p memory bounds;
-`eip:8037` had collected a record whose own title names EIP-7928. The cause is
-structural — a fix touching a fork-configuration or reference-test file inherits every
-EIP that file mentions, so a code match means "this file knows about the EIP", not "this
-fix concerns it". Consensus function names survive the same test because the function
-must actually be called by code implementing that surface. EIP, opcode and fork anchors
-are therefore read from prose only.
+Three distinct contamination mechanisms turned up, and they are not the same problem:
+
+1. **A code match inherits the file's EIP list.** `eip:2718` had collected four Reth
+   changes about RocksDB healing and p2p memory bounds, and `eip:7928` a Besu commit that
+   pins Dockerfile base images by digest. A fix touching a fork-configuration or
+   reference-test file inherits every EIP that file mentions, so the match means "this
+   file knows about the EIP", not "this fix concerns it". Dropping code as a source for
+   EIP, opcode and fork anchors removes all eight of these.
+2. **A prose mention can be a blocker or a changelog entry.** Erigon's peer-hygiene fix
+   names EIP-7975 inside release notes enumerating other authors' PRs, and its BAL fix
+   names EIP-8037 only as the reason some tests stay skipped. Three of the eight surviving
+   prose anchors are this kind. There is no mechanical filter: no record in the corpus
+   names four or more EIPs in prose, so "looks like an enumeration" is not detectable by
+   count. Separating subject from mention needs reading.
+3. **Anchors inherit author typos.** Both the Prysm and Lighthouse records write
+   *EIP-7521* for EIP-7251 (MaxEB) — Lighthouse's own markdown link resolves to
+   `eip-7251`. The two records genuinely share a surface; the anchor label is misspelled
+   identically in both, which is how the pair was found at all. Normalising anchors
+   against the EIP registry would merge them with correctly spelled EIP-7251 records.
+
+Consensus function names survive the code test because the function must actually be
+called by code implementing that surface. EIP, opcode and fork anchors are therefore read
+from prose only, at roughly 5-in-8 precision.
 
 **Precedence is testable after all.** The Parquet snapshot has no fix date —
 `fix_commit` is a SHA, `scraped_at` is crawl time — which initially made "a fix in
@@ -214,15 +229,24 @@ per-anchor candidate list for anyone who wants to attempt the pairing manually.
 
 ## 6. What would make this answerable
 
-1. **Anchors on the remaining 80% of records.** Scanning post-fix code took coverage from
-   8.1% to 19.7%; the rest needs anchors the code does not name literally — the precompile
-   address or gas-schedule constant a hunk touches, or the SSZ container it serialises.
-2. **Manual pairing of the 73 dated anchor sets.** For each, decide whether the records
+1. **Audit the anchor kind the analysis actually rests on.** 63 of the 73 anchors are
+   consensus-spec functions and only two records of that kind have been reviewed, both
+   correct. Prose EIP anchors were reviewed more thoroughly and came in at 5-in-8, so no
+   anchor-level precision figure should be quoted for the weight-bearing kind until it has
+   a comparable sample. This is the cheapest remaining check and it gates the rest.
+2. **Anchors on the remaining 85% of records.** Prose plus code names an anchor on 15.1%;
+   the rest needs anchors the text does not name literally — the precompile address or
+   gas-schedule constant a hunk touches, or the SSZ container it serialises.
+3. **Normalise anchors against the EIP registry.** Two records here reach the same surface
+   only because both authors made the same typo (EIP-7521 for 7251). Validating extracted
+   numbers against the published EIP list would merge misspellings and drop numbers that
+   are not EIPs at all.
+4. **Manual pairing of the 73 dated anchor sets.** For each, decide whether the records
    describe the same defect, independent defects on a shared surface, or ordinary
    parallel feature work. Only that converts the candidate list into a measured rate
    with a stated denominator. At 73 anchors this is a feasible review; the 18-record
    sample already done suggests most pairs will be co-location rather than shared defects.
-3. **A propagation-shaped hypothesis.** If variant propagation exists it should appear
+5. **A propagation-shaped hypothesis.** If variant propagation exists it should appear
    as a short-span, same-defect pair *outside* a shared fork-development window. That is
    a testable prediction, and the dated table is what it should be tested against.
 
