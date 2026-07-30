@@ -1,0 +1,19 @@
+anchor,anchor_kind,anchor_source,client,fix_author_date,record_title,concerns_anchor,audit_reason
+eip:8037,eip,post_fix_code,erigon,2026-03-09,EIP-7928: Add BAL max items cap and slot uniqueness validation (#19627),no,Title names EIP-7928; the 8037 match comes from surrounding file content
+eip:8037,eip,post_fix_code,besu,2026-03-26,fix: check regular and state gas dimensions independently,no,No EIP named anywhere in the record; gas-dimension accounting is unrelated
+eip:7928,eip,post_fix_code,reth,2026-03-04,fix: defer insert_state until after block validation to prevent cache race,no,"Cache-ordering race in state insertion, not block-access-list work"
+eip:7928,eip,prose,erigon,2026-03-06,"Fix BAL: selfdestruct balance filter, nil header guard, net-zero detection",yes,BAL is the EIP-7928 block access list; the fix is squarely on that surface
+eip:7928,eip,prose,erigon,2026-03-09,EIP-7928: Add BAL max items cap and slot uniqueness validation (#19627),yes,Title names the EIP explicitly
+eip:7928,eip,post_fix_code,besu,2026-03-26,test(referencetests): validate block rejection reason against expected exception,unclear,Reference-test harness change; touches a file enumerating many EIPs
+eip:7928,eip,post_fix_code,besu,2026-04-23,Pin Dockerfile base images by SHA256 digest for reproducible builds,no,Build reproducibility commit with no protocol content at all
+eip:7975,eip,post_fix_code,besu,2026-03-26,fix: check regular and state gas dimensions independently,no,No EIP named; the same record is also mis-anchored to 8037
+eip:7975,eip,post_fix_code,erigon,2026-06-02,Peer hygiene / DoS hardening: cap and rate-limit inbound NewBlockHashes,no,P2P rate limiting is unrelated to the anchor
+consensus_fn:process_bls_to_execution_change,consensus_fn,post_fix_code,teku,2022-11-10,Fix validator index check in verifyBlsToExecutionChanges,yes,Directly validates BLS-to-execution-change processing
+consensus_fn:process_bls_to_execution_change,consensus_fn,post_fix_code,nimbus,2023-02-02,prioritize REST API-provided BLS to execution changes over gossip-received,yes,"Same spec surface, handling the same operation type"
+eip:2718,eip,post_fix_code,reth,2026-01-23,feat(rocksdb): static file based healing for TransactionHashNumbers,no,"Storage healing, not typed-transaction envelope work"
+eip:2718,eip,post_fix_code,reth,2026-02-06,perf: use separate pool for save_blocks,no,Thread-pool change with no protocol content
+eip:2718,eip,post_fix_code,reth,2026-04-27,feat: bound memory footprint of p2p messages,no,"P2P memory bounds, unrelated to the anchor"
+eip:2718,eip,post_fix_code,reth,2026-04-29,feat: introduce memory-bound channel for network<->tx manager messages,no,"Internal channel plumbing, unrelated to the anchor"
+eip:2718,eip,post_fix_code,erigon,2026-06-15,"execution/rlp, execution/types: reject malformed RLP instead of dropping entries",unclear,"EIP-2718 defines the typed-transaction RLP envelope, so RLP strictness is adjacent"
+eip:7521,eip,post_fix_code,prysm,2024-10-31,Fix panic in validator REST mode when checking status after removing all keys,no,"Validator client REST handling, unrelated to the anchor"
+eip:7521,eip,post_fix_code,lighthouse,2025-03-26,Incorrect processing of effective balances in Electra epoch processing,no,"Electra effective-balance defect, unrelated to the anchor"

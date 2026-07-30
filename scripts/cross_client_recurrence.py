@@ -222,19 +222,50 @@ def extract_anchors(text: str) -> list[str]:
     return sorted(set(found))
 
 
-def anchor_source_text(data: pd.DataFrame, code_chars: int = 20000) -> pd.Series:
-    """Text an anchor may be named in: the record's prose plus its post-fix code.
+def anchor_source_text(data: pd.DataFrame) -> pd.Series:
+    """Prose an anchor may be *deliberately* named in: title plus description.
 
-    Prose alone names an anchor on 8.1% of records. The captured post-fix code names one
-    on far more, because a spec function or opcode appears in the code that implements
-    it whether or not the author mentioned it in the title.
+    Scanning ``post_fix_code`` for every anchor kind was tried and rejected. It doubled
+    coverage but a manual read of the shortest-span anchors found roughly 15% precision
+    for code-derived EIP references: ``eip:7928`` collected a Besu commit that pins
+    Dockerfile base images, ``eip:2718`` collected four Reth changes about RocksDB and
+    p2p memory bounds, and ``eip:8037`` collected a record whose title names EIP-7928.
+    The reason is structural — a fix that touches a fork-configuration or reference-test
+    file inherits every EIP that file mentions, so a code match means "this file knows
+    about the EIP", not "this fix concerns it".
+
+    Consensus-spec function names survive the same test (2/2 on review) because the
+    function has to actually be called in the code that implements the surface, so they
+    are the one kind still read from code. See ``anchor_code_text``.
     """
     return (
         data["title"].fillna("").astype(str)
         + " "
         + data["description"].fillna("").astype(str).str.slice(0, 4000)
-        + " "
-        + data["post_fix_code"].fillna("").astype(str).str.slice(0, code_chars)
+    )
+
+
+def anchor_code_text(data: pd.DataFrame, code_chars: int = 20000) -> pd.Series:
+    """Post-fix code, read only for consensus-spec function names."""
+    return data["post_fix_code"].fillna("").astype(str).str.slice(0, code_chars)
+
+
+def extract_consensus_fns(text: str) -> list[str]:
+    """Spec function anchors only, for use on code where EIP matching is unreliable."""
+    found = []
+    for match in CONSENSUS_FN_RE.finditer(text or ""):
+        if match.lastindex is None:
+            continue
+        found.append(f"consensus_fn:{CONSENSUS_SPEC_FUNCTIONS[match.lastindex - 1]}")
+    return sorted(set(found))
+
+
+def anchors_per_record(data: pd.DataFrame) -> pd.Series:
+    """All anchors for each record, applying the per-source policy above."""
+    prose = anchor_source_text(data).map(extract_anchors)
+    code = anchor_code_text(data).map(extract_consensus_fns)
+    return pd.Series(
+        [sorted(set(a) | set(b)) for a, b in zip(prose, code)], index=data.index
     )
 
 
@@ -510,7 +541,7 @@ def main() -> int:
     )
     # Extraction scans up to 20k characters per row against a large alternation, so it
     # runs once here and every consumer reuses the result.
-    anchors_per_row = anchor_source_text(data).map(extract_anchors)
+    anchors_per_row = anchors_per_record(data)
     anchors = anchor_spread(data, anchors_per_row)
     dates = (
         pd.read_csv(args.fix_dates, dtype=str)
@@ -555,10 +586,19 @@ def main() -> int:
             ("most_times_first_by_any_single_client",
              int(leaders["times_first"].max()) if not leaders.empty else 0),
             # After controlling for how often each client appears at all, a leader would
-            # show a ratio well above 1 on a non-trivial number of anchors.
-            ("clients_first_more_often_than_volume_predicts",
-             int((leaders["first_to_position_ratio"] > 1.2).sum())
+            # show a ratio well above 1. The guard matters: a client holding two or three
+            # positions can post a ratio of 5 or 9 from a single first place, so ratios
+            # are only read for clients with enough positions to mean anything.
+            ("clients_with_at_least_20_anchor_positions",
+             int((leaders["positions"] >= 20).sum()) if not leaders.empty else 0),
+            ("of_those_first_more_often_than_volume_predicts",
+             int(((leaders["positions"] >= 20)
+                  & (leaders["first_to_position_ratio"] > 1.5)).sum())
              if not leaders.empty else 0),
+            ("ratio_range_among_clients_with_20plus_positions",
+             (f"{leaders.loc[leaders['positions'] >= 20, 'first_to_position_ratio'].min():.2f}"
+              f"-{leaders.loc[leaders['positions'] >= 20, 'first_to_position_ratio'].max():.2f}")
+             if not leaders.empty and (leaders["positions"] >= 20).any() else ""),
             ("largest_volume_client_first_to_position_ratio",
              float(leaders.sort_values("positions", ascending=False)
                    .iloc[0]["first_to_position_ratio"])
