@@ -196,13 +196,20 @@ def test_ef_severity_population_and_tiers():
     population = pd.read_csv(EF_SEVERITY_POPULATION).set_index("metric")
     assert int(population.loc["ef_comparable_rows", "count"]) == 1612
     assert int(population.loc["excluded_upstream_cvss", "count"]) == 612
-    assert int(population.loc["ef_bounty_eligible", "count"]) == 592
+    assert int(population.loc["original_ef_bounty_eligible", "count"]) == 592
     assert int(population.loc["ef_not_eligible", "count"]) == 1020
-    assert int(population.loc["ef_critical_or_high", "count"]) == 128
+    assert int(population.loc["original_ef_critical_or_high", "count"]) == 128
+    assert int(
+        population.loc["confirmed_bounty_critical_or_high", "count"]
+    ) == 18
+    assert int(
+        population.loc["llm_high_candidates_tier_uncertain", "count"]
+    ) == 110
 
     tiers = pd.read_csv(EF_SEVERITY_TIERS).set_index(["population", "tier"])
     assert int(tiers.loc[("llm_estimated", "Critical"), "rows"]) == 0
-    assert int(tiers.loc[("llm_estimated", "High"), "rows"]) == 110
+    assert int(tiers.loc[("llm_estimated", "High"), "rows"]) == 0
+    assert int(tiers.loc[("llm_estimated", "tier-uncertain"), "rows"]) == 110
     assert int(tiers.loc[("bounty_graded", "Critical"), "rows"]) == 2
     assert int(tiers.loc[("bounty_graded", "High"), "rows"]) == 16
 
@@ -215,4 +222,12 @@ def test_ef_high_queue_provenance_and_client_prior_diagnostic():
 
     llm_high = queue[queue["severity_source"].eq("llm-estimated")]
     assert len(llm_high) == 110
+    assert llm_high["severity_estimated"].eq("High").all()
+    assert llm_high["severity_analysis_label"].eq("tier-uncertain").all()
+    assert llm_high["severity_review_status"].eq("threshold_unverified").all()
+    assert llm_high["severity_review_reason"].notna().all()
+    assert llm_high["blast_radius"].value_counts().to_dict() == {
+        "client_specific": 55,
+        "spec_level": 55,
+    }
     assert int(llm_high["source_platform"].isin(["geth", "lighthouse"]).sum()) == 107

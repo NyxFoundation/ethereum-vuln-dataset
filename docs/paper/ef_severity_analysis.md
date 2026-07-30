@@ -1,158 +1,149 @@
-# RQ2: analysis with EF bug-bounty severity estimates
+# RQ2: EF bug-bounty severity with an audited estimate layer
 
 ## Question
 
-Can `severity_estimated` provide enough observations for severity analysis
-without mixing the Ethereum Foundation (EF) bug-bounty impact model with
-upstream CVSS?
+Can `severity_estimated` overcome the small number of published EF-bounty
+grades, and which conclusions remain valid after auditing the estimated High
+labels?
 
-## 1. Population and two-stage outcome
+## 1. Population
 
-The primary population includes only:
+The frozen snapshot has 2,225 records. Severity provenance gives four disjoint
+populations:
 
-- 60 records with `severity_source=bounty-graded`;
-- 1,552 records with `severity_source=llm-estimated`.
+- 60 `bounty-graded` records;
+- 1,552 `llm-estimated` records;
+- 612 `upstream-cvss` records;
+- one unassessed record.
 
-Both use the EF-bounty model. We exclude 612 `upstream-cvss` records and one
-unassessed record. This produces 1,612 EF-comparable records (72.4% of the
-snapshot).
-
-This exclusion is conservative rather than perfectly scoped. The current
-dependency heuristic marks every NVD, changelog, or release URL
-`upstream-cvss`, so the 612 excluded rows contain some client records as well as
-true dependencies. The analysis avoids mixing CVSS with EF tiers at the cost of
-dropping those false-positive dependency classifications.
-
-Severity is analysed in two stages:
-
-1. **Bounty eligibility:** Critical/High/Medium/Low versus `not-eligible`;
-2. **Impact tier among eligible records:** Critical/High versus Medium/Low.
+Only the first two use the EF-bounty vocabulary. The CVSS and unassessed rows
+are excluded, leaving 1,612 EF-comparable records. Before review, 592 have a
+Critical/High/Medium/Low label and 1,020 are `not-eligible`.
 
 `not-eligible` is a scope decision, not a tier below Low.
 
-| Outcome | Records | Denominator | Share |
-|---|---:|---:|---:|
-| EF-comparable | 1,612 | 2,225 | 72.4% |
-| Bounty-eligible | 592 | 1,612 | 36.7% |
-| Not eligible | 1,020 | 1,612 | 63.3% |
-| Critical or High | 128 | 592 eligible | 21.6% |
+## 2. Audit correction
 
-This expands the EF-tiered analysis population from 60 ground-truth grades to
-592 combined grades/estimates, a 9.9-fold increase. The Critical/High review
-set expands from 18 bounty-graded records to 128 combined records.
+The original estimator assigned 110 LLM rows to High. We retain that source
+output for reproducibility, but change the analysis label for all 110 to
+`tier-uncertain`.
 
-## 2. Tier distribution and source sensitivity
+| Audit reason | Records | Correction |
+|---|---:|---|
+| `client_specific` | 55 | Exact High removed because the prompt used an unversioned static client-share prior; it does not establish that the affected client exceeded the EF >33% threshold at the fix date. |
+| `spec_level` | 55 | Exact High removed because implementing a shared rule does not establish that every implementation shared the defect, or that >33% of the network was affected. |
 
-| Source | Critical | High | Medium | Low | Not eligible |
-|---|---:|---:|---:|---:|---:|
-| Bounty-graded (n=60) | 2 | 16 | 39 | 3 | 0 |
-| LLM-estimated (n=1,552) | 0 | 110 | 242 | 180 | 1,020 |
-| Combined EF (n=1,612) | **2** | **126** | **281** | **183** | **1,020** |
+This is a threshold correction, not a claim that the records are Medium or
+Low. Assigning either tier would require the same missing historical impact
+evidence. The corrected label therefore preserves uncertainty rather than
+inventing a precise replacement.
 
-The estimates solve the sample-size problem for an eligible and
-Critical/High-versus-Medium/Low analysis. They do **not** solve it for Critical
-alone: the LLM produced no Critical estimates, leaving only two
-bounty-graded Critical records. Primary analysis must therefore combine
-Critical and High.
+The source and analysis labels are both present in
+[`tables/ef_severity_high_review_queue.csv`](tables/ef_severity_high_review_queue.csv):
 
-## 3. What the 128-record Critical/High queue contains
+- `severity_estimated` is the immutable original label;
+- `severity_analysis_label` is the audited label;
+- `severity_review_status` and `severity_review_reason` make the change
+  traceable.
 
-Across the combined eligible population, the leading root causes among the 128
-Critical/High records are:
+## 3. Corrected tier distribution
 
-| Root cause | Critical/High | Eligible in class | Share severe |
-|---|---:|---:|---:|
-| `missing_input_validation` | 26 | 146 | 17.8% |
-| `resource_exhaustion` | 22 | 87 | 25.3% |
-| `integer_overflow_underflow` | 20 | 78 | 25.6% |
-| `consensus_divergence` | 18 | 65 | 27.7% |
-| `missing_bounds_check` | 8 | 39 | 20.5% |
-| `improper_state_update` | 8 | 28 | 28.6% |
+| Source | Critical | High | Medium | Low | Not eligible | Tier uncertain |
+|---|---:|---:|---:|---:|---:|---:|
+| Bounty-graded (n=60) | 2 | 16 | 39 | 3 | 0 | 0 |
+| LLM-estimated (n=1,552) | 0 | **0** | 242 | 180 | 1,020 | **110** |
+| Combined EF (n=1,612) | **2** | **16** | **281** | **183** | **1,020** | **110** |
 
-The counts provide a practical audit queue: validation, bounded resource use,
-arithmetic, determinism, bounds, and state updates cover 102/128 (79.7%) of the
-combined Critical/High set.
+The important result is negative but useful: estimated severity expands the
+eligibility and triage population, but it does **not** expand the
+paper-quality exact High sample. There are still only 18 confirmed
+Critical/High records, all bounty-graded.
 
-Within the 110 LLM-estimated High records:
+Consequently:
 
-- 89 (80.9%) are `liveness_dos`;
-- 21 (19.1%) are `chain_split`;
-- all 110 are marked `remote_single_message_or_tx`;
-- 55 are `spec_level` and 55 `client_specific`.
+- exact-tier inference must use the 60 bounty-graded records and report its
+  small-sample limitation;
+- the 110 former High estimates are a candidate queue, not confirmed severe
+  vulnerabilities;
+- Critical remains too sparse for separate analysis (n=2), so even the
+  bounty-grade analysis should combine Critical and High.
 
-These values show that the model applies the EF-bounty semantics it was given:
-High requires a remotely reachable, network-scale path. They are a model-output
-decomposition, not independent evidence that these proportions describe the
-true historical vulnerability population.
+## 4. What is still interesting in the 110-candidate queue
 
-## 4. Why client severity rankings are invalid
+The queue is useful for prioritizing manual validation:
 
-The estimator prompt includes a hard-coded historical network-share class for
-each client. Its deterministic guardrail caps client-specific liveness DoS on a
-`MINOR` client from High to Medium. Therefore the output tier is mechanically
-dependent on client identity.
+- 89/110 (80.9%) are modelled as `liveness_dos`;
+- 21/110 (19.1%) are modelled as `chain_split`;
+- 99/110 (90.0%) are `B_corroborated`, while 11 are `C_candidate`;
+- the leading root causes are `resource_exhaustion` (20),
+  `missing_input_validation` (19), `integer_overflow_underflow` (18), and
+  `consensus_divergence` (14);
+- those four classes contain 71/110 candidates (64.5%).
 
-This effect is visible in the data:
+These are workload counts, not incidence or risk estimates. The estimator saw
+`root_cause`, `attack_path`, and `label`, so associations with those fields are
+partly circular.
 
-| Source | Geth Critical/High | Lighthouse Critical/High | Both | All Critical/High |
-|---|---:|---:|---:|---:|
-| Bounty-graded | 6 | 2 | 8 (44.4%) | 18 |
-| LLM-estimated | 59 | 48 | **107 (97.3%)** | 110 |
+The queue also exposes a valuable data-quality target: five candidates have
+`label=test`. Those records should receive source-level review before any
+security or severity claim.
 
-All 55 LLM High records classified as `client_specific` are Geth (34) or
-Lighthouse (21). This is consistent with the prompt's dominant/major share
-priors and cap, so it must not be reported as evidence that Geth or Lighthouse
-is intrinsically more vulnerable.
+## 5. Client-share bias is measured, not ignored
 
-**Permitted use:** prioritize candidate fixes for manual review under the
-specified historical share assumptions.
+The original candidate distribution is Geth 59, Lighthouse 48, and one each
+for Erigon, Nethermind, and Prysm. Geth plus Lighthouse therefore account for
+107/110 (97.3%) of candidates.
 
-**Prohibited use:** rank clients, compare client safety, estimate vulnerability
-incidence, or infer that a client causes higher severity.
+This is not evidence that those clients are less safe. Client identity entered
+the estimator through hard-coded share classes, and the guardrail capped
+client-specific DoS for clients called `MINOR`. All 55 client-specific
+candidates are Geth or Lighthouse. The concentration is therefore a diagnostic
+of estimator construction.
 
-## 5. Circularity with root cause, attack path, and subsystem
+Permitted use:
 
-The prompt explicitly supplies `root_cause`, `attack_path`, and `label`.
-Associations between those fields and `severity_estimated` are therefore partly
-constructed by the estimator. They are useful for checking internal consistency
-and organizing an audit backlog, but not as independent statistical discoveries.
+- order a manual review queue under explicitly stated assumptions;
+- compare reviewed source evidence within the queue;
+- measure how much labels change under a blind re-estimation.
 
-For the same reason, p-values for “root cause predicts estimated severity” would
-be misleading: the predictor was an input used to create the outcome. This
-analysis reports counts and review priorities only.
+Prohibited use:
 
-## 6. Defensible paper use
+- rank client safety;
+- compare vulnerability incidence by client;
+- treat 107/110 as an empirical client-risk concentration;
+- use the candidate label as the dependent variable in a test whose predictors
+  were supplied to the estimator.
 
-The defensible severity contribution is methodological and operational:
+## 6. Paper contribution
 
-> A provenance-aware EF-bounty model increases the analysable tiered population
-> from 60 to 592 records, while a two-stage eligibility/severity design prevents
-> out-of-scope fixes from being treated as Low. The resulting 128-record
-> Critical/High queue is useful for audit prioritization, but client and
-> category comparisons require bias controls because those variables informed
-> the estimator.
+The defensible contribution is a provenance-aware treatment of missing
+severity:
 
-Primary paper tables should therefore:
+> LLM decomposition makes 1,552 otherwise unrated client records searchable
+> under EF-bounty concepts, but exact network-impact tiers require external
+> threshold evidence. Auditing the 110 generated High labels therefore converts
+> them to a traceable `tier-uncertain` queue instead of inflating the confirmed
+> severe sample from 18 to 128.
 
-1. report bounty-graded and LLM-estimated counts separately;
-2. exclude all `upstream-cvss` rows;
-3. combine Critical/High, because estimated Critical has n=0;
-4. treat the 128 records as a review queue, not 128 confirmed severe
-   vulnerabilities;
-5. report all client-level results as model diagnostics, not findings.
+This is more informative than either discarding all estimates or accepting
+them at face value. It separates three research objects:
 
-## 7. Validation required for inferential severity claims
+1. published grades for exact-tier inference;
+2. estimated eligibility and impact components for exploratory analysis;
+3. threshold-uncertain candidates for source-level validation.
 
-Before using estimated severity for hypothesis tests:
+## 7. Next validation analysis
 
-1. manually review a stratified sample of the 110 LLM High, 242 Medium, 180
-   Low, and 1,020 not-eligible records;
-2. use at least two independent reviewers and report agreement;
-3. rerun a blind estimator without client share, `root_cause`, `attack_path`,
-   or `label`;
-4. compare blind and context-assisted outputs;
-5. replace static share classes with a versioned observation date and source if
-   network-share-aware severity remains a research target.
+For inferential use of estimated tiers:
+
+1. review a stratified sample across all original tiers, not only High;
+2. have at least two independent reviewers and report agreement;
+3. record fix-date network share with a source and observation date;
+4. rerun a blind estimator without client identity/share, `root_cause`,
+   `attack_path`, or `label`;
+5. compare original, blind, and human labels with a confusion matrix;
+6. only promote `tier-uncertain` to an exact tier when the EF impact threshold
+   is evidenced.
 
 ## Generated evidence
 

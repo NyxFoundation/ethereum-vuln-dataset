@@ -21,8 +21,10 @@ The working thesis is:
    contamination that must be reviewed before interpreting protocol labels.
 3. [`advisory_scope_review.md`](advisory_scope_review.md) resolves that scope
    contamination and reruns direct-client versus no-ID comparisons.
-4. [`ef_severity_analysis.md`](ef_severity_analysis.md) uses the EF-bounty
-   `severity_estimated` population without mixing upstream CVSS.
+4. [`ef_severity_analysis.md`](ef_severity_analysis.md) audits the
+   EF-bounty `severity_estimated` population without mixing upstream CVSS. Its
+   primary exact-tier result uses 60 bounty grades; 110 original LLM High
+   labels are retained as a traceable `tier-uncertain` candidate queue.
 5. CWE comparison: test how much protocol context adds beyond generic weakness
    labels when explaining network impact.
 6. Prior-work comparison: replicate and extend MineBlockVuln (ESEC/FSE 2022)
@@ -37,6 +39,7 @@ From the repository root:
 
 ```bash
 UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/paper_analysis.py
+UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/severity_analysis.py
 git diff --exit-code docs/paper/tables
 ```
 

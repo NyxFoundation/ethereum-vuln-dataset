@@ -149,7 +149,10 @@ column:
   bounty tier, calibrated against the graded rows (exact-tier ~60% / ±1 ~80% on
   real severe bugs). It **never overwrites** the graded `severity`;
   `severity_source` marks each row `bounty-graded` · `upstream-cvss` ·
-  `llm-estimated`. Method & calibration: [`docs/severity_labeling.md`](docs/severity_labeling.md).
+  `llm-estimated`. In the paper analysis, all 110 LLM-generated High labels are
+  conservatively treated as `tier-uncertain`; only 18 bounty-graded
+  Critical/High records are exact-tier evidence. Method, correction, and
+  calibration: [`docs/severity_labeling.md`](docs/severity_labeling.md).
 
 ## Clients
 

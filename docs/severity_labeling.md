@@ -97,6 +97,24 @@ enrichments. It **never overwrites** the real `severity`:
 | `impact_type` · `reachability` · `blast_radius` | the decomposition (the reliable part) |
 | `severity_why` | one-sentence rationale |
 
+## Audited High analysis label
+
+The paper analysis does not treat the 110 LLM-generated High values as exact
+tiers. `scripts/severity_analysis.py` preserves `severity_estimated` and adds a
+non-destructive review layer:
+
+- all 55 `client_specific` High estimates become `tier-uncertain` because the
+  unversioned static share prior does not prove >33% impact at the fix date;
+- all 55 `spec_level` High estimates become `tier-uncertain` because a shared
+  rule does not prove that all implementations shared the defect or that >33%
+  of the network was affected.
+
+This correction does not infer Medium or Low without evidence. The original and
+audited labels, status, and reason are checked into
+[`paper/tables/ef_severity_high_review_queue.csv`](paper/tables/ef_severity_high_review_queue.csv).
+See [`paper/ef_severity_analysis.md`](paper/ef_severity_analysis.md) for the
+corrected counts and permitted analyses.
+
 ## Recommended rollout
 1. Estimate EF-severity **only for client-code rows**; leave dependency-CVE rows
    as upstream CVSS + `not-eligible`.
@@ -105,6 +123,8 @@ enrichments. It **never overwrites** the real `severity`:
    ground truth and the `llm-estimated` slice as a triage prior.
 3. Re-validate whenever the prompt or model changes; report exact / ±1 tier on
    the client-code graded rows.
+4. Do not promote an LLM tier to a paper-quality exact High without
+   independently establishing the EF impact threshold at the fix date.
 
 *See [`security_report.md`](./security_report.md) §2 for the bounty severity
 definitions and [`limitations.md`](./limitations.md) for caveats.*

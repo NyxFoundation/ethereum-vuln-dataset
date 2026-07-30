@@ -85,4 +85,4 @@ Critical** (geth, besu, teku). Severities preserved through the canonical path.
 | `pre_fix_code` / `post_fix_code` (inline) | **86.4%** | **98.2% of the 1,959 rows with a resolved commit**; 36 committed rows lack post-fix code and 266 have no fix commit |
 | `silent_fix_prob` (LLM classifier) | 40.3% | 897 classified rows (C_candidate + plausible gate-dropped) |
 | `severity` (rated) | 6.4% | 143 rows; provenance is 60 `bounty-graded` and 83 rated `upstream-cvss` |
-| `severity_estimated` (bounty-tier) | **30.3%** | 675 Low/Medium/High/Critical estimates; 1,549 `not-eligible`, one unassessed. See `docs/severity_labeling.md`. |
+| `severity_estimated` (bounty-tier) | **30.3%** | 675 source Low/Medium/High/Critical values; 1,549 `not-eligible`, one unassessed. For paper analysis, the 110 LLM-generated High values are corrected to `tier-uncertain`, while the immutable source labels remain available. See `docs/severity_labeling.md`. |

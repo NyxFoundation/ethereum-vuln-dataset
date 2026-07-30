@@ -1,10 +1,17 @@
 #!/usr/bin/env python3
-"""Generate EF bug-bounty severity analysis tables from the frozen snapshot.
+"""Generate provenance-aware EF bug-bounty severity analysis tables.
 
-Only ``bounty-graded`` and ``llm-estimated`` rows share the EF-bounty impact
-model. ``upstream-cvss`` and ``unassessed`` rows are excluded. Analysis is
-two-stage: bounty eligibility first, then Critical/High versus Medium/Low among
-eligible rows.
+The original LLM estimates are retained for reproducibility.  A conservative
+review layer reclassifies every LLM-estimated High as ``tier-uncertain``:
+
+* ``client_specific`` estimates used an unversioned client-share prior, so the
+  >33% EF threshold is not established at the fix date;
+* ``spec_level`` says that code implements a shared rule, but does not prove
+  that every implementation had the defect or that >33% of the network was
+  affected.
+
+The former High estimates remain a candidate queue.  They are never combined
+with bounty-graded Critical/High records as if they were confirmed tiers.
 """
 
 from __future__ import annotations
@@ -18,6 +25,7 @@ import pandas as pd
 EF_SOURCES = {"bounty-graded", "llm-estimated"}
 ELIGIBLE_TIERS = {"Critical", "High", "Medium", "Low"}
 SEVERE_TIERS = {"Critical", "High"}
+UNCERTAIN_TIER = "tier-uncertain"
 DIMENSIONS = [
     "source_platform",
     "layer",
@@ -32,6 +40,45 @@ def pct(count: int, denominator: int) -> float:
     return round(100 * count / denominator, 3) if denominator else 0.0
 
 
+def apply_high_review(ef: pd.DataFrame) -> pd.DataFrame:
+    """Add a traceable analysis label without overwriting source estimates."""
+    reviewed = ef.copy()
+    reviewed["severity_analysis_label"] = reviewed["severity_estimated"]
+    reviewed["severity_review_status"] = "unreviewed_estimate"
+    reviewed["severity_review_reason"] = (
+        "Original LLM estimate retained; this row was not part of the High audit."
+    )
+
+    bounty = reviewed["severity_source"].eq("bounty-graded")
+    reviewed.loc[bounty, "severity_review_status"] = "confirmed_bounty_grade"
+    reviewed.loc[bounty, "severity_review_reason"] = (
+        "Published bounty grade; no LLM correction applied."
+    )
+
+    high = reviewed["severity_source"].eq("llm-estimated") & reviewed[
+        "severity_estimated"
+    ].eq("High")
+    client_specific = high & reviewed["blast_radius"].eq("client_specific")
+    spec_level = high & reviewed["blast_radius"].eq("spec_level")
+    other = high & ~(client_specific | spec_level)
+
+    reviewed.loc[high, "severity_analysis_label"] = UNCERTAIN_TIER
+    reviewed.loc[high, "severity_review_status"] = "threshold_unverified"
+    reviewed.loc[client_specific, "severity_review_reason"] = (
+        "Exact High removed: the estimator used an unversioned static client-share "
+        "prior, so >33% affected at the fix date is not evidenced."
+    )
+    reviewed.loc[spec_level, "severity_review_reason"] = (
+        "Exact High removed: implementing a shared specification rule does not prove "
+        "that other clients shared the defect or that >33% of the network was affected."
+    )
+    reviewed.loc[other, "severity_review_reason"] = (
+        "Exact High removed: the record does not independently establish the EF >33% "
+        "impact threshold."
+    )
+    return reviewed
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -44,9 +91,17 @@ def main() -> int:
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
     df = pd.read_parquet(args.input)
-    ef = df[df["severity_source"].isin(EF_SOURCES)].copy()
-    ef["bounty_eligible"] = ef["severity_estimated"].isin(ELIGIBLE_TIERS)
-    ef["critical_or_high"] = ef["severity_estimated"].isin(SEVERE_TIERS)
+    ef = apply_high_review(df[df["severity_source"].isin(EF_SOURCES)].copy())
+    ef["original_bounty_eligible"] = ef["severity_estimated"].isin(ELIGIBLE_TIERS)
+    ef["original_critical_or_high"] = ef["severity_estimated"].isin(SEVERE_TIERS)
+    ef["confirmed_critical_or_high"] = (
+        ef["severity_source"].eq("bounty-graded")
+        & ef["severity_analysis_label"].isin(SEVERE_TIERS)
+    )
+    ef["llm_high_candidate"] = (
+        ef["severity_source"].eq("llm-estimated")
+        & ef["severity_analysis_label"].eq(UNCERTAIN_TIER)
+    )
 
     summary = [
         ("snapshot_rows", len(df), len(df), "all frozen snapshot records"),
@@ -69,22 +124,34 @@ def main() -> int:
             "no severity assessment",
         ),
         (
-            "ef_bounty_eligible",
-            int(ef["bounty_eligible"].sum()),
+            "original_ef_bounty_eligible",
+            int(ef["original_bounty_eligible"].sum()),
             len(ef),
-            "Critical/High/Medium/Low among EF-comparable rows",
+            "Critical/High/Medium/Low before the High audit",
         ),
         (
             "ef_not_eligible",
-            int((~ef["bounty_eligible"]).sum()),
+            int(ef["severity_estimated"].eq("not-eligible").sum()),
             len(ef),
             "not-eligible is a scope decision, not a Low tier",
         ),
         (
-            "ef_critical_or_high",
-            int(ef["critical_or_high"].sum()),
-            int(ef["bounty_eligible"].sum()),
-            "Critical/High among bounty-eligible EF-comparable rows",
+            "original_ef_critical_or_high",
+            int(ef["original_critical_or_high"].sum()),
+            int(ef["original_bounty_eligible"].sum()),
+            "pre-audit Critical/High; includes unverified LLM High",
+        ),
+        (
+            "confirmed_bounty_critical_or_high",
+            int(ef["confirmed_critical_or_high"].sum()),
+            int(ef["severity_source"].eq("bounty-graded").sum()),
+            "published bounty grades only",
+        ),
+        (
+            "llm_high_candidates_tier_uncertain",
+            int(ef["llm_high_candidate"].sum()),
+            int(ef["severity_source"].eq("llm-estimated").sum()),
+            "original LLM High removed from exact-tier analysis",
         ),
     ]
     summary_frame = pd.DataFrame(
@@ -101,9 +168,16 @@ def main() -> int:
         "llm_estimated": ef[ef["severity_source"].eq("llm-estimated")],
         "combined_ef": ef,
     }
-    tier_order = ["Critical", "High", "Medium", "Low", "not-eligible"]
+    tier_order = [
+        "Critical",
+        "High",
+        "Medium",
+        "Low",
+        "not-eligible",
+        UNCERTAIN_TIER,
+    ]
     for population, frame in populations.items():
-        counts = frame["severity_estimated"].value_counts()
+        counts = frame["severity_analysis_label"].value_counts()
         for tier in tier_order:
             count = int(counts.get(tier, 0))
             tier_rows.append(
@@ -124,18 +198,20 @@ def main() -> int:
         "combined_ef": ef,
         "llm_only": ef[ef["severity_source"].eq("llm-estimated")],
     }.items():
-        eligible = frame[frame["bounty_eligible"]]
+        eligible = frame[frame["original_bounty_eligible"]]
         for dimension in DIMENSIONS:
             for category, group in eligible.groupby(dimension, dropna=False):
-                severe = int(group["critical_or_high"].sum())
+                confirmed = int(group["confirmed_critical_or_high"].sum())
+                candidates = int(group["llm_high_candidate"].sum())
                 dimension_rows.append(
                     {
                         "population": population,
                         "dimension": dimension,
                         "category": category,
                         "eligible_rows": len(group),
-                        "critical_or_high_rows": severe,
-                        "critical_or_high_percent": pct(severe, len(group)),
+                        "confirmed_critical_or_high_rows": confirmed,
+                        "llm_high_candidate_rows": candidates,
+                        "candidate_percent": pct(candidates, len(group)),
                     }
                 )
     pd.DataFrame(dimension_rows).to_csv(
@@ -143,7 +219,7 @@ def main() -> int:
     )
 
     llm = ef[ef["severity_source"].eq("llm-estimated")].copy()
-    llm_high = llm[llm["severity_estimated"].eq("High")]
+    llm_high = llm[llm["llm_high_candidate"]]
     decomposition_rows: list[dict] = []
     for dimension in ["impact_type", "reachability", "blast_radius"]:
         for category, count in llm_high[dimension].value_counts(dropna=False).items():
@@ -151,8 +227,8 @@ def main() -> int:
                 {
                     "dimension": dimension,
                     "category": category,
-                    "high_rows": int(count),
-                    "high_denominator": len(llm_high),
+                    "candidate_rows": int(count),
+                    "candidate_denominator": len(llm_high),
                     "percent": pct(int(count), len(llm_high)),
                 }
             )
@@ -165,16 +241,18 @@ def main() -> int:
         "bounty_graded": ef[ef["severity_source"].eq("bounty-graded")],
         "llm_estimated": llm,
     }.items():
-        eligible = frame[frame["bounty_eligible"]]
+        eligible = frame[frame["original_bounty_eligible"]]
         for client, group in eligible.groupby("source_platform"):
-            severe = int(group["critical_or_high"].sum())
+            confirmed = int(group["confirmed_critical_or_high"].sum())
+            candidates = int(group["llm_high_candidate"].sum())
             client_rows.append(
                 {
                     "severity_source": source,
                     "source_platform": client,
                     "eligible_rows": len(group),
-                    "critical_or_high_rows": severe,
-                    "critical_or_high_percent": pct(severe, len(group)),
+                    "confirmed_critical_or_high_rows": confirmed,
+                    "llm_high_candidate_rows": candidates,
+                    "candidate_percent": pct(candidates, len(group)),
                 }
             )
     pd.DataFrame(client_rows).to_csv(
@@ -188,6 +266,9 @@ def main() -> int:
         "source_url",
         "authority_tier",
         "severity_estimated",
+        "severity_analysis_label",
+        "severity_review_status",
+        "severity_review_reason",
         "severity_source",
         "impact_type",
         "reachability",
@@ -197,15 +278,18 @@ def main() -> int:
         "label",
         "severity_why",
     ]
-    ef[ef["critical_or_high"]][queue_columns].sort_values(
+    ef[ef["confirmed_critical_or_high"] | ef["llm_high_candidate"]][
+        queue_columns
+    ].sort_values(
         ["severity_estimated", "severity_source", "source_platform", "id"]
     ).to_csv(args.output_dir / "ef_severity_high_review_queue.csv", index=False)
 
     print(
         "EF severity analysis:",
         f"{len(ef)} comparable,",
-        f"{int(ef['bounty_eligible'].sum())} eligible,",
-        f"{int(ef['critical_or_high'].sum())} Critical/High",
+        f"{int(ef['original_bounty_eligible'].sum())} originally eligible,",
+        f"{int(ef['confirmed_critical_or_high'].sum())} confirmed Critical/High,",
+        f"{int(ef['llm_high_candidate'].sum())} tier-uncertain candidates",
     )
     return 0
 
