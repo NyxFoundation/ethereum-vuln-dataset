@@ -204,43 +204,59 @@ per-anchor candidate list for anyone who wants to attempt the pairing manually.
 
 ## 6. What would make this answerable
 
-The blocker is now precisely located: an anchor at specification-text granularity is
-readable off 7.8% of records, and the two ways of raising that both failed validation. In
-order of value:
+The blocker is precisely located: an anchor at specification-text granularity is readable
+off 7.8% of records, and every attempt to raise it has failed for the same reason in a
+different guise.
 
-1. **Anchor from a real diff, not a code snapshot.** Every code-derived failure in section
-   1 comes from the same cause — presence in a file is not aboutness. A diff restricted to
-   changed hunks would fix that at the root, and it would also make the naming-convention
-   matching safe again, because a generic `processBlock` call is only evidence when the fix
-   actually changed it. The snapshot stores `pre_fix_code` and `post_fix_code`, so a
-   line-level diff is derivable without new collection; anchors present in post and absent
-   from pre are the conservative starting point.
-2. **Anchors the text never names.** Beyond function names there are the precompile
-   address, gas-schedule constant, or SSZ container a hunk touches. These would raise
-   coverage well past 7.8% and, being value-level rather than name-level, do not collide
-   with ordinary method names.
-3. **Normalise anchors against the EIP registry.** Two records here reach the same surface
-   only because both authors made the same typo (EIP-7521 for 7251). Validating extracted
-   numbers against the published EIP list would merge misspellings and drop numbers that
-   are not EIPs at all.
-4. **Manual pairing of the 22 dated anchor sets.** For each, decide whether the records
+**Tried and rejected: anchor from changed lines.** Restricting the scan to lines present in
+`post_fix_code` but absent from `pre_fix_code` is the obvious repair for "presence in a file
+is not aboutness", and it does raise coverage to 16.5% of records with 110 multi-client
+anchors ([`tables/cross_client_diff_anchor_diagnostic.csv`](tables/cross_client_diff_anchor_diagnostic.csv)).
+It is not adopted, because a second mechanism survives it: spec functions call each other,
+so a focused consensus-layer fix touches several of them and its anchor set still does not
+say which surface the fix is *about*. One Grandine refactor lands under three anchors.
+
+The diagnostic settles it arithmetically. At a cap of one anchor per record — the strictest
+reading, admitting only records whose changed lines name a single surface — changed-line
+anchoring yields 156 records (7.0%) and 20 multi-client anchors, *worse than prose on both
+counts* (174 records, 7.8%, 35 anchors). Its apparent advantage comes entirely from
+admitting the multi-anchor records, which are the ones carrying the contamination.
+
+An anchors-per-record cap is not the separator either. The records yielding four or
+more anchors include sweeping refactors **and** the most focused records in the corpus —
+"Denial of service via `MulMod`", one of the eight confirmed severe bounty-graded records,
+and "fix: use deposit_requests_start_index in Gloas process_operations", whose own title
+names a spec function. Capping at two would discard exactly what the analysis wants. The
+measurement is checked in so the dead end stays reproducible.
+
+What is left, in order of value:
+
+1. **Value-level anchors instead of name-level ones.** The precompile address, gas-schedule
+   constant, or SSZ container a changed line touches. These do not collide with ordinary
+   method names and do not spread across a call graph the way function names do, so they
+   should not inherit either failure mode. This is the only untried route to coverage.
+2. **Manual pairing of the 22 dated anchor sets.** For each, decide whether the records
    describe the same defect, independent defects on a shared surface, or ordinary parallel
    feature work. Only that converts the candidate list into a measured rate with a stated
    denominator, and at 22 anchors it is a short review. The audits already done suggest most
-   pairs will be co-location: even the best case found, `process_bls_to_execution_change`
-   across Teku and Nimbus 84 days apart, has the two records addressing different concerns
-   on a shared operation.
-5. **A propagation-shaped hypothesis, tested on a bigger anchor set.** If variant
+   pairs will be co-location: even the best case found,
+   `process_bls_to_execution_change` across Teku and Nimbus 84 days apart, has the two
+   records addressing different concerns on a shared operation.
+3. **Normalise anchors against the EIP registry.** Two records here reach the same surface
+   only because both authors made the same typo (EIP-7521 for 7251). Validating extracted
+   numbers against the published EIP list would merge misspellings and drop numbers that are
+   not EIPs at all.
+4. **A propagation-shaped hypothesis, once an anchor set is large enough.** If variant
    propagation exists it should appear as a short-span, same-defect pair *outside* a shared
-   fork-development window. That is a falsifiable prediction, but testing it needs step 1
-   first — at 22 anchors, all four short-span cases are inside such a window.
+   fork-development window. At 22 anchors all four short-span cases are inside one, so the
+   prediction is currently untestable rather than unsupported.
 
 ## Reproduce
 
 ```bash
 UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/resolve_fix_dates.py
 UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/cross_client_recurrence.py \
-  --iterations 5000
+  --iterations 5000 --diff-anchor-diagnostic
 git diff --exit-code docs/paper/tables
 ```
 
@@ -257,5 +273,8 @@ count.
 - [`tables/cross_client_spec_anchors.csv`](tables/cross_client_spec_anchors.csv)
 - [`tables/cross_client_anchor_precedence.csv`](tables/cross_client_anchor_precedence.csv)
 - [`tables/cross_client_anchor_first_mover.csv`](tables/cross_client_anchor_first_mover.csv)
+- [`tables/cross_client_consensus_fn_audit.csv`](tables/cross_client_consensus_fn_audit.csv)
+- [`tables/cross_client_anchor_precision_audit.csv`](tables/cross_client_anchor_precision_audit.csv)
+- [`tables/cross_client_diff_anchor_diagnostic.csv`](tables/cross_client_diff_anchor_diagnostic.csv)
 - [`tables/cross_client_recurrence_summary.csv`](tables/cross_client_recurrence_summary.csv)
 - [`tables/fix_date_coverage.csv`](tables/fix_date_coverage.csv)

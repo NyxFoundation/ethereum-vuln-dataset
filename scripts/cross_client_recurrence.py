@@ -260,6 +260,61 @@ def extract_consensus_fns(text: str) -> list[str]:
     return sorted(set(found))
 
 
+def added_lines(pre: str, post: str, cap: int = 40000) -> str:
+    """Lines in ``post`` absent from ``pre``, i.e. text the fix introduced or rewrote."""
+    seen = {ln.strip() for ln in str(pre or "")[:cap].splitlines() if ln.strip()}
+    return "\n".join(
+        ln for ln in str(post or "")[:cap].splitlines()
+        if ln.strip() and ln.strip() not in seen
+    )
+
+
+def diff_anchor_diagnostic(data: pd.DataFrame) -> pd.DataFrame:
+    """Measure -- and reject -- anchoring from changed lines instead of whole files.
+
+    Restricting the scan to added lines is the obvious repair for "presence in a file is
+    not aboutness", and it does raise coverage from 7.8% to 16.5% of records. It is not
+    adopted, because a second mechanism survives it: a focused consensus-layer fix touches
+    several spec-function calls, since spec functions call each other, so a record's anchor
+    set still does not say which surface the fix is *about*. Sampling showed one Grandine
+    refactor ("Deprecate unsafe arithmetics") landing under three different anchors
+    alongside genuinely narrow fixes.
+
+    An anchors-per-record cap looked like the separator and is not. Records yielding four
+    or more anchors include sweeping refactors *and* the most focused records in the
+    corpus: "Denial of service via ``MulMod``" -- one of the eight confirmed severe
+    bounty-graded records -- and "fix: use deposit_requests_start_index in Gloas
+    process_operations", whose own title names a spec function. Capping at two would
+    discard exactly the records the analysis wants.
+
+    This function exists so that negative result stays reproducible rather than living
+    only in prose. It never feeds the main analysis.
+    """
+    diff = [added_lines(a, b) for a, b in zip(data["pre_fix_code"], data["post_fix_code"])]
+    per_row = pd.Series(diff, index=data.index).map(extract_anchors)
+    counts = per_row.map(len)
+    rows = []
+    for cap in (1, 2, 3, 10**6):
+        kept = per_row.where(counts.le(cap), other=pd.Series([[]] * len(per_row),
+                                                             index=per_row.index))
+        pairs = [{"anchor": a, "client": data.at[i, "source_platform"]}
+                 for i, anchors in kept.items() for a in anchors]
+        multi = 0
+        if pairs:
+            spread = pd.DataFrame(pairs).groupby("anchor")["client"].nunique()
+            multi = int((spread >= 2).sum())
+        rows.append(
+            {
+                "anchors_per_record_cap": "none" if cap > 1000 else cap,
+                "records_with_an_anchor": int(kept.map(bool).sum()),
+                "records_pct": round(100 * kept.map(bool).sum() / len(data), 1),
+                "multi_client_anchors": multi,
+                "adopted": False,
+            }
+        )
+    return pd.DataFrame(rows)
+
+
 def anchors_per_record(data: pd.DataFrame) -> pd.Series:
     """All anchors for each record. Prose only -- code failed validation for every kind.
 
@@ -547,6 +602,8 @@ def main() -> int:
                          "precedence analysis, which is otherwise skipped")
     ap.add_argument("--out-dir", type=Path, default=Path("docs/paper/tables"))
     ap.add_argument("--iterations", type=int, default=20000)
+    ap.add_argument("--diff-anchor-diagnostic", action="store_true",
+                    help="also emit the rejected changed-lines anchoring measurement")
     args = ap.parse_args()
 
     data = pd.read_parquet(args.inp)
@@ -646,6 +703,11 @@ def main() -> int:
             args.out_dir / "cross_client_anchor_first_mover.csv", index=False
         )
     summary.to_csv(args.out_dir / "cross_client_recurrence_summary.csv", index=False)
+    if args.diff_anchor_diagnostic:
+        diag = diff_anchor_diagnostic(data)
+        diag.to_csv(args.out_dir / "cross_client_diff_anchor_diagnostic.csv", index=False)
+        print("\n=== rejected: anchoring from changed lines ===")
+        print(diag.to_string(index=False))
 
     print("=== cross-client spread by surface class, stratified by cluster size ===")
     print(comparison.to_string(index=False))

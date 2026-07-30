@@ -83,7 +83,7 @@ UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/audit_bounty_graded_population.
 UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/cwe_context_analysis.py
 UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/resolve_fix_dates.py
 UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/cross_client_recurrence.py \
-  --iterations 5000
+  --iterations 5000 --diff-anchor-diagnostic
 git diff --exit-code docs/paper/tables
 ```
 
