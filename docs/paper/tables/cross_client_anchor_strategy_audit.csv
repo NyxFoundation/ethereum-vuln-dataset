@@ -1,0 +1,7 @@
+anchor_vocabulary,match_scope,records_with_anchor,records_pct,multi_client_anchors,outcome,why
+eip_reference,prose,174,7.8,35,adopted,"Author names the EIP deliberately; residual error is a blocker or changelog mention, ~5-in-8 precision"
+eip_reference,whole file (post_fix_code),406,18.2,,rejected,A fix touching a fork-config or reference-test file inherits every EIP that file lists: 0 of 14 reviewed matches were real
+consensus_fn_name,whole file (post_fix_code),406,18.2,63,rejected,"Generic names collide (process_block, get_ancestor are ordinary methods) and presence is not aboutness: 11 of 11 sampled anchors contaminated over 122 records"
+any_name,changed lines only,368,16.5,110,rejected,"Removes file-level inheritance but spec functions call each other, so a focused fix touches several; at a 1-anchor cap it yields 7.0% and 20 anchors, worse than prose on both"
+ssz_container_type,changed lines only,352,15.8,60,rejected,Structural types are ubiquitous in consensus code (BeaconState in 146 records) and collide across domains (Checkpoint matched Polygon Bor's unrelated checkpoint type)
+spec_constant,changed lines only,134,6.0,35,rejected,"Network preset and config files enumerate every constant with its value, so two lodestar preset records manufacture the multi-client status of dozens of constants"

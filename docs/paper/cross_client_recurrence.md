@@ -202,54 +202,58 @@ absent, in either direction.
 The contribution is a demonstration that both candidate units fail, and a dated,
 per-anchor candidate list for anyone who wants to attempt the pairing manually.
 
-## 6. What would make this answerable
+## 6. Why code-derived anchoring cannot work here
 
-The blocker is precisely located: an anchor at specification-text granularity is readable
-off 7.8% of records, and every attempt to raise it has failed for the same reason in a
-different guise.
+An anchor at specification-text granularity is readable off 7.8% of records, and five
+attempts to raise that all failed. Their outcomes are checked in as
+[`tables/cross_client_anchor_strategy_audit.csv`](tables/cross_client_anchor_strategy_audit.csv):
 
-**Tried and rejected: anchor from changed lines.** Restricting the scan to lines present in
-`post_fix_code` but absent from `pre_fix_code` is the obvious repair for "presence in a file
-is not aboutness", and it does raise coverage to 16.5% of records with 110 multi-client
-anchors ([`tables/cross_client_diff_anchor_diagnostic.csv`](tables/cross_client_diff_anchor_diagnostic.csv)).
-It is not adopted, because a second mechanism survives it: spec functions call each other,
-so a focused consensus-layer fix touches several of them and its anchor set still does not
-say which surface the fix is *about*. One Grandine refactor lands under three anchors.
+| Vocabulary | Match scope | Coverage | Outcome |
+|---|---|---:|---|
+| EIP reference | prose | 7.8% | **adopted** (~5-in-8 precise) |
+| EIP reference | whole file | 18.2% | rejected — 0 of 14 reviewed matches real |
+| Consensus function name | whole file | 18.2% | rejected — 11 of 11 sampled anchors contaminated |
+| Any name | changed lines only | 16.5% | rejected — worse than prose at a 1-anchor cap |
+| SSZ container type | changed lines only | 15.8% | rejected — types are ubiquitous, and collide |
+| Spec constant | changed lines only | 6.0% | rejected — preset files enumerate every constant |
 
-The diagnostic settles it arithmetically. At a cap of one anchor per record — the strictest
-reading, admitting only records whose changed lines name a single surface — changed-line
-anchoring yields 156 records (7.0%) and 20 multi-client anchors, *worse than prose on both
-counts* (174 records, 7.8%, 35 anchors). Its apparent advantage comes entirely from
-admitting the multi-anchor records, which are the ones carrying the contamination.
+Each failure looked like a different bug and they are one structural fact. **The property
+that makes a vocabulary usable as a cross-implementation anchor — being shared verbatim
+across independent codebases — is the same property that makes it appear in every
+codebase's configuration, preset and type-declaration files.** So:
 
-An anchors-per-record cap is not the separator either. The records yielding four or
-more anchors include sweeping refactors **and** the most focused records in the corpus —
-"Denial of service via `MulMod`", one of the eight confirmed severe bounty-graded records,
-and "fix: use deposit_requests_start_index in Gloas process_operations", whose own title
-names a spec function. Capping at two would discard exactly what the analysis wants. The
-measurement is checked in so the dead end stays reproducible.
+- fork-configuration and reference-test files enumerate every EIP;
+- network preset files enumerate every spec constant with its value — two lodestar preset
+  records single-handedly manufacture the multi-client status of dozens of constants;
+- `BeaconState` and `SignedBeaconBlock` are declared and passed everywhere in consensus
+  code, appearing in 146 and 140 records respectively;
+- spec functions call each other, so restricting to changed lines does not narrow a
+  focused fix to one surface.
 
-What is left, in order of value:
+`Checkpoint` adds a plain cross-domain collision on top: it matched Erigon's
+`BorRoSnapshots` checkpoint work, a Polygon concept unrelated to the beacon-chain type.
 
-1. **Value-level anchors instead of name-level ones.** The precompile address, gas-schedule
-   constant, or SSZ container a changed line touches. These do not collide with ordinary
-   method names and do not spread across a call graph the way function names do, so they
-   should not inherit either failure mode. This is the only untried route to coverage.
-2. **Manual pairing of the 22 dated anchor sets.** For each, decide whether the records
+**Conclusion.** Presence-based matching is structurally unable to carry aboutness on this
+corpus, at any granularity. Only two things can: the author naming the surface, which is
+the 7.8% already used, or a semantic reading of what a change *does* rather than what it
+mentions.
+
+What remains worth doing:
+
+1. **Manual pairing of the 22 dated anchor sets.** For each, decide whether the records
    describe the same defect, independent defects on a shared surface, or ordinary parallel
    feature work. Only that converts the candidate list into a measured rate with a stated
    denominator, and at 22 anchors it is a short review. The audits already done suggest most
    pairs will be co-location: even the best case found,
    `process_bls_to_execution_change` across Teku and Nimbus 84 days apart, has the two
    records addressing different concerns on a shared operation.
-3. **Normalise anchors against the EIP registry.** Two records here reach the same surface
+2. **Normalise anchors against the EIP registry.** Two records here reach the same surface
    only because both authors made the same typo (EIP-7521 for 7251). Validating extracted
    numbers against the published EIP list would merge misspellings and drop numbers that are
    not EIPs at all.
-4. **A propagation-shaped hypothesis, once an anchor set is large enough.** If variant
-   propagation exists it should appear as a short-span, same-defect pair *outside* a shared
-   fork-development window. At 22 anchors all four short-span cases are inside one, so the
-   prediction is currently untestable rather than unsupported.
+3. **Raise coverage by asking a model what a change does**, not by matching what it
+   mentions — the one remaining route past 7.8%, and one this workspace would have to audit
+   the same way it audited the severity estimates.
 
 ## Reproduce
 
@@ -276,5 +280,6 @@ count.
 - [`tables/cross_client_consensus_fn_audit.csv`](tables/cross_client_consensus_fn_audit.csv)
 - [`tables/cross_client_anchor_precision_audit.csv`](tables/cross_client_anchor_precision_audit.csv)
 - [`tables/cross_client_diff_anchor_diagnostic.csv`](tables/cross_client_diff_anchor_diagnostic.csv)
+- [`tables/cross_client_anchor_strategy_audit.csv`](tables/cross_client_anchor_strategy_audit.csv)
 - [`tables/cross_client_recurrence_summary.csv`](tables/cross_client_recurrence_summary.csv)
 - [`tables/fix_date_coverage.csv`](tables/fix_date_coverage.csv)
