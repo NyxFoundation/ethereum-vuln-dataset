@@ -1,0 +1,4 @@
+population,records,any_cwe,any_cwe_pct,in_mitre_2025_top25,non_other_root_cause,non_other_root_cause_pct,non_other_protocol_label,non_other_protocol_label_pct,cwe_values
+all_graded_rows_as_published,18,3,16.7,0,17,94.4,17,94.4,CWE-190;CWE-400;CWE-439
+published_advisory_only,9,3,33.3,0,9,100.0,8,88.9,CWE-190;CWE-400;CWE-439
+published_advisory_client_code,8,2,25.0,0,8,100.0,8,100.0,CWE-190;CWE-439

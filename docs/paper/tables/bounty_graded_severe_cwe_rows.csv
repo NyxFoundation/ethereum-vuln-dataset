@@ -1,0 +1,19 @@
+id,source_platform,severity,provenance,upstream_toolchain_cve,cwe_top25,in_top25_2025,root_cause,label,title
+475682d10d661b75,consensus-specs,High,cross_client_keyword_heuristic,False,N/A,False,other,p2p,Ethereum 2.0 Networking Specification
+7482623489bc990c,lodestar,High,cross_client_keyword_heuristic,False,N/A,False,missing_input_validation,beacon-chain:justification-and-finality,feat: eip-8025 optional execution proofs
+dc7e3fa111ce0e2a,lodestar,High,cross_client_keyword_heuristic,False,N/A,False,consensus_divergence,beacon-chain:execution-payload,rename random to prevRandao as per the kiln v2 specs
+4f09bedbf1707694,lodestar,High,cross_client_keyword_heuristic,False,N/A,False,missing_input_validation,fork-choice,Implement Kintsugi specs :tea: (the Merge November sprint PR)
+3f495d3767bd5a5f,lodestar,High,cross_client_keyword_heuristic,False,N/A,False,missing_input_validation,beacon-chain:execution-payload,Run sim single node test with Geth catalyst to finality
+b89b66ccf953baca,nimbus,High,cross_client_keyword_heuristic,False,N/A,False,serialization_bug,beacon-chain:attestation,2 changes getting us closer to interop
+b1a6e88b2f095f12,reth,High,cross_client_keyword_heuristic,False,N/A,False,missing_input_validation,rpc,feat(trie): geth-compatible zero hashes for non-existent accounts in eth_getProof
+f960a5728e79e59b,reth,High,cross_client_keyword_heuristic,False,N/A,False,consensus_divergence,engine-api,feat: Check CL/Reth capability compatibility
+besu:ghsa-advisory:GHSA-4456-w38r-m53x,besu,Critical,published_advisory,False,CWE-190,False,integer_overflow_underflow,gas,Gas allocation error in CALL operations in Besu EVM [GHSA-4456-w38r-m53x CVE-2022-36025]
+geth:ghsa-advisory:GHSA-m6gx-rhvj-fh52,geth,Critical,published_advisory,True,CWE-400,False,resource_exhaustion,other,Denial of service due to Go CVE-2020-28362 [GHSA-m6gx-rhvj-fh52 CVE-2020-28362]
+besu:hyperledger-besu:GHSA-7pg2-p5vj-xp5h,besu,High,published_advisory,False,N/A,False,missing_input_validation,evm,"SHL, SHR, and SAR operations trigger native exception at key values"
+geth:ethereum-go-ethereum:GHSA-2gjw-fg97-vg3r,geth,High,published_advisory,False,N/A,False,resource_exhaustion,crypto,DoS via malicious p2p message
+geth:ethereum-go-ethereum:GHSA-9856-9gg9-qcmq,geth,High,published_advisory,False,N/A,False,consensus_divergence,opcodes,RETURNDATA corruption via datacopy
+geth:ethereum-go-ethereum:GHSA-xw37-57qp-9mm4,geth,High,published_advisory,False,N/A,False,consensus_divergence,transactions,Consensus flaw during block processing
+geth:ethereum-go-ethereum:GHSA-jm5c-rv3w-w83m,geth,High,published_advisory,False,N/A,False,integer_overflow_underflow,opcodes,Denial of service via `MulMod`
+geth:ethereum-go-ethereum:GHSA-69v6-xc2j-r2jf,geth,High,published_advisory,False,CWE-439,False,improper_state_update,precompiles,Shallow copy in the 0x4 precompile could lead to EVM memory corruption
+lighthouse:sigp-lighthouse:GHSA-wm9c-xvqq-5c28,lighthouse,High,published_advisory,False,N/A,False,missing_input_validation,beacon-chain:sync-committee,Incorrect processing of effective balances in Electra epoch processing
+ece24a10f23119be,lighthouse,High,repo_crawl_unattributed,False,N/A,False,missing_input_validation,beacon-chain:attestation,Improve validator monitor experience for high validator counts (#3728)

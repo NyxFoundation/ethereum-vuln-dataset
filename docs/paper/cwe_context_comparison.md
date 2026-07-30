@@ -41,7 +41,8 @@ Among the 18 bounty-graded Critical/High records:
 **Corrected population.** Eight of those 18 records were never graded by anyone: they
 inherited a severity from a keyword heuristic, and a ninth is an upstream Go toolchain
 CVE. See [`bounty_graded_population_audit.md`](bounty_graded_population_audit.md).
-Restricted to the eight records backed by a maintainer-issued advisory:
+Restricted to the eight records backed by a maintainer-issued advisory
+([`tables/bounty_graded_severe_cwe_by_population.csv`](tables/bounty_graded_severe_cwe_by_population.csv)):
 
 - 2/8 (25.0%) have any CWE (`CWE-190` and `CWE-439`);
 - 0/8 are members of MITRE's 2025 CWE Top 25;

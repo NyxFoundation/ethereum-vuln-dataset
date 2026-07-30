@@ -114,14 +114,21 @@ and `tables/bounty_graded_model_screen_by_row.csv` carries the per-row compariso
 
 ## 4. Corrected confirmed-severe population
 
-| Claim | Paper as written | Corrected |
-|---|---:|---:|
-| Confirmed Critical/High records | **18** | **8** |
-| Rows usable for exact-tier inference | 60 | 13 |
-| Confirmed severe records with any CWE | 3/18 (16.7%) | 2/8 (25.0%) |
-| Confirmed severe in MITRE 2025 CWE Top 25 | 0/18 | 0/8 |
-| Confirmed severe with non-`other` root cause | 17/18 (94.4%) | 8/8 (100%) |
-| Confirmed severe with non-`other` protocol label | 17/18 (94.4%) | 8/8 (100%) |
+From
+[`tables/bounty_graded_severe_cwe_by_population.csv`](tables/bounty_graded_severe_cwe_by_population.csv):
+
+| Claim | Paper as written | Advisory only | Advisory, client code |
+|---|---:|---:|---:|
+| Records | **18** | 9 | **8** |
+| Rows usable for exact-tier inference | 60 | 14 | 13 |
+| Any CWE | 3 (16.7%) | 3 | 2 (25.0%) |
+| In MITRE 2025 CWE Top 25 | **0** | **0** | **0** |
+| Non-`other` root cause | 17 (94.4%) | 9 | 8 (100%) |
+| Non-`other` protocol label | 17 (94.4%) | 8 | 8 (100%) |
+
+The middle column keeps the upstream Go toolchain CVE, and it is the record carrying
+`CWE-400` and an `other` protocol label; removing it is what takes both Ethereum
+coordinates to 8/8.
 
 The eight are Besu's CALL gas allocation error (Critical) and, at High: Besu's
 SHL/SHR/SAR native exception, Geth's p2p DoS, RETURNDATA corruption, block-processing
@@ -262,6 +269,8 @@ git diff --exit-code docs/paper/tables
 
 - [`tables/bounty_graded_provenance.csv`](tables/bounty_graded_provenance.csv)
 - [`tables/bounty_graded_provenance_counts.csv`](tables/bounty_graded_provenance_counts.csv)
+- [`tables/bounty_graded_severe_cwe_by_population.csv`](tables/bounty_graded_severe_cwe_by_population.csv)
+- [`tables/bounty_graded_severe_cwe_rows.csv`](tables/bounty_graded_severe_cwe_rows.csv)
 - [`tables/bounty_graded_model_screen.csv`](tables/bounty_graded_model_screen.csv)
 - [`tables/bounty_graded_model_screen_by_row.csv`](tables/bounty_graded_model_screen_by_row.csv)
 - [`tables/bounty_graded_model_agreement.csv`](tables/bounty_graded_model_agreement.csv)

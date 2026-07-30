@@ -40,9 +40,16 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import sys
 from pathlib import Path
 
 import pandas as pd
+
+try:  # same import shim as scripts/cwe_context_analysis.py
+    from scripts.paper_analysis import CWE_TOP_25_2025
+except ImportError:  # pragma: no cover - direct script invocation
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from paper_analysis import CWE_TOP_25_2025
 
 
 # A published GitHub security advisory is the only self-evidencing severity in this
@@ -109,6 +116,57 @@ def load_model_screens(cache_path: Path) -> pd.DataFrame:
 
 
 TIER_RANK = {"critical": 4, "high": 3, "medium": 2, "low": 1, "not-eligible": 0}
+
+
+def severe_cwe_audit(graded: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Recompute the CWE-coverage claim on the pre- and post-audit severe populations.
+
+    ``cwe_context_comparison.md`` reported this on all 18 apparently severe rows. Half
+    of those were never graded, so the claim needs the corrected denominator, and it
+    needs to come from a generated table rather than from prose arithmetic.
+    """
+    severe = graded[graded["severity"].isin(SEVERE)].copy()
+    severe["has_cwe"] = (
+        severe["cwe_top25"].notna()
+        & severe["cwe_top25"].ne("N/A")
+        & severe["cwe_top25"].ne("")
+    )
+    severe["in_top25_2025"] = severe["cwe_top25"].isin(CWE_TOP_25_2025)
+    severe["has_root_cause"] = severe["root_cause"].ne("other")
+    severe["has_protocol_label"] = severe["label"].ne("other")
+
+    populations = {
+        "all_graded_rows_as_published": severe,
+        "published_advisory_only": severe[severe["provenance"].eq("published_advisory")],
+        "published_advisory_client_code": severe[
+            severe["provenance"].eq("published_advisory")
+            & ~severe["upstream_toolchain_cve"]
+        ],
+    }
+    rows = []
+    for name, frame in populations.items():
+        n = len(frame)
+        rows.append(
+            {
+                "population": name,
+                "records": n,
+                "any_cwe": int(frame["has_cwe"].sum()),
+                "any_cwe_pct": round(100 * frame["has_cwe"].sum() / n, 1) if n else 0.0,
+                "in_mitre_2025_top25": int(frame["in_top25_2025"].sum()),
+                "non_other_root_cause": int(frame["has_root_cause"].sum()),
+                "non_other_root_cause_pct":
+                    round(100 * frame["has_root_cause"].sum() / n, 1) if n else 0.0,
+                "non_other_protocol_label": int(frame["has_protocol_label"].sum()),
+                "non_other_protocol_label_pct":
+                    round(100 * frame["has_protocol_label"].sum() / n, 1) if n else 0.0,
+                "cwe_values": ";".join(sorted(frame.loc[frame["has_cwe"], "cwe_top25"])),
+            }
+        )
+    per_row = severe[
+        ["id", "source_platform", "severity", "provenance", "upstream_toolchain_cve",
+         "cwe_top25", "in_top25_2025", "root_cause", "label", "title"]
+    ].sort_values(["provenance", "severity", "source_platform"])
+    return pd.DataFrame(rows), per_row
 
 
 def calibration_by_provenance(screens: pd.DataFrame) -> pd.DataFrame:
@@ -237,6 +295,7 @@ def main() -> int:
         )
     per_row_screen, agreement = model_agreement(screens)
     calibration = calibration_by_provenance(screens)
+    cwe_populations, cwe_per_row = severe_cwe_audit(graded)
 
     def severe(frame: pd.DataFrame) -> int:
         return int(frame["severity"].isin(SEVERE).sum())
@@ -266,6 +325,12 @@ def main() -> int:
     args.out_dir.mkdir(parents=True, exist_ok=True)
     per_row.to_csv(args.out_dir / "bounty_graded_provenance.csv", index=False)
     counts.to_csv(args.out_dir / "bounty_graded_provenance_counts.csv", index=False)
+    cwe_populations.to_csv(
+        args.out_dir / "bounty_graded_severe_cwe_by_population.csv", index=False
+    )
+    cwe_per_row.to_csv(
+        args.out_dir / "bounty_graded_severe_cwe_rows.csv", index=False
+    )
     screen_table.to_csv(args.out_dir / "bounty_graded_model_screen.csv", index=False)
     summary.to_csv(args.out_dir / "bounty_graded_audit_summary.csv", index=False)
     if not calibration.empty:
@@ -288,6 +353,11 @@ def main() -> int:
                  fill_value=0)
     )
     print(pivot.to_string())
+    print("\n=== CWE coverage of the severe slice, by population ===")
+    print(cwe_populations[
+        ["population", "records", "any_cwe", "in_mitre_2025_top25",
+         "non_other_root_cause", "non_other_protocol_label", "cwe_values"]
+    ].to_string(index=False))
     print("\n=== summary ===")
     for row in summary.to_dict("records"):
         print(f"  {row['measure']}: {row['value']}")
