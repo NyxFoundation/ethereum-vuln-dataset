@@ -1,0 +1,12 @@
+client,stratum_size,drawn,sampling_fraction_pct
+erigon,112240,549,0.4891
+reth,93360,456,0.4884
+prysm,85061,416,0.4891
+nethermind,68131,333,0.4888
+geth,65678,321,0.4887
+teku,45593,223,0.4891
+besu,44033,215,0.4883
+lighthouse,38831,190,0.4893
+lodestar,32639,159,0.4871
+nimbus,25142,123,0.4892
+grandine,3112,15,0.482
