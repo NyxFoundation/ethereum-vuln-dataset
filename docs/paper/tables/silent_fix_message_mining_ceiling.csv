@@ -1,0 +1,11 @@
+selector,commits_selected,share_of_history_pct,benchmark_recall_pct,precision_pct,lift_over_base_rate,definition
+message: fix-word only,14568,22.2,36.2,2.09,1.6,\bfix(e[sd])?\b over subject+body
+message: failure nouns,1671,2.5,25.9,12.99,10.2,panic|crash|segfault|deadlock|hang|overflow|underflow|leak|race|nil pointer|oom|dos
+message: defensive verbs,3921,6.0,12.6,2.7,2.1,validate|verify|guard|prevent|reject|sanitize|bound|clamp|check
+message: fix OR failure,15107,23.0,42.4,2.36,1.8,union of the first two
+message: fix OR failure OR defensive,15972,24.3,45.4,2.39,1.9,union of the first three -- the ceiling for message mining
+structure: references #NNNN,14291,21.8,22.4,1.32,1.0,an issue or PR number anywhere in the message
+structure: closes/fixes #NNNN,743,1.1,6.4,7.27,5.7,an explicit closing keyword before the number
+structure: has a body at all,15157,23.1,19.2,1.06,0.8,commit message longer than its subject
+structure: module: prefix,39506,60.2,85.5,1.81,1.4,geth's `pkg/path: subject` convention
+structure: issue URL in body,203,0.3,1.3,5.42,4.2,a github.com/.../issues/N link
