@@ -2,28 +2,57 @@
 """estimate_severity.py — LLM severity estimation against the EF bug-bounty model.
 
 Severity in the bounty is NETWORK-SCALE IMPACT x REMOTE REACHABILITY (a single
-packet / on-chain tx). Asking an LLM for "Critical?" directly over-rates. Instead
-we DECOMPOSE into the bounty's own axes and let a deterministic guardrail cap the
-tier, then CALIBRATE against rows classified as client-code bounty grades. In
-the current snapshot, 60 rows are marked ``bounty-graded``; rated upstream-CVSS
-rows are a separate population.
+packet / on-chain tx). Asking an LLM for "Critical?" directly over-rates, because
+the tier depends on a quantity that is not in the diff:
+
+    affected_network_share = affected_client_share x client_conditional_reach
+
+The first factor is historical deployment data. The second — of the operators
+running THIS client, what fraction can the attacker actually affect — is decided
+by default configuration, node role, platform, and whether the triggering input is
+attacker-supplied, so it IS assessable from the fix.
+
+We therefore ask the LLM only for the assessable factor and never for a network
+percentage. The prompt deliberately does NOT state this client's deployment
+share: an earlier revision did, which made the resulting tier a restatement of a
+hard-coded prior (see docs/paper/ef_severity_analysis.md). A deterministic
+post-step then bounds the affected network share and caps the tier, and CALIBRATES
+against rows classified as client-code bounty grades. In the current snapshot,
+60 rows are marked ``bounty-graded``; rated upstream-CVSS rows are a separate
+population.
 
 Per row the LLM emits:
   impact_type   chain_split | liveness_dos | value_integrity | validator_slashing
                 | local_only | none
   reachability  remote_single_message_or_tx | remote_needs_conditions | local_internal
   blast_radius  spec_level (all clients / whole network) | client_specific | subset
+  client_conditional_reach
+                all_nodes | default_role_subset | narrow_config
+                | operator_self_only        (share of THIS client's operators)
   severity_est  Critical | High | Medium | Low | not-eligible
   confidence, why
 
 Guardrails (applied after the LLM):
   * local_internal reachability OR impact_type in {local_only, none}  -> not-eligible
-  * client_specific bug is capped by that client's network share tier
-  * spec_level chain_split / value_integrity can reach High/Critical
+  * the affected network share is bounded as an interval from blast_radius,
+    client_conditional_reach, and a numeric share band, then the tier is capped by
+    the interval's upper end
+  * a tier that the interval's lower end does not reach is marked
+    ``share_dependent``: it holds only if the client's deployment share at the fix
+    date is at least ``severity_required_client_share``, which this file does not
+    claim to know
+  * value_integrity is exempt from the share cap, because "create/finalize
+    infinite ETH" and "steal or burn ETH from all EOAs" are not share criteria
 
 --validate : run on the bounty-graded rows and report agreement (exact / ±1 tier)
 --apply    : write severity_estimated + rationale for all rows (severity_source
              = 'bounty-graded' where a real grade exists, else 'llm-estimated')
+
+The share bands here are the *only* place deployment share enters. They are
+unsourced prose tiers with no observation date; downstream analysis must report
+``severity_required_client_share`` rather than presenting a tier that depends on
+them as measured. ``scripts/client_conditional_severity.py`` generates the
+share-independent frontier tables from the same numbers.
 """
 from __future__ import annotations
 
@@ -40,21 +69,41 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import llm_classify_fixes as llm  # noqa: E402
 import local_diffs as ld  # noqa: E402
 
-# rough, historical network-share tiers — only to bound blast radius for a
-# client-specific bug (a spec-level bug affects the whole network regardless).
-SHARE = {
-    "geth": "DOMINANT execution client (~45-55% of execution nodes)",
-    "nethermind": "MAJOR execution client (~20-30%)",
-    "erigon": "MODERATE execution client (~10-20%)",
-    "besu": "MINOR execution client (<10%)",
-    "reth": "MINOR (growing) execution client (<10%)",
-    "prysm": "MAJOR consensus client (~30-40%)",
-    "lighthouse": "MAJOR consensus client (~30-40%)",
-    "teku": "MODERATE consensus client (~10-15%)",
-    "nimbus": "MINOR consensus client (<10%)",
-    "lodestar": "MINOR consensus client (<5%)",
-    "grandine": "MINOR consensus client (<5%)",
+# Numeric deployment-share bands, as (low, high) fractions of that layer's nodes.
+# These are the ONLY place deployment share enters, they are never shown to the
+# LLM, and they are unsourced: the prose tiers were inherited from an earlier
+# revision and carry no observation date or citation. Downstream code must report
+# the required share rather than presenting these as measured deployment data.
+SHARE_BANDS = {
+    "geth": (0.45, 0.55),
+    "nethermind": (0.20, 0.30),
+    "erigon": (0.10, 0.20),
+    "besu": (0.00, 0.10),
+    "reth": (0.00, 0.10),
+    "prysm": (0.30, 0.40),
+    "lighthouse": (0.30, 0.40),
+    "teku": (0.10, 0.15),
+    "nimbus": (0.00, 0.10),
+    "lodestar": (0.00, 0.05),
+    "grandine": (0.00, 0.05),
 }
+
+# Fraction of THIS client's operators that a single attacker-supplied input can
+# affect. Assessable from the fix, which is why the LLM is asked for this and not
+# for a network percentage.
+REACH_BANDS = {
+    "all_nodes": (0.90, 1.00),
+    "default_role_subset": (0.25, 0.75),
+    "narrow_config": (0.01, 0.25),
+    "operator_self_only": (0.00, 0.01),
+    "unknown": (0.00, 1.00),
+}
+
+# EF tiers as a fraction of the network affected. Critical's 0.50 is its validator
+# slashing form; its value-integrity forms are not share-shaped and are exempted
+# from the cap below.
+EF_THRESHOLD = [("critical", 0.50), ("high", 0.33), ("medium", 0.05), ("low", 0.0001)]
+
 TIER = {"critical": 4, "high": 3, "medium": 2, "low": 1, "not-eligible": 0, "": 0}
 DEF = """EF bug-bounty severity = network-scale impact reachable by a SINGLE network packet or on-chain transaction:
 - Critical: create/finalize infinite ETH; steal or burn ETH from all EOAs; take down the ENTIRE network with one tx; slash >50% of validators.
@@ -65,12 +114,14 @@ DEF = """EF bug-bounty severity = network-scale impact reachable by a SINGLE net
 
 
 def build_prompt(r, diff):
-    share = SHARE.get(r["source_platform"], "a client")
     return f"""Triage this Ethereum client fix for the Ethereum Foundation bug bounty.
 
 {DEF}
 
-Reason step by step, then map to a tier USING THE DEFINITION ABOVE (do not inflate):
+Reason step by step and answer the five questions below. Do NOT estimate what
+fraction of the whole Ethereum network is affected: you are not told this client's
+deployment share, and guessing it is how these labels get inflated. Question 4 asks
+only about operators of THIS client, which the fix itself tells you.
 1. impact_type: what could an attacker actually achieve?
    {{chain_split, liveness_dos, value_integrity, validator_slashing, local_only, none}}
 2. reachability: {{remote_single_message_or_tx, remote_needs_conditions, local_internal}}
@@ -79,11 +130,27 @@ Reason step by step, then map to a tier USING THE DEFINITION ABOVE (do not infla
    IMPORTANT: EVM opcodes/precompiles/gas rules, consensus state-transition,
    fork-choice, attestation/slashing rules, and SSZ/RLP consensus encoding are
    SPEC-LEVEL — every client must produce the identical result, so a divergence
-   or crash there can split or stall the WHOLE network (High/Critical), not just
-   this client. Only genuinely client-local code (this client's DB, RPC server,
-   CLI, sync internals) is client_specific.
-   This client is: {share}.
-4. severity_est: Critical | High | Medium | Low | not-eligible.
+   or crash there can split or stall the WHOLE network, not just this client.
+   Only genuinely client-local code (this client's DB, RPC server, CLI, sync
+   internals) is client_specific.
+4. client_conditional_reach: of the operators ALREADY RUNNING THIS CLIENT, what
+   fraction can the attacker affect with this defect?
+   {{all_nodes, default_role_subset, narrow_config, operator_self_only}}
+   - all_nodes: any node on the DEFAULT configuration processes the
+     attacker-supplied input on the affected path.
+   - default_role_subset: one common role or default-adjacent mode only —
+     validating vs non-validating, archive vs pruned, snap vs full sync, or a
+     default-on endpoint that is not always exposed.
+   - narrow_config: needs a non-default flag, an unusual platform (for example a
+     32-bit host), an opt-in or unreleased feature, or a specific deployment shape.
+   - operator_self_only: only the operator's own node, through local action; no
+     attacker-supplied input crosses to other operators.
+   Judge this from the diff and description — guards, config gates, feature flags,
+   platform assumptions, and which code path consumes the untrusted input. If the
+   fix touches an unreleased fork or feature, that is narrow_config.
+5. severity_est: Critical | High | Medium | Low | not-eligible, for the case where
+   this client were the ENTIRE network. A later deterministic step rescales this by
+   deployment share, so do not discount for the client being small or popular.
 
 Context — area: {r.get('label')} · root_cause: {r.get('root_cause')} · attack_path: {r.get('attack_path')}
 Title: {str(r.get('title') or '')[:200]}
@@ -92,18 +159,72 @@ Code diff (truncated):
 {(diff or '(no diff)')[:2800]}
 
 Output ONLY one JSON object on the last line:
-{{"impact_type":"...","reachability":"...","blast_radius":"...","severity_est":"...","confidence":0.0,"why":"<one sentence>"}}"""
+{{"impact_type":"...","reachability":"...","blast_radius":"...","client_conditional_reach":"...","severity_est":"...","confidence":0.0,"why":"<one sentence>"}}"""
+
+
+def affected_share_bounds(o, client):
+    """Bound the affected network share as an interval.
+
+    Lower end uses only the fixing client's share, because no LLM output enumerates
+    which *other* implementations actually contained a shared-rule defect. Upper end
+    opens to the whole network for ``spec_level``, which is exactly why a spec-level
+    estimate cannot be read as an exact tier.
+    """
+    reach_lo, reach_hi = REACH_BANDS.get(
+        str(o.get("client_conditional_reach") or "unknown"), REACH_BANDS["unknown"])
+    share_lo, share_hi = SHARE_BANDS.get(client, (0.0, 1.0))
+    if o.get("blast_radius") == "spec_level":
+        share_hi = 1.0
+    return share_lo * reach_lo, share_hi * reach_hi
+
+
+def max_tier(share_hi):
+    for tier, threshold in EF_THRESHOLD:
+        if share_hi >= threshold:
+            return tier
+    return "not-eligible"
+
+
+def required_client_share(tier, o):
+    """Minimum deployment share at which ``tier`` holds, given the assessed reach.
+
+    Deliberately client-independent: this is the share a reader must establish from
+    a sourced series, not one this file supplies.
+    """
+    threshold = dict(EF_THRESHOLD).get(tier)
+    if threshold is None:
+        return None
+    _, reach_hi = REACH_BANDS.get(
+        str(o.get("client_conditional_reach") or "unknown"), REACH_BANDS["unknown"])
+    if reach_hi <= 0:
+        return None
+    return round(min(threshold / reach_hi, 1.0), 4)
 
 
 def guardrail(o, client):
+    """Cap the LLM tier by the bounded affected share; report share dependence.
+
+    Returns ``(tier, certainty, required_share)``. ``certainty`` is ``bounded`` when
+    even the interval's lower end reaches the tier, ``share_dependent`` when the
+    tier holds only above ``required_share``, and ``out_of_scope`` for the
+    eligibility guardrail.
+    """
     est = str(o.get("severity_est", "")).lower()
     if o.get("reachability") == "local_internal" or o.get("impact_type") in ("local_only", "none"):
-        return "not-eligible"
-    # client-specific liveness DoS on a minor client can't reach >33% -> cap High->Medium
-    if o.get("blast_radius") == "client_specific" and est in ("critical", "high"):
-        if o.get("impact_type") in ("liveness_dos",) and "MINOR" in SHARE.get(client, ""):
-            return "medium"
-    return est or "not-eligible"
+        return "not-eligible", "out_of_scope", None
+    if not est:
+        return "not-eligible", "no_estimate", None
+
+    # "Infinite ETH" and "steal from all EOAs" are not network-share criteria.
+    if o.get("impact_type") == "value_integrity":
+        return est, "share_exempt", None
+
+    lo, hi = affected_share_bounds(o, client)
+    capped = est if TIER.get(est, 0) <= TIER[max_tier(hi)] else max_tier(hi)
+    if capped == "not-eligible":
+        return "not-eligible", "below_lowest_threshold", None
+    certainty = "bounded" if lo >= dict(EF_THRESHOLD).get(capped, 0.0) else "share_dependent"
+    return capped, certainty, required_client_share(capped, o)
 
 
 DEP_RE = re.compile(
@@ -132,7 +253,15 @@ def classify(row, retries=1):
             o = {"error": str(e)}
         if o.get("severity_est"):            # got a usable answer
             break
-    o["severity_final"] = guardrail(o, r["source_platform"]) if o.get("severity_est") else ""
+    # A truncated JSON response must stay unassessed rather than collapse to
+    # not-eligible; see the concurrency note in docs/severity_labeling.md.
+    if o.get("severity_est"):
+        tier, certainty, required = guardrail(o, r["source_platform"])
+    else:
+        tier, certainty, required = "", "no_estimate", None
+    o["severity_final"] = tier
+    o["severity_certainty"] = certainty
+    o["severity_required_client_share"] = "" if required is None else f"{required:g}"
     return r["id"], o
 
 
@@ -207,12 +336,32 @@ def main():
         print("  confusion (true -> pred):")
         for (t, p), c in sorted(conf.items(), key=lambda x: -x[1])[:12]:
             print(f"    {t:9s} -> {p:12s} {c}")
+        # The graded rows are the only place the reach axis can be checked against a
+        # published tier, so report its distribution and how often the tier survives
+        # without assuming a deployment share.
+        reach, cert = {}, {}
+        for r in sub.to_dict("records"):
+            o = res.get(r["id"], {})
+            if not o.get("severity_final"):
+                continue
+            k = o.get("client_conditional_reach") or "(absent)"
+            reach[k] = reach.get(k, 0) + 1
+            c = o.get("severity_certainty") or "(absent)"
+            cert[c] = cert.get(c, 0) + 1
+        print("  client_conditional_reach:")
+        for k, c in sorted(reach.items(), key=lambda x: -x[1]):
+            print(f"    {k:20s} {c}")
+        print("  tier certainty:")
+        for k, c in sorted(cert.items(), key=lambda x: -x[1]):
+            print(f"    {k:20s} {c}")
     if a.apply:
         import csv
         n_est = n_bg = n_dep = 0
         with a.out.open("w", newline="", encoding="utf-8") as fh:
             w = csv.writer(fh); w.writerow(["id", "severity_estimated", "severity_source",
-                                            "impact_type", "reachability", "blast_radius", "severity_why"])
+                                            "impact_type", "reachability", "blast_radius",
+                                            "client_conditional_reach", "severity_certainty",
+                                            "severity_required_client_share", "severity_why"])
             for r in d.to_dict("records"):
                 rid = r["id"]; g = str(r["severity"]).lower() in ("critical", "high", "medium", "low")
                 dpp = is_dependency(r); o = scache.get(rid, {})
@@ -225,7 +374,10 @@ def main():
                 else:
                     src, est = "unassessed", ""
                 w.writerow([rid, est, src, o.get("impact_type", ""), o.get("reachability", ""),
-                            o.get("blast_radius", ""), str(o.get("why", ""))[:200]])
+                            o.get("blast_radius", ""), o.get("client_conditional_reach", ""),
+                            o.get("severity_certainty", ""),
+                            o.get("severity_required_client_share", ""),
+                            str(o.get("why", ""))[:200]])
         print(f"wrote {a.out} — bounty-graded {n_bg}, llm-estimated {n_est}, upstream-cvss {n_dep}")
 
 

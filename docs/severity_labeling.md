@@ -31,25 +31,59 @@ divergence *every client shares* → whole-network impact → High/Critical; a b
 that client's share. The LLM must be told this explicitly, or it under-rates
 EVM/consensus bugs as "client_specific" (see calibration).
 
+### Pitfall 3 — a network percentage is not in the artifact
+The tier is a share of the *network*, but a diff, issue, or advisory contains no
+deployment data. An earlier revision papered over this by putting a hard-coded
+prose share into the prompt (`This client is: DOMINANT execution client
+(~45-55%)`), which made the tier a restatement of that prior — see
+[`paper/client_conditional_severity.md`](./paper/client_conditional_severity.md).
+The tier is therefore split into its two factors:
+
+> affected_network_share = affected_client_share × client_conditional_reach
+
+Only the second factor is asked of the LLM, and the prompt no longer states the
+client's share at all.
+
 ## The method — decompose, then map
 
 Per row the LLM (given the bounty definition, the fix's diff, and our
-`root_cause` / `attack_path` / `label`) emits four **assessable** fields:
+`root_cause` / `attack_path` / `label`) emits five **assessable** fields:
 
 | field | values |
 |---|---|
 | `impact_type` | chain_split · liveness_dos · value_integrity · validator_slashing · local_only · none |
 | `reachability` | remote_single_message_or_tx · remote_needs_conditions · local_internal |
 | `blast_radius` | spec_level · client_specific · subset |
-| `severity_est` | Critical · High · Medium · Low · not-eligible |
+| `client_conditional_reach` | all_nodes · default_role_subset · narrow_config · operator_self_only |
+| `severity_est` | Critical · High · Medium · Low · not-eligible, **for the case where this client were the entire network** |
 
-A deterministic **guardrail** then corrects the tier:
+`client_conditional_reach` is the share of the operators *already running this
+client* that one attacker-supplied input can affect. Unlike a network percentage it
+is visible in the fix: default configuration, node role, platform assumption,
+feature gating, and which path consumes untrusted input all decide it.
+
+A deterministic **guardrail** then bounds the product and corrects the tier:
 - `local_internal` reachability, or `impact_type ∈ {local_only, none}` → **not-eligible** (out of bounty scope);
-- `client_specific` **liveness_dos** on a MINOR client cannot reach >33% → capped to **Medium**;
-- `spec_level` `chain_split` / `value_integrity` may reach **High/Critical** regardless of which client shipped the fix.
+- the affected network share is bounded as an interval from `blast_radius`,
+  `client_conditional_reach`, and a numeric share band, and the tier is capped by
+  the interval's upper end. `spec_level` opens the upper end to the whole network;
+  the lower end stays at the fixing client's share, because no output enumerates
+  which *other* implementations actually had the shared-rule defect;
+- a tier the lower end does not reach is marked `severity_certainty =
+  share_dependent` and carries `severity_required_client_share`, the deployment
+  share at which it would hold;
+- `value_integrity` is exempt from the share cap: "create/finalize infinite ETH"
+  and "steal or burn ETH from all EOAs" are not share criteria.
 
 The components are the reliable, reusable output; the tier is a **calibrated
 estimate**, never presented as a bounty grade.
+
+The share bands live only in the deterministic step, are never shown to the LLM,
+and are unsourced prose tiers with no observation date. Their consequences are
+generated share-independently by
+`scripts/client_conditional_severity.py`: a client-local defect cannot reach High
+for **8 of 11 clients** even at 100% client-conditional reach, so only Geth,
+Lighthouse, and Prysm can host a client-specific High at all.
 
 The checked-in downstream analysis is
 [`paper/ef_severity_analysis.md`](./paper/ef_severity_analysis.md). It excludes
@@ -94,8 +128,15 @@ enrichments. It **never overwrites** the real `severity`:
 |---|---|
 | `severity_estimated` | the tier — the real grade where one exists, else the LLM estimate |
 | `severity_source` | `bounty-graded` \| `upstream-cvss` \| `llm-estimated` \| `unassessed`; only `bounty-graded` is the EF-bounty ground-truth slice |
-| `impact_type` · `reachability` · `blast_radius` | the decomposition (the reliable part) |
+| `impact_type` · `reachability` · `blast_radius` · `client_conditional_reach` | the decomposition (the reliable part) |
+| `severity_certainty` | `bounded` \| `share_dependent` \| `share_exempt` \| `out_of_scope` \| `below_lowest_threshold` \| `no_estimate` |
+| `severity_required_client_share` | for a `share_dependent` tier, the deployment share at which it holds |
 | `severity_why` | one-sentence rationale |
+
+The frozen snapshot predates these three columns; populating them needs an
+estimator re-run with the revised prompt. Until then the paper analysis bounds each
+candidate with `client_conditional_reach=unknown`, the most favourable assumption
+for the record.
 
 ## Audited High analysis label
 

@@ -1,0 +1,6 @@
+reach_band,reach_low,reach_high,definition
+all_nodes,0.9,1.0,Any node running this client on its default configuration processes the attacker-supplied input on the affected path.
+default_role_subset,0.25,0.75,"Only one common node role or default-adjacent mode is affected: validating vs non-validating, archive vs pruned, snap vs full sync, or an endpoint that is enabled by default but not always exposed."
+narrow_config,0.01,0.25,"A non-default flag, an unusual platform (for example a 32-bit host), an opt-in feature, or an operator-specific deployment shape is required."
+operator_self_only,0.0,0.01,Only the operator's own node is affected through local action; no attacker-supplied remote input crosses to other operators.
+unknown,0.0,1.0,Not assessed. Used so an unreviewed row widens its bound instead of silently assuming full reach.

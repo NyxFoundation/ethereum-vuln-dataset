@@ -30,6 +30,10 @@ The working thesis is:
    [`liveness_candidate_audit.md`](liveness_candidate_audit.md) screens all 89
    liveness candidates and source-reviews the first five suspicious
    `label=test` rows.
+   [`client_conditional_severity.md`](client_conditional_severity.md) then
+   restates the tier as deployment share × client-conditional reach, so the
+   assessable factor comes from the fix and each record reports the deployment
+   share its tier would require.
 5. [`cwe_context_comparison.md`](cwe_context_comparison.md) measures how much
    Ethereum root-cause and protocol-location context remains when generic CWE
    metadata is absent.
@@ -48,6 +52,7 @@ UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/paper_analysis.py
 UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/severity_analysis.py
 UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/audit_chain_split_candidates.py
 UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/audit_liveness_candidates.py
+UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/client_conditional_severity.py
 UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/cwe_context_analysis.py
 git diff --exit-code docs/paper/tables
 ```

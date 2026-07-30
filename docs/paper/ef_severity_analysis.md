@@ -132,7 +132,34 @@ them at face value. It separates three research objects:
 2. estimated eligibility and impact components for exploratory analysis;
 3. threshold-uncertain candidates for source-level validation.
 
-## 7. Next validation analysis
+## 7. The threshold is now inverted rather than assumed
+
+The blocking factor in every correction above is the same: the EF tiers are
+network-share statements, and network share is not in a repository artifact.
+[`client_conditional_severity.md`](client_conditional_severity.md) resolves this
+by decomposing the tier into
+
+> affected_network_share = affected_client_share × client_conditional_reach
+
+and asking the estimator only for the second factor, which the fix does show
+(default configuration, node role, platform, feature gating). The share is no
+longer supplied to the prompt at all; a deterministic step bounds the product and
+reports the share a tier *would* require.
+
+Two results follow immediately, without any new LLM output:
+
+- a `client_specific` defect cannot reach High for 8 of the 11 clients even at
+  100% client-conditional reach — only Geth, Lighthouse, and Prysm can host one;
+- all 55 `client_specific` candidates in this queue need the defect to affect more
+  than half of their client's operator population before High becomes
+  arithmetically available, and the 21 Lighthouse rows need more than 100% at the
+  bottom of that client's share band.
+
+This makes the Geth-plus-Lighthouse concentration in §5 an arithmetic consequence
+of the threshold rather than a client-risk signal, and it turns `tier-uncertain`
+into a falsifiable share requirement per record.
+
+## 8. Next validation analysis
 
 For inferential use of estimated tiers:
 
@@ -143,7 +170,8 @@ For inferential use of estimated tiers:
    `attack_path`, or `label`;
 5. compare original, blind, and human labels with a confusion matrix;
 6. only promote `tier-uncertain` to an exact tier when the EF impact threshold
-   is evidenced.
+   is evidenced — which now means a sourced, dated client-share series meeting
+   the record's `severity_required_client_share`.
 
 The first source-level validation is complete for all 21 original chain-split
 High candidates. Only nine contain direct evidence of a consensus-sensitive
@@ -177,3 +205,6 @@ remote input to an availability failure. In total, 15 targeted liveness rows
 - [`tables/liveness_test_label_audit.csv`](tables/liveness_test_label_audit.csv)
 - [`tables/liveness_both_terms_audit.csv`](tables/liveness_both_terms_audit.csv)
 - [`tables/liveness_remote_only_audit.csv`](tables/liveness_remote_only_audit.csv)
+- [`tables/client_conditional_frontier.csv`](tables/client_conditional_frontier.csv)
+- [`tables/client_conditional_candidate_bounds.csv`](tables/client_conditional_candidate_bounds.csv)
+- [`tables/client_conditional_summary.csv`](tables/client_conditional_summary.csv)

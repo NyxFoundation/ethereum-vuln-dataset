@@ -458,7 +458,9 @@ def main() -> int:
     if a.severity_csv and a.severity_csv.exists():
         svc = pd.read_csv(a.severity_csv).drop_duplicates("id")
         keep = [c for c in ("id", "severity_estimated", "severity_source", "impact_type",
-                            "reachability", "blast_radius", "severity_why") if c in svc.columns]
+                            "reachability", "blast_radius", "client_conditional_reach",
+                            "severity_certainty", "severity_required_client_share",
+                            "severity_why") if c in svc.columns]
         sec = sec.merge(svc[keep], on="id", how="left")
         if "severity_estimated" in sec.columns:      # normalize tier casing
             cap = {"critical": "Critical", "high": "High", "medium": "Medium", "low": "Low"}
