@@ -93,11 +93,14 @@ The generated CSV files are deliberately checked in. A paper claim should cite
 a generated table, identify its population and denominator, and state whether
 the underlying label is authoritative, heuristic, or LLM-derived.
 
-`data/severity_est_v2.csv` is a re-estimation overlay, checked in because the
-`client_conditional_*` tables are generated from it. It covers only the rows the paper
-analysis consumes, so its other rows read `unassessed`; the frozen Parquet snapshot is
-never rebuilt from it. See
-[`../severity_labeling.md`](../severity_labeling.md) for how to regenerate it.
+`data/severity_est_v2.csv` is a re-estimation overlay covering the whole EF-comparable
+population (1,552 of 1,553 client-code rows, `glm-5.2`), checked in because the
+`client_conditional_*` tables are generated from it. The frozen Parquet snapshot is never
+rebuilt from it, and `severity_analysis.py --severity-csv` refuses to write over the
+snapshot tables. Regenerating it: see
+[`../severity_labeling.md`](../severity_labeling.md). Its headline effect is in
+[`ef_severity_analysis.md`](ef_severity_analysis.md) §7b — zero exact Critical or High
+survive across 1,552 estimates, against 110 exact High from the original estimator.
 
 ## Claim status
 

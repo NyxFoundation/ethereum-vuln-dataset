@@ -174,6 +174,57 @@ This makes the Geth-plus-Lighthouse concentration in §5 an arithmetic consequen
 of the threshold rather than a client-risk signal, and it turns `tier-uncertain`
 into a falsifiable share requirement per record.
 
+## 7b. The full re-estimation, measured
+
+The revised estimator has now been run over the whole EF-comparable population with
+`glm-5.2`, and the overlay is checked in as `data/severity_est_v2.csv` (1,552 of 1,553
+client-code rows assessed). Reproduce the analysis with
+
+```bash
+UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/severity_analysis.py \
+  --severity-csv data/severity_est_v2.csv --overlay-out-dir <dir>
+```
+
+which writes elsewhere by design: an overlay changes every count, so it must not overwrite
+the snapshot tables this document otherwise cites.
+
+Where the raw estimates land, before the review layer:
+
+| Raw estimate | `bounded` | `share_dependent` | `share_exempt` |
+|---|---:|---:|---:|
+| Critical | 0 | **37** | 0 |
+| High | 8 | **55** | 2 |
+
+**Every one of the 37 Critical estimates is share-dependent**, so the review layer demotes
+all of them. That is the prompt's "as if this client were the entire network" instruction
+inflating the raw tier exactly as designed, and the deterministic step catching it every
+time. Of 65 High estimates, 55 are demoted the same way.
+
+After the review layer, across 1,552 LLM-estimated rows:
+
+| Analysis label | Rows |
+|---|---:|
+| Critical | **0** |
+| High | **0** |
+| Medium | 78 |
+| Low | 169 |
+| tier-uncertain | 304 |
+
+with statuses `threshold_share_dependent` 294, `bounded_on_unreviewed_reach` 8,
+`threshold_unverified` 2, and 8 `confirmed_bounty_grade`.
+
+**The result to report.** The original estimator produced 110 exact High labels. The revised
+one produces **zero** exact Critical or High across the whole corpus, and the ten estimates
+the share arithmetic could not reduce all carry a visible dependency flag — eight on an
+`all_nodes` reach assessment that failed source review, two exempted because
+"infinite ETH" is not a share criterion. The confirmed severe sample is unchanged at 8, all
+from published advisories.
+
+This is the quantitative form of the claim this directory has been making throughout:
+decomposed LLM labels are effective retrieval cues and are not impact evidence. Making the
+threshold dependence explicit did not shrink an inflated number by a little; it removed the
+category.
+
 ## 8. Next validation analysis
 
 For inferential use of estimated tiers:
