@@ -156,10 +156,44 @@ network.
 "narrow" and unreliable when it says `all_nodes`, and the unreliable direction is the
 one that produces the consequential verdict.
 
-**Do not claim.** The 33 `supported` records are not 33 records meeting the EF >33%
-threshold. Their error rate is unmeasured, but all three reviewable members of that
-bucket were over-permissive, so it must be treated as a review queue ordered by
-arithmetic, not as a result. The 30 `excluded` records are the defensible output.
+## 6b. A second annotator bounds how much of this survives
+
+The same 110 candidates were assessed again with `claude-sonnet-5`. Reach is where the
+annotators differ, and they differ in one direction:
+
+| | Value |
+|---|---:|
+| Rows both models assessed | 109 |
+| Exact reach-band agreement | 76 (69.7%) |
+| Within one reach band | 91 (83.5%) |
+| `glm-5.2` the more permissive of the two | **27** |
+| `claude-sonnet-5` the more permissive | 6 |
+
+Recomputing the arithmetic per annotator shows how far that propagates
+([`tables/client_conditional_verdict_crosstab.csv`](tables/client_conditional_verdict_crosstab.csv);
+rows `claude-sonnet-5`, columns `glm-5.2`):
+
+| | glm excluded | glm share-dependent | glm supported |
+|---|---:|---:|---:|
+| **claude excluded** | **28** | 11 | **7** |
+| **claude share-dependent** | 4 | 32 | 5 |
+| **claude supported** | 0 | 1 | **21** |
+
+Verdict agreement is 81/109 (74.3%). The headline counts move with the annotator: High
+is excluded for 30 candidates under `glm-5.2` and 46 under `claude-sonnet-5`, and
+supported for 33 versus 23.
+
+Two things follow. First, **28 candidates are excluded from High under both
+annotators** — that intersection, not either model's own count, is the defensible
+arithmetic result. Second, seven records sit at opposite extremes, excluded by one
+annotator and supported by the other, and `glm-5.2` is on the permissive side of every
+one. A permissive reach bias is therefore not a calibration offset to be corrected
+after the fact; on those seven records it decides the verdict outright.
+
+**Do not claim.** The `supported` bucket is not a set of records meeting the EF >33%
+threshold. All three of its source-reviewable members were over-permissive, and its
+size varies by 10 records between annotators, so it is a review queue ordered by
+arithmetic. The defensible output is the 28-record both-annotator exclusion.
 
 ## 7. Paper contribution
 
@@ -170,11 +204,12 @@ arithmetic, not as a result. The 30 `excluded` records are the defensible output
 > reach High for 8 of 11 clients even at complete client-conditional reach, and all
 > 55 client-specific High candidates in the corpus require that a defect affect
 > more than half of their client's operator population before the tier is
-> arithmetically available. Measuring reach then rules 30 of 110 candidates out of
-> High by arithmetic alone. Scoring the measurement against source review shows the
+> arithmetically available. Measuring reach then rules 28 of 110 candidates out of
+> High under two independent annotators. Scoring the measurement shows the
 > decomposition also localises its own error: exclusions are confirmed on every
-> reviewable record, while every reviewable record the model rated at full client
-> coverage was over-permissive. The corpus therefore reports the deployment share a
+> source-reviewable record, while every record rated at full client coverage was
+> over-permissive, and the two annotators reach opposite extremes on seven records with
+> the same one always permissive. The corpus therefore reports the deployment share a
 > tier would require, and reports which half of that judgement it can defend.
 
 This converts `tier-uncertain` from an admission into a measurement: each record
@@ -191,12 +226,15 @@ irreducible prior.
   `share_dependent` tier as final.
 - Reach bands are ordinal ranges chosen for auditability, not measured
   distributions.
-- Reach is populated by **one model on one prompt** (`glm-5.2`). Section 6 scores it
-  against source review on the eight rows where that is possible and finds it
-  over-permissive on three. A second independent model, and human assignment on a
-  stratified sample with reported agreement, are both still required before any reach
-  figure enters a headline claim. In particular the `supported` bucket is a review
-  queue, not a finding.
+- Reach is populated by a model, not a human. `glm-5.2` supplies the values used in the
+  bounds; `claude-sonnet-5` provides a second assessment for scoring only. Exact
+  reach-band agreement between them is 69.7%, which is moderate for a four-band ordinal
+  scale, so **human assignment on a stratified sample with reported agreement is still
+  required** before a reach figure enters a headline claim. Prefer the 28-record
+  both-annotator exclusion over either model's own count.
+- Choosing `glm-5.2` for the bounds is not a claim that it is the better annotator. It
+  is the more permissive one, so the checked-in tables understate exclusion; the
+  crosstab in §6b is what bounds the alternative.
 - One of the 110 candidates has no assessed reach and remains bounded at `unknown`.
 - The audit-derived reach values in `REVIEWED_REACH` are read from the audit prose by
   a single reviewer. They are versioned in the script so a second reviewer can dispute
@@ -234,4 +272,8 @@ UV_CACHE_DIR=/tmp/uv-cache uv run python collection/estimate_severity.py --apply
 - [`tables/client_conditional_candidate_bounds.csv`](tables/client_conditional_candidate_bounds.csv)
 - [`tables/client_conditional_reach_distribution.csv`](tables/client_conditional_reach_distribution.csv)
 - [`tables/client_conditional_reach_vs_review.csv`](tables/client_conditional_reach_vs_review.csv)
+- [`tables/client_conditional_reach_by_model.csv`](tables/client_conditional_reach_by_model.csv)
+- [`tables/client_conditional_reach_model_agreement.csv`](tables/client_conditional_reach_model_agreement.csv)
+- [`tables/client_conditional_verdict_by_model.csv`](tables/client_conditional_verdict_by_model.csv)
+- [`tables/client_conditional_verdict_crosstab.csv`](tables/client_conditional_verdict_crosstab.csv)
 - [`tables/client_conditional_summary.csv`](tables/client_conditional_summary.csv)

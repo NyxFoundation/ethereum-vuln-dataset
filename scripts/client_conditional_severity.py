@@ -267,6 +267,62 @@ def reach_agreement_across_models(
     return wide, pd.DataFrame(pairs) if pairs else empty_pairs
 
 
+def verdict_agreement_across_models(
+    cache_path: Path, queue: pd.DataFrame
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Recompute the High verdict per annotator and cross-tabulate the results.
+
+    The arithmetic is deterministic, but its input is not: the verdict is a function of
+    (reach, blast_radius, client), and two annotators disagree about reach. Reporting
+    the verdict crosstab is what separates the part of the result that survives a
+    change of annotator from the part that does not.
+    """
+    empty = pd.DataFrame()
+    if not cache_path.exists() or queue.empty:
+        return empty, empty
+
+    ids = set(queue["id"])
+    clients = dict(zip(queue["id"], queue["source_platform"].astype(str).str.lower()))
+    per_model = {}
+    for key, entry in json.loads(cache_path.read_text()).items():
+        if not isinstance(entry, dict):
+            continue
+        reach = entry.get("client_conditional_reach")
+        if reach not in REACH_BANDS:
+            continue
+        parts = key.split("@")
+        if len(parts) < 3 or parts[0] not in ids:
+            continue
+        row_id, model = parts[0], parts[-1]
+        _, share_lo, share_hi = SHARE_BANDS.get(clients.get(row_id, ""), ("", 0.0, 1.0))
+        if entry.get("blast_radius") == "spec_level":
+            share_hi = 1.0
+        band = REACH_BANDS[reach]
+        lo = share_lo * band["low"]
+        hi = share_hi * band["high"]
+        per_model.setdefault(model, {})[row_id] = {
+            "reach": reach,
+            "verdict": verdict(EF_THRESHOLD["High"], lo, hi),
+        }
+
+    if len(per_model) < 2:
+        return empty, empty
+
+    frame = pd.DataFrame(
+        {model: {rid: v["verdict"] for rid, v in rows.items()}
+         for model, rows in per_model.items()}
+    )
+    frame.index.name = "id"
+    models = sorted(frame.columns)
+    a, b = models[0], models[1]
+    both = frame[frame[a].notna() & frame[b].notna()]
+    cross = (
+        pd.crosstab(both[a], both[b], rownames=[a], colnames=[b])
+        .reset_index()
+    )
+    return frame.reset_index(), cross
+
+
 def required_reach(threshold: float, share: float) -> float | None:
     """Minimum client-conditional reach that meets ``threshold`` at ``share``."""
     if share <= 0:
@@ -538,6 +594,9 @@ def main() -> int:
     reach_by_model, reach_pairs = reach_agreement_across_models(
         args.sev_cache, set(uncertain["id"])
     )
+    verdict_by_model, verdict_cross = verdict_agreement_across_models(
+        args.sev_cache, uncertain
+    )
     summary = build_summary(frontier, bounds)
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
@@ -560,6 +619,13 @@ def main() -> int:
         reach_pairs.to_csv(
             args.out_dir / "client_conditional_reach_model_agreement.csv", index=False
         )
+    if not verdict_cross.empty:
+        verdict_by_model.to_csv(
+            args.out_dir / "client_conditional_verdict_by_model.csv", index=False
+        )
+        verdict_cross.to_csv(
+            args.out_dir / "client_conditional_verdict_crosstab.csv", index=False
+        )
     summary.to_csv(args.out_dir / "client_conditional_summary.csv", index=False)
 
     print(f"tier-uncertain candidates: {len(bounds)}")
@@ -581,6 +647,9 @@ def main() -> int:
     if not reach_pairs.empty:
         print("\n=== inter-model agreement on the reach band ===")
         print(reach_pairs.to_string(index=False))
+    if not verdict_cross.empty:
+        print("\n=== High verdict, recomputed per annotator ===")
+        print(verdict_cross.to_string(index=False))
     print("\n=== summary ===")
     for row in summary.to_dict("records"):
         print(f"  {row['measure']}: {row['value']}")

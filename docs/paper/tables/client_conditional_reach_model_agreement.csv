@@ -1,0 +1,2 @@
+model_a,model_b,compared,exact_agree,exact_pct,within_one_band,within_one_band_pct,a_more_permissive,b_more_permissive
+claude:claude-sonnet-5,openai:glm-5.2,109,76,69.7,91,83.5,6,27
