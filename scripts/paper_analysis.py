@@ -392,6 +392,12 @@ def main() -> int:
         ),
         metric("rated_severity", rated.sum(), n, "Critical/High/Medium/Low"),
         metric(
+            "unrated_severity",
+            (~rated).sum(),
+            n,
+            "severity is Info or Unrated; this is not an advisory-linkage measure",
+        ),
+        metric(
             "cve_ghsa_in_title_or_description",
             narrow_cve_ghsa.sum(),
             n,
@@ -415,6 +421,24 @@ def main() -> int:
             broad_neither.sum(),
             n,
             "no rated severity and no recognized advisory ID in any provenance field",
+        ),
+        metric(
+            "recognized_advisory_id_and_rated",
+            (rated & any_advisory_id).sum(),
+            n,
+            "recognized advisory ID present and severity is rated",
+        ),
+        metric(
+            "recognized_advisory_id_only",
+            ((~rated) & any_advisory_id).sum(),
+            n,
+            "recognized advisory ID present but severity is Info or Unrated",
+        ),
+        metric(
+            "rated_only_without_recognized_advisory_id",
+            (rated & ~any_advisory_id).sum(),
+            n,
+            "rated severity but no recognized advisory ID in any provenance field",
         ),
         metric("fix_commit_present", fix_commit.sum(), n, "non-empty fix_commit"),
         metric("post_fix_code_present", post_code.sum(), n, "non-empty post_fix_code JSON"),

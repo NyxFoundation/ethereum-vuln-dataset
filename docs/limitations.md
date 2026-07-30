@@ -1,16 +1,17 @@
 # Limitations & known caveats
 
 An honest inventory of what this dataset does *not* cover and where its labels
-are approximate. Numbers are for the current snapshot (n = 2,225 curated rows).
+are approximate. Numbers are for the current snapshot (n = 2,225 curated rows);
+canonical definitions are in [`DATA_SNAPSHOT.md`](./DATA_SNAPSHOT.md).
 
 ## 1. Coverage gaps
 
 | gap | state | fixable? |
 |---|---|---|
-| **`severity` rated** | 6.4% | ❌ structural — Ethereum clients silently patch, so most fixes ship *unrated*. A severity cannot be invented; the 6.4% are the ones an advisory actually rated. |
-| **`pre_fix_code` / `post_fix_code`** | 86.3% (98.1% of the 1,959 rows that resolve to a commit) | ⚠ mostly structural — the missing ~266 rows are advisory / NVD / release-note entries that map to **no single fix commit**, so there is no code to inline. 38 committed rows have an unfetchable diff (huge/binary). |
+| **`severity` rated** | 143 / 2,225 (6.4%) | ❌ structural — 2,082 rows (93.6%) are Info/Unrated. This does not imply that all 2,082 lack an advisory. |
+| **`pre_fix_code` / `post_fix_code`** | 1,923 / 2,225 (86.4%); 1,923 / 1,959 (98.2%) among rows with a fix commit | ⚠ mostly structural — 266 rows map to no single fix commit, and 36 committed rows lack a fetchable post-fix diff. |
 | **`fix_commit` / `introduced_in_commit`** | 88.0% | ⚠ the 12% without a commit are advisory/NVD/release rows (no single commit exists). |
-| **`cwe_top25`** | 24.7% | ⚠ partly fixable — the LLM only emitted a CWE for the `other`/no-commit rows it processed; advisories themselves often omit CWE (geth advisories say *"details to be released later"*). Running the LLM over all rows would raise it, with diminishing returns. |
+| **`cwe_top25`** | 396 / 2,225 (17.8%) | ⚠ sparse and misleadingly named — it stores general CWE labels; only 130 rows (5.8% overall) are in MITRE's 2025 Top 25. |
 | **`silent_fix_prob`** | 40.3% | by design — only the C_candidate + plausible gate-dropped rows were LLM-classified; classifying *all* commits is impractical (see §2). |
 | **`label = other`** | 6.6% | near floor — the remainder are genuinely generic (event/backend orchestration, advisory rows with no diff, vendored code). Forcing a label would be wrong. |
 

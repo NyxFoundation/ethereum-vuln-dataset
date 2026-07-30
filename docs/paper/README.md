@@ -3,6 +3,9 @@
 This directory contains the incremental, reproducible analysis for the
 `ethereum-vuln-dataset` paper.
 
+All current counts use the definitions in
+[`../DATA_SNAPSHOT.md`](../DATA_SNAPSHOT.md).
+
 The working thesis is:
 
 > CVE-, CWE-, and smart-contract-centred security views do not fully represent

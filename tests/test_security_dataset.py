@@ -4,15 +4,18 @@ These assert the properties that make the corpus "vulnerabilities only": the
 build is reproducible, the release-note boilerplate is gone, and every row
 carries a security signal.
 """
+import json
 import re
 from pathlib import Path
 
 import pandas as pd
 import pytest
+from scripts.paper_analysis import ADVISORY_ID_RE, PROVENANCE_FIELDS, RATED
 
 ROOT = Path(__file__).resolve().parents[1]
 CURATED = ROOT / "data" / "ethereum_vulns.parquet"
 RAW = ROOT / "data" / "raw" / "train.classified.parquet"
+MANIFEST = ROOT / "data" / "manifest.json"
 
 BOILERPLATE = re.compile(r"critical update required|urgency guidelines|high-urgency", re.I)
 REQUIRED_COLS = {
@@ -78,3 +81,45 @@ def test_curated_is_subset_of_raw(df):
     raw = pd.read_parquet(RAW)
     assert len(df) < len(raw)
     assert set(df["id"]) <= set(raw["id"])
+
+
+def test_manifest_distributions_match_curated_snapshot(df):
+    """Prevent a previous build's distributions from surviving a row update."""
+    manifest = json.loads(MANIFEST.read_text())
+    build = manifest["build"]
+
+    def counts(column):
+        return {
+            str(key): int(value)
+            for key, value in df[column].value_counts().items()
+        }
+
+    assert manifest["n_rows"] == len(df)
+    assert build["security_rows"] == len(df)
+    assert build["by_confidence"] == counts("confidence")
+    assert build["by_authority_tier"] == counts("authority_tier")
+    assert build["by_n_signals"] == counts("n_signals")
+    assert build["by_source"] == counts("source_platform")
+    assert build["by_severity"] == counts("severity")
+    assert build["by_score"] == counts("security_score")
+    assert build["by_severity_source"] == counts("severity_source")
+
+
+def test_canonical_public_evidence_partition(df):
+    """The four publication categories must be mutually exclusive and exhaustive."""
+    advisory = (
+        df[PROVENANCE_FIELDS]
+        .fillna("")
+        .astype(str)
+        .agg(" ".join, axis=1)
+        .str.contains(ADVISORY_ID_RE)
+    )
+    rated = df["severity"].fillna("").str.lower().isin(RATED)
+    partition = [
+        advisory & rated,
+        advisory & ~rated,
+        ~advisory & rated,
+        ~advisory & ~rated,
+    ]
+    assert sum(int(mask.sum()) for mask in partition) == len(df)
+    assert [int(mask.sum()) for mask in partition] == [52, 120, 91, 1962]

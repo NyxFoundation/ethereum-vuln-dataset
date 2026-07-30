@@ -5,10 +5,11 @@ Built by reading 2,225 real security fixes from all eleven production Ethereum
 clients — six languages, both layers. Every claim traces to
 `data/ethereum_vulns.parquet`; the figures rebuild with `scripts/make_figures.py`.*
 
-Open a client's CVE history and you find almost nothing. Fewer than one fix in
-twenty ever gets an advisory. The rest ship quietly, inside ordinary-looking
-commits, because announcing a live consensus bug before the network upgrades is
-itself an attack.
+Open a client's CVE history and you see only one slice. In this corpus, 172 of
+2,225 records (7.7%) contain a recognized advisory ID, while 1,962 (88.2%) have
+neither such an ID nor a rated severity. Many ship inside ordinary-looking
+commits, in part because announcing a live consensus bug before the network
+upgrades can itself create risk.
 
 So the CVE list is not the map. The fix history is. We reconstructed it across
 Geth, Nethermind, Besu, Erigon, Reth, Lighthouse, Lodestar, Nimbus, Prysm, Teku,
@@ -168,8 +169,8 @@ in the consensus path, which is what turned an off-by-something into a Critical.
    event. A bug in one client is a lead on the rest. Diversity both softens the
    blast and hands you the next finding.
 5. **Rank by impact, not by CVE.** Weigh a finding by what one message could
-   actually cause. Most of the bugs here never had a CVE, so a CVE-only view walks
-   straight past them.
+   actually cause. A CVE-only view omits the 88.2% of corpus records with
+   neither a recognized advisory ID nor a rated severity.
 
 ## The audit, in order
 

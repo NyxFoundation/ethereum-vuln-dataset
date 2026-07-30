@@ -5,6 +5,10 @@ wake-ups; this file is the memory). Each iteration: **acquire additional diff �
 evaluate → improve**, repeated until vulnerability coverage saturates
 (loop-until-dry: N consecutive iterations add no new distinct vulns).
 
+> **Historical ledger:** every count below belongs to the named iteration and
+> is not a current dataset statistic. For the current 2,225-row snapshot, use
+> [`DATA_SNAPSHOT.md`](./DATA_SNAPSHOT.md).
+
 ## Baseline (before loop) — 2026-07-02
 - curated rows: **2096**, rated-severity: **173** (8.3%), high-confidence: **382**
 - Diagnosis: volume-driven (60k+ commit-grep rows), only a tiny authoritative core

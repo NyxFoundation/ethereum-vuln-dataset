@@ -4,13 +4,10 @@ Fresh crawl + deterministic curation. Raw snapshot re-collected from all 11
 clients (+ consensus-specs) via `collection/run_pipeline.sh` (uncapped), then the
 curated security-only set derived offline by `pipeline/build_security_dataset.py`.
 
-> **Note:** LLM STRIDE/CWE classification was **skipped** for this build, so
-> `stride=Other` / `cwe_top25=N/A` for every row. The GATE therefore keeps a row
-> only on an *independent non-LLM* signal: a CVE/GHSA id, a rated severity
-> (Critical/High/Medium/Low), or a security-keyword match (`security_score ≥ 0.5`).
-> This yields a smaller, higher-precision set than a classified build — the
-> ~16k rows dropped below are the unrated "stealth" fixes that only an LLM
-> STRIDE label would have admitted.
+> **Current-snapshot rule:** all “After” counts and coverage below are computed
+> from `data/ethereum_vulns.parquet` (2,225 rows). Iteration-local history lives
+> in [`IMPROVEMENT_LOG.md`](./IMPROVEMENT_LOG.md); canonical definitions and
+> hashes live in [`DATA_SNAPSHOT.md`](./DATA_SNAPSHOT.md).
 
 ## Before (raw crawl)
 
@@ -49,44 +46,43 @@ Critical** (geth, besu, teku). Severities preserved through the canonical path.
   across all 11 clients (curated C_candidate + gate-dropped *plausible* rows),
   flagged **696** as real silent fixes. This both promotes classified fixes C→B
   and, via the gate, **admits +453 silent fixes the deterministic keyword gate
-  had dropped** (1,880 → 2,333 rows). Model chosen by an 80-item eval sweep
+  had dropped** in that intermediate iteration. Model chosen by an 80-item eval sweep
   (F1 0.872, precision 0.895); see `docs/model_evaluation.md`. Diffs served
   rate-limit-free by `local_diffs.py` (bulk PR-ref clone). Regenerate via
   `collection/llm_classify_fixes.py --apply` → `data/silent_fix_llm.csv`.
-- by severity: {'Unrated': 963, 'Info': 773, 'High': 63, 'Medium': 54, 'Low': 21, 'Critical': 3}
-  (High/Medium dropped vs iter-1 because T2b removed 49 unrelated CVEs' bogus CVSS severities)
+- by confidence: {'medium': 1445, 'low': 454, 'high': 326}
+- by severity: {'Unrated': 1332, 'Info': 750, 'High': 63, 'Medium': 57, 'Low': 20, 'Critical': 3}
 - by source:
-  - geth: 438
-  - erigon: 371
-  - lodestar: 276
-  - nimbus: 232
-  - lighthouse: 178
-  - reth: 172
-  - prysm: 116
-  - nethermind: 108
-  - besu: 94
-  - teku: 93
-  - grandine: 16
+  - erigon: 425
+  - geth: 407
+  - nimbus: 269
+  - lodestar: 225
+  - lighthouse: 217
+  - reth: 183
+  - nethermind: 130
+  - teku: 123
+  - prysm: 113
+  - besu: 112
+  - grandine: 19
   - consensus-specs: 2
-- security_score distribution: {'0.0': 34, '0.3': 4, '0.5': 1253, '0.8': 423, '0.9': 172, '1.0': 210}
+- security_score distribution: {'0.0': 220, '0.3': 271, '0.5': 1119, '0.8': 289, '0.9': 159, '1.0': 167}
 
 ## Validation checkpoints (issue #89)
 
 - c-kzg-4844 / blst: present (kzg×12, 4844×13, blst×13 in curated)
-- Lodestar: 276 · Nimbus: 232 · Prysm: 116 — all present
+- Lodestar: 225 · Nimbus: 269 · Prysm: 113 — all present
 - `ethereum_specs` source: **0** (spec-divergence crawler returned no matches this run; the 11 clients + consensus-specs are covered)
 
-## Column coverage (n=2,333)
+## Column coverage (n=2,225)
 
 | column | coverage | notes |
 |---|---:|---|
 | `source_url`, `title`, `description`, `attack_path` | 100.0% | attack_path defaults to a best-effort class |
 | `label` (assigned, non-`other`) | **93.4%** | deterministic path/keyword + LLM fallback (`gemma4:31b`) reading the diff or, for no-commit rows, the advisory text |
-| `root_cause` (assigned) | 86.8% | keyword + classifier reason + LLM |
-| `cwe_top25` (from advisory/diff text via LLM) | **24.7%** | read from the link's advisory text / diff even when no fix commit exists — advisories often lack a CWE but the Impact text yields one |
+| `root_cause` (assigned) | 86.5% | keyword + classifier reason + LLM |
+| `cwe_top25` (general CWE label assigned) | **17.8%** | despite the legacy column name, only 130 rows (5.8% overall) are in MITRE's 2025 Top 25 |
 | `fix_commit` / `introduced_in_commit` | **88.0%** | `/commit/` + `/pull/` URLs, GHSA advisory patch-releases, and **inline `#PR` / commit refs parsed from CHANGELOG/release text** (author-linked, high precision) |
-| `pre_fix_code` / `post_fix_code` (inline) | **86.3%** | **98.1% of the 1,959 rows that have a resolved commit** — only 38 committed rows lack a diff (huge/edge-case). The remaining ~266 no-code rows have no single fix commit (advisory/NVD/release) — no code exists to inline. |
-| `silent_fix_prob` (LLM classifier) | 38.5% | classified rows (C_candidate + plausible gate-dropped) |
-| `severity` (bounty-graded, rated) | 6.4% | the EF bug-bounty grades; most fixes are silently patched, unrated |
-| `severity_estimated` (bounty-tier) | **30.3%** | a Low/Medium/High/Critical tier via: 60 `bounty-graded` (ground truth) + 83 `upstream-cvss` (dependency CVEs) + **532 `llm-estimated`** (from the client-code fixes; 1,020 more judged `not-eligible` = not remotely network-impacting). `severity_source` flags provenance. See `docs/severity_labeling.md`. |
-
+| `pre_fix_code` / `post_fix_code` (inline) | **86.4%** | **98.2% of the 1,959 rows with a resolved commit**; 36 committed rows lack post-fix code and 266 have no fix commit |
+| `silent_fix_prob` (LLM classifier) | 40.3% | 897 classified rows (C_candidate + plausible gate-dropped) |
+| `severity` (rated) | 6.4% | 143 rows; provenance is 60 `bounty-graded` and 83 rated `upstream-cvss` |
+| `severity_estimated` (bounty-tier) | **30.3%** | 675 Low/Medium/High/Critical estimates; 1,549 `not-eligible`, one unassessed. See `docs/severity_labeling.md`. |

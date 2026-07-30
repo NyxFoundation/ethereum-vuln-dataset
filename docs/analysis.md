@@ -6,8 +6,9 @@ security fixes across the eleven production Ethereum clients.*
 
 > **Key takeaways.** For anyone auditing Ethereum clients (or other blockchain /
 > consensus systems), the data says: (1) the **historical fix record — not the
-> CVE list — is the more complete map**, since ~94% of fixes carry no CVE or
-> advisory; (2) the threat profile is **availability- and consensus-centric**
+> CVE list — is the more complete map**, since 88.2% of records carry neither a
+> recognized advisory ID nor a rated severity; (2) the threat profile is
+> **availability- and consensus-centric**
 > (untrusted network input crashing or diverging a node), not the memory-
 > corruption profile of generic C/C++ datasets; (3) by the bounty's impact
 > definition, **consensus, EVM and crypto code is where an exploitable bug is
@@ -30,23 +31,25 @@ are computed directly over the curated table; fix-size uses the inlined
 post-fix hunks. Method and coverage caveats are in
 [`limitations.md`](./limitations.md).
 
-## 2. Finding 1 — the silent-fix majority
+## 2. Finding 1 — the advisory-light majority
 
 ![Figure 1](figures/fig1_silent_prevalence.png)
 
-**Only 4.9% of curated fixes carry a CVE/GHSA identifier and 6.4% carry any
-rated severity; ≈93.6% are silent** — no advisory, frequently an uninformative
-commit message. This quantifies, for Ethereum clients specifically, the
-silent-patching behaviour that VulFixMiner [Zhou et al., ASE'21] and Sawadogo et
-al. describe qualitatively.
+Under the canonical search across all provenance fields, **172 records (7.7%)
+carry a recognized CVE/GHSA/RustSec identifier**, 143 (6.4%) carry a rated
+severity, and **1,962 (88.2%) carry neither**. The four mutually exclusive
+groups are: ID + rating 52, ID only 120, rating only 91, and neither 1,962.
+The operational definition is fixed in
+[`DATA_SNAPSHOT.md`](./DATA_SNAPSHOT.md).
 
 *Implication.* CVE-anchored datasets — **CVEfixes** [Bhandari et al., 2021] and
 **BigVul** [Fan et al., 2020] — begin from an advisory and walk to the patch, so
-by construction they can only observe the ~5% advisory-linked slice. This corpus
+by construction they can only observe an advisory-linked slice. In this corpus,
+that slice is 7.7% under the canonical identifier definition. This corpus
 is built in the opposite direction (mine the silent majority, then corroborate),
 making it **complementary to, not a subset of**, CVE-anchored resources. A model
-trained solely on CVE-linked fixes never sees the 94% of Ethereum-client fixes
-that never received a CVE.
+trained solely on advisory-linked fixes does not see the 88.2% with neither a
+recognized advisory ID nor a rated severity.
 
 ## 3. Finding 2 — an availability-first, protocol-specific threat profile
 
@@ -171,9 +174,9 @@ Assessed along **Croft et al.**'s [2023] data-quality dimensions:
 - **Currentness.** Freshly crawled (2026), including the newest forks
   (deneb→fulu/gloas, cancun→osaka), where public datasets typically lag years.
 
-The low bars — `severity` (6.4%) and `silent_fix_prob` (40%) — are structural,
-not defects: unrated severity *is* the silent-fix signal (§2), and full-commit
-LLM classification was deliberately bounded (§8).
+The low bars — `severity` (6.4%) and `silent_fix_prob` (40.3%) — describe
+coverage, not ground truth about disclosure. Full-commit LLM classification was
+deliberately bounded (§8).
 
 ## 9. Implications for use
 

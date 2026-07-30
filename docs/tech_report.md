@@ -6,7 +6,9 @@
 
 ## TL;DR
 
-- **11 clients, 6 languages, 2,225 security fixes.** Of these, **93.6% carry no formal severity rating** (Critical/High/Medium/Low). They are "silent fixes" — patches committed under labels like "refactor" or "fix edge case" without advisories or CVEs.
+- **11 clients, 6 languages, 2,225 security fixes.** Of these, **1,962
+  (88.2%) carry neither a recognized CVE/GHSA/RustSec ID nor a rated
+  severity**. Separately, 2,082 (93.6%) are Info/Unrated.
 - **Six bug patterns account for ~75% of all fixes.** Input validation failures, resource exhaustion, race conditions, unhandled errors, integer overflows, and consensus divergences.
 - **Because Ethereum is implemented 11 ways from one spec, a fix in one client is a lead for unreported bugs in the others.** Cross-client differential analysis is the highest-ROI hunting strategy.
 
@@ -20,13 +22,17 @@ The CVE count? **A few dozen.**
 
 If you stop there, you conclude Ethereum clients are remarkably secure. **That conclusion is wrong.**
 
-We crawled the full commit history of all 11 clients and identified **2,225 security fixes**. Of these, **93.6% have no formal severity rating** — no Critical, no High, no Medium, no Low. They live in raw commits labeled "refactor state transition" or "fix edge case in block processing."
+We crawled the full commit history of all 11 clients and identified **2,225
+security fixes**. The canonical provenance search finds 172 records (7.7%) with
+a recognized advisory ID and 143 (6.4%) with a rated severity; **1,962 (88.2%)
+have neither**. Many live in commits labeled "refactor state transition" or
+"fix edge case in block processing."
 
 The reason is simple. Disclosing a live consensus bug is itself an attack. You cannot announce "here is how to fork the chain" before the majority of the network has upgraded.
 
 **So the CVE list is not the map. The commit history is.**
 
-![Silent fix ratio: Unrated+Info = 2,082 (93.6%)](figures/silent_fix_pie.png)
+![Advisory and severity evidence across 2,225 records](figures/fig1_silent_prevalence.png)
 
 [NyxFoundation/ethereum-vuln-dataset](https://github.com/NyxFoundation/ethereum-vuln-dataset) is the corpus that builds this map. It normalizes past security fixes from 11 clients into a single schema, labeling protocol area, root cause, attack path, and before/after code. This article is a field guide based on that data and the analysis in `docs/`.
 
@@ -164,7 +170,11 @@ Diff the same spec function across all clients. Guard asymmetry is an unreported
 
 Before using it, understand the boundaries.
 
-- **Only 6.4% have ground-truth `severity`.** The rest is LLM-estimated (`severity_estimated`). Exact match with bounty grading is ~60%, within ±1 tier ~80%. Critical tends to be underestimated. **But `severity_estimated` is accurate enough for filtering.** The 326-row `confidence == "high"` subset is usable without manual verification.
+- **Only 60 rows are marked `bounty-graded`; 143 rows (6.4%) have any rated
+  `severity`.** The `severity_estimated` field is a triage prior, not ground
+  truth. Calibration reports ~60% exact and ~80% within one tier on the selected
+  known-severe cases. The 326-row `confidence == "high"` subset still requires
+  verification for consequential conclusions.
 - **Recall is limited to "fixes that left traces."** Truly silent fixes — vague commit message + no advisory + no path clue — are invisible to crawlers. **But the traces that remain contain enough patterns.** 1,808 of 2,225 rows have `authority_tier != "C_candidate"`, an essential slice.
 - **`introduced_in_commit` is the fix commit's parent, not the true introduction.** True origin requires `git blame` walking. **But the pre-fix code state already provides enough clues to reproduce attack paths.**
 - **This is a corpus, not a benchmark.** No train/test split included. You must add temporal or per-client splits yourself and treat fork-shared commits and cross-implementation duplicates as leak risks. **But for exploration and audit planning, no benchmark is needed.**
@@ -192,9 +202,12 @@ Apply `checklist.md` directly to your security review. P1-P6 greps are worth add
 
 ### For Audit Firms
 
-Skip the 506-row Critical/High corpus and you will repeat the same blind spots as past silent fixes.
+Ignoring the Critical/High examples and the broader essential slice repeats the
+same blind spots as advisory-only review.
 
-This dataset compresses Ethereum client audit pre-investigation from one week to one hour. Add the concrete question "does this client exhibit the same patterns as these 506 Critical/High cases?" to your audit plan. Cite `security_report.md` patterns and `critical_high_findings.md` examples to optimize scope and time allocation.
+Use the concrete question “does this client exhibit the same patterns as the
+reviewed Critical/High examples?” in the audit plan. Cite `security_report.md`
+patterns and `critical_high_findings.md` examples to optimize scope and time.
 
 ### For Security Researchers
 

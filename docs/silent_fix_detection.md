@@ -3,9 +3,11 @@
 **Silent (a.k.a. stealth) security fixes** are patches that repair an exploitable
 or availability-affecting defect but ship *without* an advisory (no CVE/GHSA),
 often with a deliberately uninformative commit message, so users upgrade before
-attackers notice. Ethereum clients do this heavily — issue #2 in this project
-found **~98–100% of client security fixes are silent**. Detecting them is the
-core problem this dataset addresses.
+attackers notice. Prior issue #2 experiments estimated **~98–100%** under their
+own historical definition; that is not the current snapshot statistic. In the
+current canonical snapshot, 1,962 / 2,225 records (88.2%) have neither a
+recognized advisory ID nor a rated severity. Detecting low-disclosure fixes is
+the core problem this dataset addresses.
 
 This document covers (1) the research landscape and (2) exactly what algorithm
 this repo runs, including what we tried and rejected.

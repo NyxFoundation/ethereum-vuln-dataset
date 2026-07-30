@@ -5,6 +5,7 @@ import pandas as pd, numpy as np, json
 import matplotlib as mpl; mpl.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.ticker import PercentFormatter
+from paper_analysis import ADVISORY_ID_RE, PROVENANCE_FIELDS, RATED
 
 # ---- style (clean, report-quality) -----------------------------------------
 plt.rcParams.update({
@@ -30,22 +31,29 @@ def hbar(ax, labels, vals, color=BLUE, pct=False, ann=True):
                     va="center", ha="left", fontsize=9, color="#333")
     ax.margins(x=0.14)
 
-# ---- FIG 1: silent-fix prevalence ------------------------------------------
-rated=(d.severity.str.lower().isin(['critical','high','medium','low'])).mean()*100
-cveid=(d.title.fillna('')+' '+d.description.fillna('')).str.contains(r'CVE-|GHSA-',regex=True).mean()*100
+# ---- FIG 1: advisory/rating evidence ---------------------------------------
+rated_mask=d.severity.fillna('').str.lower().isin(RATED)
+advisory_mask=d[PROVENANCE_FIELDS].fillna('').astype(str).agg(' '.join,axis=1).str.contains(ADVISORY_ID_RE)
+rated=rated_mask.mean()*100
+both=(rated_mask & advisory_mask).mean()*100
+advisory_only=(~rated_mask & advisory_mask).mean()*100
+rated_only=(rated_mask & ~advisory_mask).mean()*100
+neither=(~rated_mask & ~advisory_mask).mean()*100
 fig,ax=plt.subplots(figsize=(7.2,2.2))
-segs=[("carries CVE/GHSA id",cveid,ORANGE),
-      ("rated severity only (no id)",rated-cveid if rated>cveid else 0,"#e8a87c"),
-      ("silent (no advisory, no rating)",100-rated,GRAY)]
+segs=[("advisory ID + rated",both,RED),
+      ("advisory ID only",advisory_only,ORANGE),
+      ("rated only",rated_only,"#e8a87c"),
+      ("neither advisory ID nor rating",neither,GRAY)]
 left=0
 for lbl,w,c in segs:
     ax.barh(0,w,left=left,color=c,height=0.5,label=f"{lbl}  ({w:.1f}%)")
-    if w>4: ax.text(left+w/2,0,f"{w:.1f}%",ha="center",va="center",color="white",fontsize=10,fontweight="bold")
+    # Small adjacent segments are legible in the legend but overlap in-bar.
+    if w>8: ax.text(left+w/2,0,f"{w:.1f}%",ha="center",va="center",color="white",fontsize=10,fontweight="bold")
     left+=w
 ax.set_xlim(0,100); ax.set_ylim(-.5,.5); ax.set_yticks([])
 ax.xaxis.set_major_formatter(PercentFormatter()); ax.grid(axis="y",visible=False)
 ax.legend(loc="upper center",bbox_to_anchor=(0.5,-0.35),ncol=1,frameon=False,fontsize=9,handlelength=1.1)
-ax.set_title("How Ethereum-client fixes reach the public",loc="left",fontsize=12,color=INK,fontweight="bold",pad=8)
+ax.set_title("Public advisory and severity evidence",loc="left",fontsize=12,color=INK,fontweight="bold",pad=8)
 plt.tight_layout(); plt.savefig(f"{FG}/fig1_silent_prevalence.png",bbox_inches="tight"); plt.close()
 
 # ---- FIG 2: root cause + attack path (2 panels) ----------------------------
@@ -123,7 +131,7 @@ ax.barh(y,vals,color=cols,height=0.7)
 ax.set_yticks(y); ax.set_yticklabels(labels); ax.set_xlim(0,105)
 ax.xaxis.set_major_formatter(PercentFormatter()); ax.grid(axis="y",visible=False)
 for yi,v in zip(y,vals): ax.text(v+1,yi,f"{v:.0f}%",va="center",fontsize=9,color="#333")
-ax.set_title("Per-column coverage  (n=2,225)",loc="left",fontsize=12,color=INK,fontweight="bold")
+ax.set_title(f"Per-column coverage  (n={n:,})",loc="left",fontsize=12,color=INK,fontweight="bold")
 ax.axvline(100,color="#ccc",lw=0.8)
 plt.tight_layout(); plt.savefig(f"{FG}/fig6_coverage.png",bbox_inches="tight"); plt.close()
 

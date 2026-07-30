@@ -49,9 +49,9 @@
     "security_rows": 2225,
     "low_signal_dropped": 14665,
     "by_confidence": {
-      "medium": 1542,
+      "medium": 1445,
       "low": 454,
-      "high": 337
+      "high": 326
     },
     "by_authority_tier": {
       "B_corroborated": 1573,
@@ -59,40 +59,40 @@
       "A_authoritative": 235
     },
     "by_n_signals": {
-      "1": 487,
-      "2": 1154,
-      "3": 566,
+      "1": 462,
+      "2": 1104,
+      "3": 533,
       "4": 120,
       "5": 6
     },
     "by_source": {
-      "geth": 449,
-      "erigon": 446,
-      "nimbus": 272,
-      "lodestar": 233,
-      "lighthouse": 221,
-      "reth": 197,
-      "nethermind": 138,
+      "erigon": 425,
+      "geth": 407,
+      "nimbus": 269,
+      "lodestar": 225,
+      "lighthouse": 217,
+      "reth": 183,
+      "nethermind": 130,
       "teku": 123,
-      "besu": 117,
-      "prysm": 114,
-      "grandine": 21,
+      "prysm": 113,
+      "besu": 112,
+      "grandine": 19,
       "consensus-specs": 2
     },
     "by_severity": {
-      "Unrated": 1333,
-      "Info": 853,
+      "Unrated": 1332,
+      "Info": 750,
       "High": 63,
-      "Medium": 60,
-      "Low": 21,
+      "Medium": 57,
+      "Low": 20,
       "Critical": 3
     },
     "by_score": {
       "0.0": 220,
-      "0.3": 272,
-      "0.5": 1208,
-      "0.8": 296,
-      "0.9": 170,
+      "0.3": 271,
+      "0.5": 1119,
+      "0.8": 289,
+      "0.9": 159,
       "1.0": 167
     },
     "residual_boilerplate_fp": 0,

@@ -3,10 +3,14 @@ rows,2225,2225,100.0,all curated rows in the frozen Parquet snapshot
 authority_A,235,2225,10.562,authority_tier == A_authoritative
 authority_A_or_B,1808,2225,81.258,the essential slice
 rated_severity,143,2225,6.427,Critical/High/Medium/Low
+unrated_severity,2082,2225,93.573,severity is Info or Unrated; this is not an advisory-linkage measure
 cve_ghsa_in_title_or_description,109,2225,4.899,case-sensitive CVE-/GHSA- token; reproduces make_figures.py
 recognized_advisory_id_any_provenance,172,2225,7.73,"case-insensitive CVE/GHSA/RUSTSEC ID in title, description, issue_id, contest, source_url, or evidence"
 neither_rated_nor_narrow_cve_ghsa,1991,2225,89.483,no rated severity and no case-sensitive CVE-/GHSA- in title/description
 neither_rated_nor_any_advisory_id,1962,2225,88.18,no rated severity and no recognized advisory ID in any provenance field
+recognized_advisory_id_and_rated,52,2225,2.337,recognized advisory ID present and severity is rated
+recognized_advisory_id_only,120,2225,5.393,recognized advisory ID present but severity is Info or Unrated
+rated_only_without_recognized_advisory_id,91,2225,4.09,rated severity but no recognized advisory ID in any provenance field
 fix_commit_present,1959,2225,88.045,non-empty fix_commit
 post_fix_code_present,1923,2225,86.427,non-empty post_fix_code JSON
 cwe_present,396,2225,17.798,cwe_top25 != N/A

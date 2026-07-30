@@ -1,6 +1,7 @@
 # Severity labeling with an LLM — methodology
 
-Severity is present on only **6.4%** of rows (the bounty-graded ones). This
+Rated severity is present on **143 / 2,225 rows (6.4%)**. Provenance marks 60
+rows `bounty-graded`; the other 83 rated rows are marked `upstream-cvss`. This
 document is the design for estimating severity on the rest **against the Ethereum
 Foundation bug-bounty model**, with the calibration results that justify it. The
 tool is `collection/estimate_severity.py`.
@@ -14,13 +15,13 @@ the tier depends on *how much of the network* the exploit reaches — which is n
 in the diff. So we do not ask for the tier; we **decompose, then map**.
 
 ### Pitfall 1 — two different severity models are mixed in the data
-Of the 143 rated rows, **~83 are upstream *dependency* CVEs** (log4j, Netty,
-`golang.org/x/crypto`, `nim-libp2p`) carrying their **CVSS** severity, and only
-**~60 are real client-code bugs** carrying (implicitly) the **EF-bounty** severity.
-A log4j bump does not split the Ethereum network. **These must be separated:**
-estimate EF-severity only for client-code bugs; dependency rows keep the upstream
-CVSS and are `not-eligible` under the bounty model. (Conflating them was the
-single biggest source of apparent disagreement.)
+Of the 143 rated rows, **83 are currently marked `upstream-cvss`** and 60
+`bounty-graded`. The first label must not be read as “83 verified dependency
+CVEs”: the current classifier also treats changelog/release URLs as dependency
+evidence, and `upstream-cvss` appears on 612 rows overall. Dependency scope
+therefore requires a separate audit. A confirmed dependency bump such as log4j
+does not split the Ethereum network, so confirmed dependency rows should retain
+upstream CVSS and remain `not-eligible` under the bounty model.
 
 ### Pitfall 2 — spec-level vs client-specific is the hard axis
 The tier hinges on blast radius: a bug in **shared spec logic** (EVM
@@ -63,7 +64,8 @@ Run `estimate_severity.py --validate`. Key results and what they mean:
   ("Implement Kintsugi specs", "Run sim single node test"); the LLM correctly
   returns `impact_type = none → not-eligible`. Much of the raw "disagreement" is
   the dataset's label noise, not the model's error — a useful by-product.
-- **Dependency CVEs** (log4j/Netty/…) are correctly returned `not-eligible` under
+- **Manually confirmed dependency CVEs** (log4j/Netty/…) are returned
+  `not-eligible` under
   the bounty model even though the row carries a CVSS High — confirming Pitfall 1.
 
 Residual weakness: value-integrity Criticals (e.g. besu gas-allocation) are still
@@ -85,7 +87,7 @@ enrichments. It **never overwrites** the real `severity`:
 | column | meaning |
 |---|---|
 | `severity_estimated` | the tier — the real grade where one exists, else the LLM estimate |
-| `severity_source` | `bounty-graded` \| `llm-estimated` (so consumers can filter to ground truth) |
+| `severity_source` | `bounty-graded` \| `upstream-cvss` \| `llm-estimated` \| `unassessed`; only `bounty-graded` is the EF-bounty ground-truth slice |
 | `impact_type` · `reachability` · `blast_radius` | the decomposition (the reliable part) |
 | `severity_why` | one-sentence rationale |
 

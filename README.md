@@ -8,8 +8,8 @@ single schema, scored for security relevance, and tiered by evidence strength.
 It is built for training and evaluating spec-compliance / audit tooling:
 > *given the code state just before this fix, would the tool have caught the bug?*
 
-Because Ethereum clients **silently patch** most vulnerabilities (no CVE, vague
-commit message), the hard part is separating real fixes from the flood of
+Because many Ethereum-client fixes lack a recognized advisory ID or a rated
+severity, the hard part is separating real fixes from the flood of
 refactors, dep-bumps and release notes. That separation — **the gate** — is what
 this README explains.
 
@@ -34,8 +34,12 @@ renders as a table (key columns). Full data with inline pre/post code: [`ethereu
 | curated (security-only) | **2,225** |
 | └ essential slice (tier A ∪ B) | **1,808** |
 | by tier | A_authoritative 235 · B_corroborated 1,573 · C_candidate 417 |
-| by confidence | high 337 · medium 1,542 · low 454 |
-| by severity | Critical 3 · High 63 · Medium 60 · Low 21 · Info 853 · Unrated 1,333 |
+| by confidence | high 326 · medium 1,445 · low 454 |
+| by severity | Critical 3 · High 63 · Medium 57 · Low 20 · Info 750 · Unrated 1,332 |
+| public evidence | advisory ID 172 (7.7%) · rated 143 (6.4%) · neither 1,962 (88.2%) |
+
+Canonical definitions and all current counts are fixed in
+[`docs/DATA_SNAPSHOT.md`](docs/DATA_SNAPSHOT.md).
 
 ## How the corpus is built
 
@@ -99,8 +103,10 @@ Pre-gate de-noising, in order (`pipeline/build_security_dataset.py`):
 
 ## Silent-fix detection
 
-Ethereum clients patch ~98–100% of vulnerabilities *silently*. Two research-backed
-methods recover them (full write-up: [`docs/silent_fix_detection.md`](docs/silent_fix_detection.md)):
+The current corpus has 1,962 records (88.2%) with neither a recognized
+CVE/GHSA/RustSec ID nor a rated severity. Two research-backed methods help
+recover low-disclosure fixes (full write-up:
+[`docs/silent_fix_detection.md`](docs/silent_fix_detection.md)):
 
 - **Patch backlinking** — start from a confirmed advisory (OSV/GHSA) and extract
   the exact fixing commit/version (`fix_commit`). Deterministic, high precision.
@@ -128,13 +134,16 @@ The bounty's **scope is exactly this corpus** — the eleven clients plus
 `c-kzg-4844` and the deposit contract. Three consequences shape the `severity`
 column:
 
-- **~94% of rows are `Unrated`.** Most fixes ship with no CVE or advisory, so the
-  bug was never graded. **Unrated ≠ low impact** — the fix record, not the CVE
-  list, is the map (see [`security_report.md`](docs/security_report.md)).
-- **Two severity models coexist.** A minority of rated rows are *upstream
-  dependency CVEs* (log4j, Netty, `golang.org/x/crypto`) carrying **CVSS**
-  severity — a dependency bug does not split the Ethereum network, so it is out of
-  bounty scope. These are kept distinct from real client-bug (EF-bounty) grades.
+- **2,082 rows (93.6%) are `Info` or `Unrated`.** This is a rating-coverage
+  statistic, not an advisory statistic. Under the canonical identifier search,
+  **1,962 rows (88.2%) have neither a recognized advisory ID nor a rating**.
+  **Unrated ≠ low impact** — the fix record, not a CVE score, is the primary
+  evidence (see [`security_report.md`](docs/security_report.md)).
+- **Two severity models coexist.** Of the 143 rated rows, 60 are marked
+  `bounty-graded` and 83 `upstream-cvss`. The latter label is not a verified
+  dependency flag because the current heuristic also catches changelog/release
+  rows; dependency scope requires manual review. Confirmed dependency CVEs carry
+  CVSS and are outside the EF-bounty impact model.
 - **`severity_estimated` (optional LLM pass)** fills the gap by decomposing each
   fix into `impact_type` / `reachability` / `blast_radius` and mapping to the
   bounty tier, calibrated against the graded rows (exact-tier ~60% / ±1 ~80% on
