@@ -145,6 +145,11 @@ For inferential use of estimated tiers:
 6. only promote `tier-uncertain` to an exact tier when the EF impact threshold
    is evidenced.
 
+The first source-level validation is complete for all 21 original chain-split
+High candidates. Only nine contain direct evidence of a consensus-sensitive
+defect, and zero establish a chain split or the EF >33% threshold. See
+[`chain_split_candidate_audit.md`](chain_split_candidate_audit.md).
+
 ## Generated evidence
 
 - [`tables/ef_severity_population.csv`](tables/ef_severity_population.csv)
@@ -153,3 +158,5 @@ For inferential use of estimated tiers:
 - [`tables/ef_severity_high_decomposition.csv`](tables/ef_severity_high_decomposition.csv)
 - [`tables/ef_severity_client_diagnostic.csv`](tables/ef_severity_client_diagnostic.csv)
 - [`tables/ef_severity_high_review_queue.csv`](tables/ef_severity_high_review_queue.csv)
+- [`tables/chain_split_candidate_audit.csv`](tables/chain_split_candidate_audit.csv)
+- [`tables/chain_split_audit_summary.csv`](tables/chain_split_audit_summary.csv)

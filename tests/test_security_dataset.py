@@ -42,6 +42,12 @@ CWE_ROOT_CAUSE_COVERAGE = (
 BOUNTY_SEVERE_CWE_AUDIT = (
     ROOT / "docs" / "paper" / "tables" / "bounty_severe_cwe_audit.csv"
 )
+CHAIN_SPLIT_AUDIT = (
+    ROOT / "docs" / "paper" / "tables" / "chain_split_candidate_audit.csv"
+)
+CHAIN_SPLIT_SUMMARY = (
+    ROOT / "docs" / "paper" / "tables" / "chain_split_audit_summary.csv"
+)
 
 BOILERPLATE = re.compile(r"critical update required|urgency guidelines|high-urgency", re.I)
 REQUIRED_COLS = {
@@ -277,3 +283,25 @@ def test_cwe_context_complementarity_and_severe_audit():
         "distinct_cwe_labels": 2,
     }
     assert int(roots.loc["incorrect_gas_accounting", "cwe_known_rows"]) == 0
+
+
+def test_chain_split_candidate_source_audit_is_complete():
+    audit = pd.read_csv(CHAIN_SPLIT_AUDIT)
+    assert len(audit) == 21
+    assert audit["id"].nunique() == 21
+    assert audit["severity_estimated"].eq("High").all()
+    assert audit["severity_analysis_label"].eq("tier-uncertain").all()
+    assert not audit["confirmed_chain_split"].any()
+    assert audit["audit_reason"].notna().all()
+    assert audit["audit_verdict"].value_counts().to_dict() == {
+        "consensus_sensitive_defect": 9,
+        "operational_or_nonconsensus_change": 4,
+        "preventive_hardening_no_realized_failure": 4,
+        "feature_or_predeployment_change": 2,
+        "availability_defect_not_chain_split": 1,
+        "source_linkage_insufficient": 1,
+    }
+
+    summary = pd.read_csv(CHAIN_SPLIT_SUMMARY).set_index("audit_verdict")
+    assert int(summary["rows"].sum()) == 21
+    assert int(summary["confirmed_chain_split_rows"].sum()) == 0

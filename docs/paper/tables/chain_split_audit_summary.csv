@@ -1,0 +1,7 @@
+audit_verdict,rows,denominator,percent,confirmed_chain_split_rows
+consensus_sensitive_defect,9,21,42.857,0
+operational_or_nonconsensus_change,4,21,19.048,0
+preventive_hardening_no_realized_failure,4,21,19.048,0
+feature_or_predeployment_change,2,21,9.524,0
+availability_defect_not_chain_split,1,21,4.762,0
+source_linkage_insufficient,1,21,4.762,0
