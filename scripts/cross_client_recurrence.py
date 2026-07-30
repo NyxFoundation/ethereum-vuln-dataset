@@ -5,10 +5,12 @@ The paper's novelty claim is cross-implementation analysis, so the question is w
 a fix in one client indicates variants in another. Two things must be said up front
 about what this corpus can and cannot answer.
 
-**It cannot test direction.** There is no fix date in the snapshot -- ``fix_commit`` is
-a SHA and ``scraped_at`` is crawl time -- so "a fix in client A precedes variants in
-client B" is not measurable here. Everything below measures *co-occurrence*, never
-precedence, and the word "predicts" must not be used for it.
+**Direction needs a date the snapshot lacks.** ``fix_commit`` is a SHA and
+``scraped_at`` is crawl time, so precedence is not testable from the Parquet file alone.
+``scripts/resolve_fix_dates.py`` recovers a committer and author date for all 1,959 rows
+that have a fix commit, from the bare clones the crawler already maintains; pass the
+resulting overlay via ``--fix-dates`` and section 4 orders each multi-client anchor in
+time. Without it, everything here is co-occurrence only.
 
 **Explicit specification anchors are sparse.** Naming an EIP, a consensus-spec
 function, an opcode, or a fork is the only way a record states its shared-spec surface
@@ -28,6 +30,8 @@ Outputs under ``docs/paper/tables``:
 * ``cross_client_surface_comparison.csv``  spec-anchored vs client-local, by size
 * ``cross_client_permutation_test.csv``    the stratified permutation result
 * ``cross_client_spec_anchors.csv``        explicit anchors and their client spread
+* ``cross_client_anchor_precedence.csv``   multi-client anchors ordered in time
+* ``cross_client_anchor_first_mover.csv``  which client is first, across anchors
 * ``cross_client_recurrence_summary.csv``  headline counts
 """
 
@@ -278,10 +282,93 @@ def anchor_spread(data: pd.DataFrame) -> pd.DataFrame:
     return out.sort_values(["clients", "records"], ascending=False)
 
 
+def anchor_precedence(
+    data: pd.DataFrame, anchors: pd.DataFrame, dates: pd.DataFrame
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Order each multi-client anchor in time and report who was first.
+
+    This is the directional question, and it is only answerable once ``fix_commit`` has
+    a date (see scripts/resolve_fix_dates.py). Fork-name anchors are excluded: they mark
+    a release cycle, so "who shipped Electra first" is not a statement about defects.
+
+    Author date is used rather than committer date because squash-merges and rebases
+    rewrite the latter, which would reorder clients by their maintainers' merge
+    workflows instead of by when the patch was written.
+    """
+    if anchors.empty or dates.empty:
+        return pd.DataFrame(), pd.DataFrame()
+
+    stamped = dates[dates["fix_author_date"].notna() & dates["fix_author_date"].ne("")]
+    when = dict(zip(stamped["id"], stamped["fix_author_date"]))
+
+    text = (
+        data["title"].fillna("").astype(str)
+        + " "
+        + data["description"].fillna("").astype(str).str.slice(0, 4000)
+    )
+    rows = []
+    for idx, found in text.map(extract_anchors).items():
+        row_id = data.at[idx, "id"]
+        stamp = when.get(row_id)
+        if not stamp:
+            continue
+        for anchor in found:
+            if anchor.startswith("fork:"):
+                continue
+            rows.append(
+                {
+                    "anchor": anchor,
+                    "id": row_id,
+                    "client": data.at[idx, "source_platform"],
+                    "author_date": stamp,
+                }
+            )
+    if not rows:
+        return pd.DataFrame(), pd.DataFrame()
+
+    long = pd.DataFrame(rows)
+    long["date"] = pd.to_datetime(long["author_date"], utc=True, format="ISO8601")
+
+    ordered = []
+    for anchor, frame in long.groupby("anchor"):
+        if frame["client"].nunique() < 2:
+            continue
+        frame = frame.sort_values("date")
+        first, last = frame.iloc[0], frame.iloc[-1]
+        ordered.append(
+            {
+                "anchor": anchor,
+                "records": len(frame),
+                "clients": frame["client"].nunique(),
+                "first_client": first["client"],
+                "first_date": first["date"].date().isoformat(),
+                "last_client": last["client"],
+                "last_date": last["date"].date().isoformat(),
+                "span_days": int((last["date"] - first["date"]).days),
+                "client_order": ";".join(frame["client"].tolist()),
+            }
+        )
+    if not ordered:
+        return pd.DataFrame(), pd.DataFrame()
+
+    detail = pd.DataFrame(ordered).sort_values(["clients", "span_days"], ascending=False)
+    leaders = (
+        detail.groupby("first_client")
+        .agg(times_first=("anchor", "count"),
+             median_span_days=("span_days", "median"))
+        .reset_index()
+        .sort_values("times_first", ascending=False)
+    )
+    return detail, leaders
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--in", dest="inp", type=Path,
                     default=Path("data/ethereum_vulns.parquet"))
+    ap.add_argument("--fix-dates", type=Path, default=Path("data/fix_dates.csv"),
+                    help="overlay from scripts/resolve_fix_dates.py; enables the "
+                         "precedence analysis, which is otherwise skipped")
     ap.add_argument("--out-dir", type=Path, default=Path("docs/paper/tables"))
     ap.add_argument("--iterations", type=int, default=20000)
     args = ap.parse_args()
@@ -299,6 +386,12 @@ def main() -> int:
         ignore_index=True,
     )
     anchors = anchor_spread(data)
+    dates = (
+        pd.read_csv(args.fix_dates, dtype=str)
+        if args.fix_dates.exists()
+        else pd.DataFrame()
+    )
+    precedence, leaders = anchor_precedence(data, anchors, dates)
 
     usable = clusters[clusters["records"] >= 2]
     anchored = anchors[anchors["clients"] >= 2] if not anchors.empty else anchors
@@ -324,7 +417,21 @@ def main() -> int:
             ("records_naming_an_anchor_pct", round(100 * anchor_rows / len(data), 1)),
             ("distinct_explicit_anchors", len(anchors)),
             ("explicit_anchors_in_two_or_more_clients", len(anchored)),
-            ("fix_dates_available", 0),  # no date column: precedence is not testable
+            ("fix_dates_resolved", int(dates["fix_author_date"].ne("").sum())
+             if not dates.empty else 0),
+            ("non_fork_anchors_with_dates_in_two_or_more_clients", len(precedence)),
+            # A span of years means both clients merely touched a long-lived surface at
+            # some point; propagation would show up as a short one.
+            ("multi_client_anchors_span_90_days_or_less",
+             int(precedence["span_days"].le(90).sum()) if not precedence.empty else 0),
+            ("multi_client_anchors_span_over_2_years",
+             int(precedence["span_days"].gt(730).sum()) if not precedence.empty else 0),
+            ("median_span_days_across_anchors",
+             int(precedence["span_days"].median()) if not precedence.empty else 0),
+            ("most_times_first_by_any_single_client",
+             int(leaders["times_first"].max()) if not leaders.empty else 0),
+            ("distinct_clients_appearing_first",
+             int(len(leaders)) if not leaders.empty else 0),
         ],
         columns=["measure", "value"],
     )
@@ -336,6 +443,13 @@ def main() -> int:
         permutation.to_csv(args.out_dir / "cross_client_permutation_test.csv", index=False)
     if not anchors.empty:
         anchors.to_csv(args.out_dir / "cross_client_spec_anchors.csv", index=False)
+    if not precedence.empty:
+        precedence.to_csv(
+            args.out_dir / "cross_client_anchor_precedence.csv", index=False
+        )
+        leaders.to_csv(
+            args.out_dir / "cross_client_anchor_first_mover.csv", index=False
+        )
     summary.to_csv(args.out_dir / "cross_client_recurrence_summary.csv", index=False)
 
     print("=== cross-client spread by surface class, stratified by cluster size ===")
@@ -346,6 +460,12 @@ def main() -> int:
     if not anchors.empty:
         print("\n=== explicit specification anchors in the most clients ===")
         print(anchors.head(12)[["anchor", "kind", "records", "clients"]].to_string(index=False))
+    if not precedence.empty:
+        print("\n=== multi-client anchors ordered in time (author date) ===")
+        print(precedence[["anchor", "clients", "first_client", "first_date",
+                          "last_client", "last_date", "span_days"]].to_string(index=False))
+        print("\n=== which client is first, across anchors ===")
+        print(leaders.to_string(index=False))
     print("\n=== summary ===")
     for row in summary.to_dict("records"):
         print(f"  {row['measure']}: {row['value']}")

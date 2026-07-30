@@ -1,0 +1,9 @@
+first_client,times_first,median_span_days
+lighthouse,4,701.5
+nimbus,4,1452.0
+geth,2,2225.0
+erigon,2,32.5
+nethermind,2,621.0
+lodestar,2,1075.5
+besu,1,1641.0
+prysm,1,145.0

@@ -60,10 +60,11 @@ artifact contains. Stages 4c and 4d are where that is traced and repaired.
 7. [`cross_client_recurrence.md`](cross_client_recurrence.md) clusters fixes by
    specification anchor and tests whether recurrence concentrates on shared-spec
    surfaces. It does not: cross-client spread is explained by cluster size alone
-   (stratified permutation p = 0.63). Precedence is untestable because the snapshot
-   has no fix date, so the directional "predicts" framing is dropped. The defensible
-   output is 19 explicitly anchored candidate variant sets across independent
-   implementations.
+   (stratified permutation p = 0.63). Fix dates recovered for all 1,959 rows with a
+   fix commit make precedence testable, and it fails too — across the 18 dated
+   multi-client anchors, eight different clients appear first and the median gap is
+   2.9 years. Cross-implementation recurrence is not demonstrated at either
+   granularity.
 
 ## Reproduce the checked-in tables
 
@@ -78,6 +79,7 @@ UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/client_conditional_severity.py 
   --severity-csv data/severity_est_v2.csv
 UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/audit_bounty_graded_population.py
 UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/cwe_context_analysis.py
+UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/resolve_fix_dates.py
 UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/cross_client_recurrence.py \
   --iterations 5000
 git diff --exit-code docs/paper/tables
