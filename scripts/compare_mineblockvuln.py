@@ -46,6 +46,39 @@ TYPE_NAMES = {
     19: "Nil Pointer Dereference",
     20: "Database Corruption",
 }
+TYPE_AXES = {
+    1: "root_cause",
+    2: "root_cause",
+    3: "root_cause",
+    4: "subsystem_or_object",
+    5: "root_cause",
+    6: "symptom_or_impact",
+    7: "subsystem_or_object",
+    8: "symptom_or_impact",
+    9: "subsystem_or_object",
+    10: "root_cause",
+    11: "root_cause",
+    12: "subsystem_or_object",
+    13: "root_cause",
+    14: "subsystem_or_object",
+    15: "root_cause",
+    16: "root_cause",
+    17: "symptom_or_impact",
+    18: "subsystem_or_object",
+    19: "root_cause",
+    20: "symptom_or_impact",
+}
+EXPECTED_ROOT_CAUSES = {
+    1: {"race_condition"},
+    2: {"missing_input_validation", "missing_bounds_check"},
+    3: {"resource_exhaustion"},
+    5: {"race_condition"},
+    10: {"missing_input_validation", "missing_bounds_check"},
+    11: {"integer_overflow_underflow"},
+    15: {"missing_bounds_check"},
+    16: {"missing_bounds_check", "integer_overflow_underflow"},
+    19: {"unhandled_error_or_nil"},
+}
 
 
 def sha256(path: Path) -> str:
@@ -267,7 +300,33 @@ def main() -> int:
         .reset_index(name="mineblock_geth_issues")
         .sort_values("TYPE")
     )
+    type_counts["semantic_axis"] = type_counts["TYPE"].map(TYPE_AXES)
     type_counts.to_csv(args.output_dir / "mineblock_type_counts.csv", index=False)
+    axis_counts = (
+        type_counts.groupby("semantic_axis")["mineblock_geth_issues"]
+        .sum()
+        .reset_index()
+    )
+    axis_counts["percent"] = (
+        100 * axis_counts["mineblock_geth_issues"] / axis_counts["mineblock_geth_issues"].sum()
+    ).round(3)
+    axis_counts.to_csv(args.output_dir / "mineblock_type_axes.csv", index=False)
+
+    current_root_rows: list[dict] = []
+    for population, frame in [("current_geth", current), ("current_all_clients", current_all)]:
+        for root_cause, count in frame["root_cause"].value_counts().items():
+            current_root_rows.append(
+                {
+                    "population": population,
+                    "root_cause": root_cause,
+                    "rows": int(count),
+                    "denominator": len(frame),
+                    "percent": round(100 * count / len(frame), 3),
+                }
+            )
+    pd.DataFrame(current_root_rows).to_csv(
+        args.output_dir / "mineblock_current_root_cause_counts.csv", index=False
+    )
 
     current_by_ref: dict[str, list[dict]] = {}
     for row in current.to_dict("records"):
@@ -322,6 +381,7 @@ def main() -> int:
                 }
             )
     crosswalk = pd.DataFrame(crosswalk_rows)
+    crosswalk_detail = crosswalk.copy()
     if not crosswalk.empty:
         crosswalk = (
             crosswalk.groupby(
@@ -340,6 +400,40 @@ def main() -> int:
             )
         )
     crosswalk.to_csv(args.output_dir / "mineblock_type_crosswalk.csv", index=False)
+
+    alignment_rows: list[dict] = []
+    if not crosswalk_detail.empty:
+        for (type_id, type_name), group in crosswalk_detail.groupby(
+            ["mineblock_type", "mineblock_type_name"]
+        ):
+            root_counts = group["current_root_cause"].value_counts()
+            expected = EXPECTED_ROOT_CAUSES.get(int(type_id))
+            aligned = (
+                int(group["current_root_cause"].isin(expected).sum())
+                if expected is not None
+                else None
+            )
+            alignment_rows.append(
+                {
+                    "mineblock_type": int(type_id),
+                    "mineblock_type_name": type_name,
+                    "semantic_axis": TYPE_AXES[int(type_id)],
+                    "matched_current_rows": len(group),
+                    "distinct_current_root_causes": group["current_root_cause"].nunique(),
+                    "modal_current_root_cause": root_counts.index[0],
+                    "modal_rows": int(root_counts.iloc[0]),
+                    "modal_percent": round(100 * root_counts.iloc[0] / len(group), 3),
+                    "expected_root_cause_rows": aligned,
+                    "expected_root_cause_percent": (
+                        round(100 * aligned / len(group), 3)
+                        if aligned is not None
+                        else None
+                    ),
+                }
+            )
+    pd.DataFrame(alignment_rows).sort_values("mineblock_type").to_csv(
+        args.output_dir / "mineblock_taxonomy_alignment.csv", index=False
+    )
 
     print(
         "MineBlockVuln comparison:",

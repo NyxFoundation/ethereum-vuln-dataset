@@ -20,6 +20,10 @@ ADVISORY_REVIEW = ROOT / "docs" / "paper" / "tables" / "advisory_review_queue.cs
 ADVISORY_COMPARISON = (
     ROOT / "docs" / "paper" / "tables" / "direct_advisory_vs_no_id.csv"
 )
+MINEBLOCK_AXES = ROOT / "docs" / "paper" / "tables" / "mineblock_type_axes.csv"
+MINEBLOCK_ALIGNMENT = (
+    ROOT / "docs" / "paper" / "tables" / "mineblock_taxonomy_alignment.csv"
+)
 
 BOILERPLATE = re.compile(r"critical update required|urgency guidelines|high-urgency", re.I)
 REQUIRED_COLS = {
@@ -162,3 +166,18 @@ def test_advisory_comparison_denominators():
         "direct_advisory_denominator": 36,
         "no_id_denominator": 2053,
     }
+
+
+def test_mineblock_semantic_axes_and_alignment():
+    axes = pd.read_csv(MINEBLOCK_AXES).set_index("semantic_axis")
+    assert int(axes["mineblock_geth_issues"].sum()) == 212
+    assert axes["mineblock_geth_issues"].to_dict() == {
+        "root_cause": 109,
+        "subsystem_or_object": 53,
+        "symptom_or_impact": 50,
+    }
+
+    alignment = pd.read_csv(MINEBLOCK_ALIGNMENT).set_index("mineblock_type_name")
+    assert int(alignment.loc["Go Panic", "matched_current_rows"]) == 23
+    assert int(alignment.loc["Go Panic", "distinct_current_root_causes"]) == 6
+    assert float(alignment.loc["Overflow", "expected_root_cause_percent"]) == 80.0

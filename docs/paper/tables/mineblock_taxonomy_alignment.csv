@@ -1,0 +1,11 @@
+mineblock_type,mineblock_type_name,semantic_axis,matched_current_rows,distinct_current_root_causes,modal_current_root_cause,modal_rows,modal_percent,expected_root_cause_rows,expected_root_cause_percent
+1,Race Condition,root_cause,4,3,race_condition,2,50.0,2.0,50.0
+2,Check/Validation,root_cause,1,1,other,1,100.0,0.0,0.0
+4,Transaction Related,subsystem_or_object,2,2,consensus_divergence,1,50.0,,
+5,Deadlock,root_cause,1,1,race_condition,1,100.0,1.0,100.0
+6,Go Panic,symptom_or_impact,23,6,other,9,39.13,,
+8,Denial-of-Service,symptom_or_impact,3,3,missing_bounds_check,1,33.333,,
+11,Overflow,root_cause,5,2,integer_overflow_underflow,4,80.0,4.0,80.0
+14,RPC Related,subsystem_or_object,1,1,incorrect_gas_accounting,1,100.0,,
+15,Out-of-Bound,root_cause,2,2,missing_bounds_check,1,50.0,1.0,50.0
+19,Nil Pointer Dereference,root_cause,3,2,unhandled_error_or_nil,2,66.667,2.0,66.667

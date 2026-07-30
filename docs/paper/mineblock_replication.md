@@ -94,7 +94,7 @@ within Geth.
 protocol-native analysis, not “largest” or “most complete” historical
 Ethereum-vulnerability coverage.
 
-## 4. Replication of the old type distribution is not yet valid
+## 4. The old “type” taxonomy mixes three semantic axes
 
 MineBlockVuln's leading typed Geth categories were:
 
@@ -113,17 +113,70 @@ Only 45 current rows match a MineBlockVuln Top-20 issue by issue/PR number.
 Twenty-three of those matches are in the old “Go Panic” category. This shared
 slice is too small and selected to support a distributional replication claim.
 
-The taxonomies also answer different questions:
+The taxonomies also answer different questions. Classifying all 212 typed Geth
+issues by what the category name denotes gives:
+
+| Semantic axis | MineBlockVuln issues | Share |
+|---|---:|---:|
+| Root cause | 109 | 51.4% |
+| Subsystem or affected object | 53 | 25.0% |
+| Symptom or impact | 50 | 23.6% |
 
 - MineBlockVuln types mix symptoms (`Go Panic`), root causes (`Race
   Condition`), affected objects (`Block Related`), and modules (`RPC Related`);
 - the current corpus separates protocol area, root cause, and attack path.
 
+This means a single distribution cannot be compared directly with the current
+`root_cause` column. “Go Panic,” for example, is a Go-specific runtime symptom,
+not a protocol vulnerability class that can be transferred to Rust, Java, C#,
+Nim, or TypeScript.
+
 The generated
 [`tables/mineblock_type_crosswalk.csv`](tables/mineblock_type_crosswalk.csv)
-therefore serves as an annotation queue, not a one-to-one mapping.
+therefore serves as an annotation queue, not a one-to-one mapping. The explicit
+axis classification is in
+[`tables/mineblock_type_axes.csv`](tables/mineblock_type_axes.csv).
 
-## 5. Next validity work
+## 5. Exact-overlap rows validate some categories and reject others
+
+The 45 matched current rows are too selected for population inference, but they
+can test whether an old label has a stable root-cause meaning:
+
+| MineBlockVuln type | Matched rows | Current root causes | Expected-root alignment |
+|---|---:|---:|---:|
+| Overflow | 5 | 2 distinct | 4/5 (80.0%) |
+| Nil Pointer Dereference | 3 | 2 distinct | 2/3 (66.7%) |
+| Race Condition | 4 | 3 distinct | 2/4 (50.0%) |
+| Go Panic | 23 | **6 distinct** | not applicable: symptom |
+| Denial-of-Service | 3 | **3 distinct** | not applicable: impact |
+
+`Overflow` behaves mostly like a root-cause category. `Go Panic` does not: its
+23 shared rows spread across `other` (9), `unhandled_error_or_nil` (6),
+`race_condition` (4), `resource_exhaustion` (2),
+`improper_state_update` (1), and `serialization_bug` (1). A panic label tells
+the researcher how a Go process failed, not why the vulnerability existed.
+
+This decomposition changes the cross-language research question. The paper
+should not ask whether “Go Panic” reproduces in six languages. It should ask
+whether the underlying causes hidden by that symptom—unchecked errors,
+concurrency, resource exhaustion, state updates, and serialization—recur across
+implementations.
+
+## 6. Descriptive distribution shift, not a replication claim
+
+Within MineBlockVuln's selected Top-20 Geth issues, `Race Condition` is 48/212
+(22.6%). The current schema assigns `race_condition` to 52/407 Geth records
+(12.8%) and 217/2,225 records across all clients (9.8%). Conversely, the current
+Geth corpus is led by `resource_exhaustion` (77; 18.9%) and
+`missing_input_validation` (55; 13.5%).
+
+These differences are descriptive only. The datasets have low exact overlap,
+different collection frames, different units, and different annotation
+taxonomies. They cannot establish a temporal change in Ethereum vulnerabilities
+or a language effect. Their value is to show that the prior headline
+distribution depends materially on a mixed-axis type system.
+
+## 7. Next validity work
 
 1. Manually stratify the 279 not-collected refs into:
    - in-scope vulnerability/security fix;
@@ -141,14 +194,22 @@ therefore serves as an annotation queue, not a one-to-one mapping.
    Ethereum) across the six implementation languages. Do not attribute a
    Geth/Go observation to the Ethereum protocol.
 
-## 6. Candidate contribution after correction
+## 8. Candidate contribution after correction
 
 The defensible replication story is:
 
 > Prior work established that repository mining finds blockchain security work
 > beyond CVEs, but studied Ethereum through one Go implementation. The current
-> corpus tests which findings survive across eleven implementations and six
-> languages, while exposing the recall and taxonomy limits of both datasets.
+> corpus exposes that the prior “type” distribution combines root cause,
+> subsystem, and language-specific symptom. Separating those axes enables the
+> first defensible cross-implementation comparison across eleven clients and six
+> languages, while the exact-overlap audit makes the recall limits explicit.
 
 This is a stronger empirical contribution than repeating the prior paper's
 module and type counts on a differently selected sample.
+
+## 9. Generated category evidence
+
+- [`tables/mineblock_type_axes.csv`](tables/mineblock_type_axes.csv)
+- [`tables/mineblock_taxonomy_alignment.csv`](tables/mineblock_taxonomy_alignment.csv)
+- [`tables/mineblock_current_root_cause_counts.csv`](tables/mineblock_current_root_cause_counts.csv)
