@@ -225,10 +225,31 @@ provenance column is only as strong as the weakest collector feeding it, and
 - The model screen is one prompt and two models. It is reported as corroboration of
   the provenance split, never as the deciding evidence, and its agreement is
   concentrated in rejections rather than in acceptances.
-- This audit does not revisit the 1,552 `llm-estimated` rows. Their provenance was
+- This audit does not revisit all 1,552 `llm-estimated` rows. Their provenance was
   never claimed to be authoritative, so the corrections above do not propagate to
-  them, but the `not-eligible` share among them is now known to be measured against a
-  population containing similar collector noise.
+  them by construction.
+
+## 9. The defect does not reach the tier-uncertain queue
+
+The obvious worry is that the same collector poisoned the 110-row candidate queue that
+[`ef_severity_analysis.md`](ef_severity_analysis.md) and
+[`client_conditional_severity.md`](client_conditional_severity.md) analyse. It did not.
+
+None of the 110 rows comes from `cross_client`. They come from `stealth_pr` (34),
+`networking` (30), Geth's repository and advisory collectors (26), Lighthouse's (18),
+and one each from Prysm and Erigon. More decisively, **no collector assigned any of
+them a tier**: all 110 carry `severity` of `Unrated` (90) or `Info` (20).
+`mine_stealth_prs.py`, which contributes the largest share, writes
+`"severity": "Unrated"` explicitly.
+
+So every tier on those rows came from the estimator, was already labelled
+`llm-estimated`, and was already corrected to `tier-uncertain`. The corruption was
+confined to `crawl_cross_client.py::_infer_severity`.
+
+**Observation.** The failure was not "the corpus fabricates severities." It was one
+collector fabricating them, combined with a provenance label assigned by exclusion
+that could not tell the difference. The second half is what made a local crawler
+heuristic into the paper's ground truth.
 
 ## Reproduce
 
