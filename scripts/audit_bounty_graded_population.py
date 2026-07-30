@@ -106,6 +106,42 @@ def load_model_screens(cache_path: Path) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def model_agreement(screens: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Pairwise agreement between models on the in-scope/out-of-scope screen.
+
+    Two models are two annotators. Reporting their agreement is what lets the screen
+    corroborate the provenance split instead of standing in for it. Rows only one
+    model has seen are excluded from the pairwise counts rather than counted as
+    agreement.
+    """
+    if screens.empty or screens["model"].nunique() < 2:
+        empty = pd.DataFrame(columns=["model_a", "model_b", "compared", "agree",
+                                      "agreement_pct"])
+        return screens.head(0), empty
+
+    wide = screens.pivot_table(
+        index=["id", "provenance", "severity"], columns="model",
+        values="model_out_of_scope", aggfunc="first",
+    ).reset_index()
+
+    models = sorted(screens["model"].unique())
+    rows = []
+    for i, a in enumerate(models):
+        for b in models[i + 1:]:
+            both = wide[wide[a].notna() & wide[b].notna()]
+            agree = int((both[a] == both[b]).sum())
+            rows.append(
+                {
+                    "model_a": a,
+                    "model_b": b,
+                    "compared": len(both),
+                    "agree": agree,
+                    "agreement_pct": round(100 * agree / len(both), 1) if len(both) else 0.0,
+                }
+            )
+    return wide, pd.DataFrame(rows)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--in", dest="inp", type=Path,
@@ -153,6 +189,7 @@ def main() -> int:
         screen_table = pd.DataFrame(
             columns=["model", "provenance", "model_out_of_scope", "records"]
         )
+    per_row_screen, agreement = model_agreement(screens)
 
     def severe(frame: pd.DataFrame) -> int:
         return int(frame["severity"].isin(SEVERE).sum())
@@ -184,6 +221,13 @@ def main() -> int:
     counts.to_csv(args.out_dir / "bounty_graded_provenance_counts.csv", index=False)
     screen_table.to_csv(args.out_dir / "bounty_graded_model_screen.csv", index=False)
     summary.to_csv(args.out_dir / "bounty_graded_audit_summary.csv", index=False)
+    if not agreement.empty:
+        per_row_screen.to_csv(
+            args.out_dir / "bounty_graded_model_screen_by_row.csv", index=False
+        )
+        agreement.to_csv(
+            args.out_dir / "bounty_graded_model_agreement.csv", index=False
+        )
 
     print("=== tier distribution by what produced the severity ===")
     pivot = (
@@ -199,6 +243,9 @@ def main() -> int:
     if not screen_table.empty:
         print("\n=== independent model eligibility screen ===")
         print(screen_table.to_string(index=False))
+    if not agreement.empty:
+        print("\n=== pairwise model agreement on the eligibility screen ===")
+        print(agreement.to_string(index=False))
     return 0
 
 
