@@ -1,0 +1,12 @@
+size_bucket,surface,clusters,spanning_multiple_clients,spanning_pct,mean_clients,records
+2-3,client_local,30,25,83.3,2.0,78
+2-3,spec_anchored,71,43,60.6,1.65,164
+4-7,client_local,26,23,88.5,2.54,139
+4-7,spec_anchored,36,33,91.7,2.83,180
+4-7,unclassified,5,5,100.0,3.0,29
+8-15,client_local,18,18,100.0,3.39,179
+8-15,spec_anchored,32,30,93.8,3.44,341
+8-15,unclassified,1,1,100.0,4.0,10
+16+,client_local,12,12,100.0,4.42,308
+16+,spec_anchored,18,18,100.0,4.5,581
+16+,unclassified,3,3,100.0,4.33,106

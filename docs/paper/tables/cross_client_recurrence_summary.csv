@@ -1,0 +1,14 @@
+measure,value
+records,2225.0
+clusters_label_x_root_cause,362.0
+clusters_with_at_least_two_records,252.0
+clusters_spanning_multiple_clients,211.0
+records_in_multi_client_clusters,1993.0
+spec_anchored_clusters,157.0
+client_local_clusters,86.0
+unclassified_clusters,9.0
+records_naming_an_explicit_spec_anchor,181.0
+records_naming_an_anchor_pct,8.1
+distinct_explicit_anchors,130.0
+explicit_anchors_in_two_or_more_clients,31.0
+fix_dates_available,0.0

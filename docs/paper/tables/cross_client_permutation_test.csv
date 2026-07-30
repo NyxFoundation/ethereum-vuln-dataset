@@ -1,0 +1,3 @@
+surface_definition,statistic,observed,null_mean,null_sd,iterations,p_value_two_sided,seed
+surface,stratified difference in mean clients per cluster,-0.0508,-0.0014,0.1069,5000,0.631474,20260730
+surface_narrow,stratified difference in mean clients per cluster,0.0484,-0.0013,0.1075,5000,0.640872,20260730
