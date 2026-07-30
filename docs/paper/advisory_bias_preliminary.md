@@ -3,7 +3,9 @@
 **Question:** Are advisory-linked records merely a smaller sample, or a
 distributionally different sample of Ethereum-client security work?
 
-**Status:** exploratory result; the manual scope review is not complete.
+**Status:** superseded for scope-sensitive claims by
+[`advisory_scope_review.md`](advisory_scope_review.md). This file preserves the
+pre-review result so the effect of scope correction remains reproducible.
 
 The analysis uses the broad definition established in
 [`snapshot_audit.md`](snapshot_audit.md): a row is advisory-linked when a
@@ -71,7 +73,7 @@ The 172 advisory-linked rows do not form one coherent population. They mix:
 2. upstream dependency CVEs and RustSec advisories;
 3. documentation, CI, test, and developer-tool dependency updates.
 
-A conservative automated triage of the 172 rows currently suggests:
+A conservative automated triage of the 172 rows initially suggested:
 
 | Suggested scope | Rows | Share |
 |---|---:|---:|
@@ -80,7 +82,10 @@ A conservative automated triage of the 172 rows currently suggests:
 | needs_manual_review | 9 | 5.2% |
 
 These are review suggestions, not final labels. The checked-in review queue
-contains blank `reviewed_scope` and `review_notes` columns for human validation.
+now contains populated `reviewed_scope` and `review_notes` columns. The completed
+review finds 135 dependency/tooling, 36 direct client implementation, and one
+other-product record; use
+[`advisory_scope_review.md`](advisory_scope_review.md) for interpretation.
 
 This mixture materially affects the raw result. For example, many dependency
 updates in documentation or JavaScript tooling carry a protocol-looking

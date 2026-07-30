@@ -1,0 +1,5 @@
+comparison_group,rows,cwe_known_rows,cwe_known_percent,top25_rows,top25_percent_of_all,top25_percent_of_cwe_known
+dependency_or_tooling,135,43,31.852,18,13.333,41.86
+direct_client_advisory,36,26,72.222,11,30.556,42.308
+no_recognized_advisory_id,2053,326,15.879,101,4.92,30.982
+other_product,1,1,100.0,0,0.0,0.0

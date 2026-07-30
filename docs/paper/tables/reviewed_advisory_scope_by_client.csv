@@ -1,0 +1,12 @@
+source_platform,dependency_or_tooling,direct_client_implementation,other_product,total
+besu,12,7,0,19
+erigon,13,2,0,15
+geth,26,23,0,49
+grandine,2,0,0,2
+lighthouse,15,1,0,16
+lodestar,23,3,0,26
+nethermind,1,0,1,2
+nimbus,24,0,0,24
+prysm,5,0,0,5
+reth,3,0,0,3
+teku,11,0,0,11

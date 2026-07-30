@@ -16,6 +16,10 @@ ROOT = Path(__file__).resolve().parents[1]
 CURATED = ROOT / "data" / "ethereum_vulns.parquet"
 RAW = ROOT / "data" / "raw" / "train.classified.parquet"
 MANIFEST = ROOT / "data" / "manifest.json"
+ADVISORY_REVIEW = ROOT / "docs" / "paper" / "tables" / "advisory_review_queue.csv"
+ADVISORY_COMPARISON = (
+    ROOT / "docs" / "paper" / "tables" / "direct_advisory_vs_no_id.csv"
+)
 
 BOILERPLATE = re.compile(r"critical update required|urgency guidelines|high-urgency", re.I)
 REQUIRED_COLS = {
@@ -123,3 +127,38 @@ def test_canonical_public_evidence_partition(df):
     ]
     assert sum(int(mask.sum()) for mask in partition) == len(df)
     assert [int(mask.sum()) for mask in partition] == [52, 120, 91, 1962]
+
+
+def test_advisory_scope_review_is_complete():
+    review = pd.read_csv(ADVISORY_REVIEW)
+    assert len(review) == 172
+    assert review["reviewed_scope"].notna().all()
+    assert review["review_notes"].notna().all()
+    assert review["reviewed_scope"].value_counts().to_dict() == {
+        "dependency_or_tooling": 135,
+        "direct_client_implementation": 36,
+        "other_product": 1,
+    }
+
+
+def test_advisory_comparison_denominators():
+    comparison = pd.read_csv(ADVISORY_COMPARISON)
+    denominators = (
+        comparison[
+            [
+                "population",
+                "direct_advisory_denominator",
+                "no_id_denominator",
+            ]
+        ]
+        .drop_duplicates()
+        .set_index("population")
+    )
+    assert denominators.loc["A_or_B"].to_dict() == {
+        "direct_advisory_denominator": 36,
+        "no_id_denominator": 1656,
+    }
+    assert denominators.loc["all_tiers"].to_dict() == {
+        "direct_advisory_denominator": 36,
+        "no_id_denominator": 2053,
+    }

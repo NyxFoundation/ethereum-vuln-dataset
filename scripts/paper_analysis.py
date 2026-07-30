@@ -124,6 +124,67 @@ CLIENT_NAMES = {
     "consensus-specs": ("consensus specs", "consensus-specs"),
 }
 
+# Manual corrections after reviewing all 172 advisory-linked rows in the frozen
+# snapshot. Rows not listed retain the conservative automated suggestion:
+# dependency_or_tooling stays dependency/tooling and client_implementation stays
+# direct client implementation. Every needs_manual_review row is resolved here.
+SCOPE_OVERRIDES = {
+    # Automated client-name matching hid dependency/tooling work.
+    "fc384bdaf55405d0": ("dependency_or_tooling", "Netty CVE dependency update"),
+    "c4abc462e912553e": ("dependency_or_tooling", "secp256k1 dependency update"),
+    "d9d15b02a9ffb53b": ("dependency_or_tooling", "gnark-crypto dependency update"),
+    "geth:ghsa-advisory:GHSA-m6gx-rhvj-fh52": (
+        "dependency_or_tooling",
+        "upstream Go CVE",
+    ),
+    "eb5202427514a50d": ("dependency_or_tooling", "zeroize_derive dependency update"),
+    "a4bfb41590b1a159": ("dependency_or_tooling", "elliptic dependency update"),
+    "52a0b74179ac2fb5": (
+        "dependency_or_tooling",
+        "client-side guard around bigint-buffer dependency vulnerability",
+    ),
+    "lodestar:scope-networking:PR#8927": (
+        "dependency_or_tooling",
+        "AJV development-dependency update",
+    ),
+    "nimbus:consensus:PR#6805": (
+        "dependency_or_tooling",
+        "documentation-only reference removal",
+    ),
+    "3c83a22575420ffe": (
+        "dependency_or_tooling",
+        "golang.org/x/crypto CVE dependency update",
+    ),
+    "9b6f7f93db170dd0": ("dependency_or_tooling", "generic dependency update"),
+    # The NVD name match is a different Nethermind product, not the Ethereum client.
+    "ea812e5ad2a3da8e": (
+        "other_product",
+        "Nethermind Juno is a Starknet client, outside the Ethereum-client scope",
+    ),
+    # Resolution of the nine formerly ambiguous rows.
+    "39f552132567e254": (
+        "direct_client_implementation",
+        "Erigon client crypto validation fix",
+    ),
+    "erigon:erigontech-erigon:PR#5450": (
+        "direct_client_implementation",
+        "Erigon regression test for a client vulnerability",
+    ),
+    "7c5ea587d2623255": ("dependency_or_tooling", "pion/dtls dependency update"),
+    "f4dd3dfb89c70b7d": (
+        "dependency_or_tooling",
+        "golang.org/x/crypto vulnerability",
+    ),
+    "d77e6d7be5ad3831": ("dependency_or_tooling", "upstream Go crypto vulnerability"),
+    "17e86a513438dd82": (
+        "dependency_or_tooling",
+        "upstream SSH protocol/library vulnerability",
+    ),
+    "016e9b48cc0d0faa": ("dependency_or_tooling", "ignored hyper dependency advisory"),
+    "7aa58e560f5daf20": ("dependency_or_tooling", "axum dependency update"),
+    "b9328bbd0a612628": ("dependency_or_tooling", "protobuf CVE dependency update"),
+}
+
 
 def pct(count: int, denominator: int) -> float:
     return round(100.0 * count / denominator, 3) if denominator else 0.0
@@ -305,8 +366,18 @@ def write_advisory_review_queue(df: pd.DataFrame, output_dir: Path) -> None:
     review["description_excerpt"] = (
         review["description"].fillna("").astype(str).str.replace(r"\s+", " ", regex=True).str[:500]
     )
-    review["reviewed_scope"] = ""
-    review["review_notes"] = ""
+    def reviewed(row: pd.Series) -> tuple[str, str]:
+        if row["id"] in SCOPE_OVERRIDES:
+            return SCOPE_OVERRIDES[row["id"]]
+        if row["suggested_scope"] == "dependency_or_tooling":
+            return "dependency_or_tooling", "confirmed by dependency/tooling title evidence"
+        if row["suggested_scope"] == "client_implementation":
+            return "direct_client_implementation", "confirmed client implementation record"
+        raise ValueError(f"unresolved advisory scope: {row['id']}")
+
+    resolutions = review.apply(reviewed, axis=1)
+    review["reviewed_scope"] = resolutions.map(lambda item: item[0])
+    review["review_notes"] = resolutions.map(lambda item: item[1])
     columns = [
         "id",
         "source_platform",
@@ -328,6 +399,151 @@ def write_advisory_review_queue(df: pd.DataFrame, output_dir: Path) -> None:
     review[columns].sort_values(
         ["suggested_scope", "source_platform", "issue_id"]
     ).to_csv(output_dir / "advisory_review_queue.csv", index=False)
+
+
+def reviewed_scope_tables(df: pd.DataFrame, output_dir: Path) -> None:
+    """Compare manually reviewed advisory scope with records carrying no ID."""
+    advisory = df[df["advisory_id_present"]].copy()
+    suggestions = advisory.apply(advisory_scope_suggestion, axis=1)
+    advisory["suggested_scope"] = suggestions.map(lambda item: item[0])
+
+    def scope(row: pd.Series) -> str:
+        if row["id"] in SCOPE_OVERRIDES:
+            return SCOPE_OVERRIDES[row["id"]][0]
+        return {
+            "dependency_or_tooling": "dependency_or_tooling",
+            "client_implementation": "direct_client_implementation",
+        }[row["suggested_scope"]]
+
+    advisory["reviewed_scope"] = advisory.apply(scope, axis=1)
+    counts = (
+        advisory["reviewed_scope"]
+        .value_counts()
+        .rename_axis("reviewed_scope")
+        .reset_index(name="rows")
+    )
+    counts["percent_of_advisory_linked"] = (
+        100 * counts["rows"] / len(advisory)
+    ).round(3)
+    counts.to_csv(output_dir / "reviewed_advisory_scope_counts.csv", index=False)
+
+    by_client = pd.crosstab(advisory["source_platform"], advisory["reviewed_scope"])
+    by_client["total"] = by_client.sum(axis=1)
+    by_client.rename_axis("source_platform").reset_index().to_csv(
+        output_dir / "reviewed_advisory_scope_by_client.csv", index=False
+    )
+
+    identifier_rows: list[dict] = []
+    for _, row in advisory.iterrows():
+        blob = " ".join(str(row.get(field) or "") for field in PROVENANCE_FIELDS)
+        for identifier in sorted(
+            {match.group(0).upper() for match in ADVISORY_ID_RE.finditer(blob)}
+        ):
+            identifier_rows.append(
+                {
+                    "advisory_id": identifier,
+                    "reviewed_scope": row["reviewed_scope"],
+                    "source_platform": row["source_platform"],
+                    "record_id": row["id"],
+                }
+            )
+    identifiers = pd.DataFrame(identifier_rows)
+    scope_counts = identifiers.groupby("advisory_id")["reviewed_scope"].nunique()
+    identifiers["appears_in_multiple_scopes"] = identifiers["advisory_id"].map(
+        scope_counts.gt(1)
+    )
+    identifiers.to_csv(
+        output_dir / "reviewed_advisory_identifiers.csv", index=False
+    )
+
+    comparison = df.copy()
+    comparison["comparison_group"] = "no_recognized_advisory_id"
+    scope_by_id = advisory.set_index("id")["reviewed_scope"]
+    advisory_rows = comparison["id"].isin(scope_by_id.index)
+    comparison.loc[advisory_rows, "comparison_group"] = comparison.loc[
+        advisory_rows, "id"
+    ].map(scope_by_id)
+    comparison["comparison_group"] = comparison["comparison_group"].replace(
+        {"direct_client_implementation": "direct_client_advisory"}
+    )
+    cwe_rows: list[dict] = []
+    for group, group_frame in comparison.groupby("comparison_group"):
+        cwe = group_frame["cwe_top25"].fillna("N/A").astype(str)
+        known = cwe.ne("N/A")
+        top25 = cwe.isin(CWE_TOP_25_2025)
+        cwe_rows.append(
+            {
+                "comparison_group": group,
+                "rows": len(group_frame),
+                "cwe_known_rows": int(known.sum()),
+                "cwe_known_percent": pct(int(known.sum()), len(group_frame)),
+                "top25_rows": int(top25.sum()),
+                "top25_percent_of_all": pct(int(top25.sum()), len(group_frame)),
+                "top25_percent_of_cwe_known": pct(
+                    int(top25.sum()), int(known.sum())
+                ),
+            }
+        )
+    pd.DataFrame(cwe_rows).to_csv(
+        output_dir / "reviewed_scope_cwe_coverage.csv", index=False
+    )
+    comparison = comparison[
+        comparison["comparison_group"].isin(
+            {"direct_client_advisory", "no_recognized_advisory_id"}
+        )
+    ]
+
+    rows: list[dict] = []
+    for population, tiers in POPULATIONS.items():
+        population_frame = comparison[comparison["authority_tier"].isin(tiers)].copy()
+        direct = population_frame["comparison_group"].eq("direct_client_advisory")
+        no_id = population_frame["comparison_group"].eq("no_recognized_advisory_id")
+        for dimension in [
+            "root_cause",
+            "attack_path",
+            "label",
+            "source_platform",
+            "layer",
+        ]:
+            for category in population_frame[dimension].dropna().unique():
+                member = population_frame[dimension].eq(category)
+                a = int((direct & member).sum())
+                b = int((direct & ~member).sum())
+                c = int((no_id & member).sum())
+                d = int((no_id & ~member).sum())
+                if a + c < 20:
+                    continue
+                ac, bc, cc, dc = (value + 0.5 for value in (a, b, c, d))
+                log_or = math.log((ac * dc) / (bc * cc))
+                standard_error = math.sqrt(1 / ac + 1 / bc + 1 / cc + 1 / dc)
+                p_value = math.erfc(abs(log_or / standard_error) / math.sqrt(2))
+                rows.append(
+                    {
+                        "population": population,
+                        "dimension": dimension,
+                        "category": category,
+                        "direct_advisory_rows": a,
+                        "direct_advisory_denominator": int(direct.sum()),
+                        "direct_advisory_percent": pct(a, int(direct.sum())),
+                        "no_id_rows": c,
+                        "no_id_denominator": int(no_id.sum()),
+                        "no_id_percent": pct(c, int(no_id.sum())),
+                        "odds_ratio": round(math.exp(log_or), 6),
+                        "ci95_low": round(math.exp(log_or - 1.96 * standard_error), 6),
+                        "ci95_high": round(math.exp(log_or + 1.96 * standard_error), 6),
+                        "p_value": p_value,
+                    }
+                )
+    out = pd.DataFrame(rows)
+    out["q_value_bh"] = out.groupby(
+        ["population", "dimension"], group_keys=False
+    )["p_value"].transform(benjamini_hochberg)
+    out.sort_values(
+        ["population", "dimension", "q_value_bh", "odds_ratio"], inplace=True
+    )
+    out["p_value"] = out["p_value"].map(lambda value: f"{value:.8g}")
+    out["q_value_bh"] = out["q_value_bh"].map(lambda value: f"{value:.8g}")
+    out.to_csv(output_dir / "direct_advisory_vs_no_id.csv", index=False)
 
 
 def main() -> int:
@@ -509,6 +725,7 @@ def main() -> int:
     provenance.to_csv(args.output_dir / "severity_source_by_rating.csv", index=False)
     advisory_bias_tables(df, args.output_dir)
     write_advisory_review_queue(df, args.output_dir)
+    reviewed_scope_tables(df, args.output_dir)
 
     print(f"wrote publication tables to {args.output_dir} (n={n})")
     return 0
