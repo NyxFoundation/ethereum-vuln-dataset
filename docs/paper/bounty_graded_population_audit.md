@@ -84,26 +84,33 @@ These are CI plumbing, interop test harnesses, feature and spec implementation w
 and a specification document. The first four are High because their bodies discuss
 finality, consensus, or the Merge.
 
-## 3. Two models independently reject the heuristic rows
+## 3. Two independent models reject the same rows
 
 The eligibility screen in the estimator (`impact_type ∈ {local_only, none}` or
-`reachability == local_internal` → not eligible) was run over all 60 rows. It is not
-authoritative, but it is independent of the provenance classification above, and the
-two agree closely.
+`reachability == local_internal` → not eligible) was run over the population twice,
+by `claude-sonnet-5` and by `glm-5.2`. Neither is authoritative, but both are
+independent of the provenance classification above, and they converge on it.
 
-| Provenance | Model accepts as in-scope | Model rejects |
-|---|---:|---:|
-| Published advisory | 13 | 1 |
-| `cross_client` keyword heuristic | 4 | 41 |
-| Repository crawl, unattributed | 0 | 1 |
+| Provenance | Rows | claude accepts / rejects | glm accepts / rejects |
+|---|---:|---:|---:|
+| Published advisory | 14 | 13 / 1 | 13 / 0 |
+| `cross_client` keyword heuristic | 45 | 4 / **41** | 4 / **41** |
+| Repository crawl, unattributed | 1 | 0 / 1 | 0 / 1 |
 
-Agreement with the provenance split is 55/60 (91.7%). The single rejected advisory
-row is the upstream Go toolchain CVE, which the model called dependency hygiene —
-the same conclusion this audit reaches on separate grounds. The four accepted
-heuristic rows are the residual disagreement and should be reviewed individually.
+Pairwise agreement between the two models is **55/59 (93.2%)**. The one advisory row
+claude rejected is the upstream Go toolchain CVE, which it called dependency hygiene —
+the conclusion this audit reaches on separate grounds; `glm-5.2` never saw that row
+because the corrected dependency classifier now excludes it.
 
-`tables/bounty_graded_model_screen.csv` is regenerated per model, so a second model's
-screen appends rather than overwrites.
+Both models accept exactly 13 rows as in-scope and both reject exactly 41 of the 45
+heuristic rows. Each accepts four heuristic rows, but the two accept-sets overlap on
+only two records, so the six-record union is larger than either model's own error and
+the agreement is concentrated in the rejections. High pairwise agreement here means
+the models agree about what is *not* a vulnerability; it is not evidence that the
+screen is precise.
+
+The cache is keyed by model, so each model's screen appends rather than overwrites,
+and `tables/bounty_graded_model_screen_by_row.csv` carries the per-row comparison.
 
 ## 4. Corrected confirmed-severe population
 
@@ -139,11 +146,33 @@ DoS, the 0x4 precompile, effective balances, and the p2p DoS. Those are six of t
 published-advisory rows. The figure is agreement on a hand-picked severe subset, not
 calibration over the graded population.
 
-Running the same validation over all 60 rows scores 6/60 exact and 44/60 predicted
-not-eligible, because 46 of the rows are not gradeable vulnerabilities. The earlier
-methodology note had already observed this — "much of the raw disagreement is the
-dataset's label noise, not the model's error" — but treated it as a by-product
-instead of as a defect in the ground truth.
+Running the same validation over the whole population scores 6/60 exact for
+`claude-sonnet-5` and 2/59 for `glm-5.2`, with 44 and 46 rows predicted not-eligible.
+That looks like a badly miscalibrated estimator. Splitting the same runs by what
+produced the severity shows it is not:
+
+| Model | Provenance | Scored | Exact | Exact % | Within ±1 | Within ±1 % |
+|---|---|---:|---:|---:|---:|---:|
+| claude-sonnet-5 | Published advisory | 14 | 5 | 35.7% | 13 | **92.9%** |
+| claude-sonnet-5 | `cross_client` heuristic | 45 | 1 | 2.2% | 3 | 6.7% |
+| glm-5.2 | Published advisory | 13 | 2 | 15.4% | 12 | **92.3%** |
+| glm-5.2 | `cross_client` heuristic | 45 | 0 | 0.0% | 1 | 2.2% |
+
+Against real published grades both models land within one tier on roughly 92% of
+records — at or above the 80% the earlier methodology reported. Against the
+collector-fabricated tiers they land within one tier on 2–7%. The pooled figure was
+an artifact of scoring an estimator against tiers no grader ever assigned.
+
+`glm-5.2`'s confusion matrix makes the mechanism explicit: its largest cell is
+`medium → not-eligible` with 37 records, which is exactly the count of cross-client
+rows that `_infer_severity` rated Medium by default, and its second is
+`high → not-eligible` with 8, exactly the count it rated High by keyword.
+
+Exact-tier agreement is lower than the previously documented 60%, and that is
+expected rather than a regression: the revised prompt declines to assert an exact tier
+when the threshold depends on deployment share, returning `share_dependent` instead
+(see [`client_conditional_severity.md`](client_conditional_severity.md)). Within-±1
+agreement is the comparable metric, and it holds.
 
 **Do not claim.** No exact-tier agreement figure may be quoted without stating the
 population it was measured on. A calibration number over `bounty-graded` as stored in
@@ -169,8 +198,11 @@ every checked-in table still reproduces; the audit tables carry the corrected vi
 > pull requests selected merely for mentioning two clients — promoting CI plumbing,
 > interop harnesses, and a specification document into the exact-tier ground truth.
 > Restricting the population to maintainer-issued advisories reduces the confirmed
-> Critical/High sample from 18 to 8, and an independent model eligibility screen
-> agrees with that provenance split on 55/60 records.
+> Critical/High sample from 18 to 8. Two independent models each reject 41 of the 45
+> heuristic rows and accept all 13 advisory rows, agreeing with each other on 93.2%
+> of the population, and both reach ~92% within-±1 agreement against real published
+> grades while reaching 2–7% against the fabricated ones — so a pooled calibration
+> figure over this population measures the collector, not the estimator.
 
 This is a reusable methodological result rather than a local bug report: a severity
 provenance column is only as strong as the weakest collector feeding it, and
@@ -182,10 +214,17 @@ provenance column is only as strong as the weakest collector feeding it, and
   other than a GitHub advisory (an EF disclosure post, a private bounty award) is
   classified `collector-inferred` here and would be missed. The 13-row population is
   a lower bound on real graded records, not a census.
-- The four heuristic rows the model accepted as in-scope have not been individually
+- The heuristic rows the models accepted as in-scope have not been individually
   source-reviewed. Some may be genuine vulnerabilities that merely lack an advisory.
-- The model screen is one prompt and, at the time of writing, one model. It is
-  reported as corroboration of the provenance split, never as the deciding evidence.
+  The union across both models is six records: both accept `feat: eip-8025 optional
+  execution proofs` and Erigon's `Added SSZ REST for Engine API`; claude additionally
+  accepts the Kintsugi spec PR and a merge-interop test assertion, while glm accepts
+  the prevRandao rename and `PayloadId as string`. All six are assessed at
+  `narrow_config` reach or lower, so none is a candidate for a severe tier even if it
+  turns out to be a genuine defect.
+- The model screen is one prompt and two models. It is reported as corroboration of
+  the provenance split, never as the deciding evidence, and its agreement is
+  concentrated in rejections rather than in acceptances.
 - This audit does not revisit the 1,552 `llm-estimated` rows. Their provenance was
   never claimed to be authoritative, so the corrections above do not propagate to
   them, but the `not-eligible` share among them is now known to be measured against a
@@ -203,4 +242,7 @@ git diff --exit-code docs/paper/tables
 - [`tables/bounty_graded_provenance.csv`](tables/bounty_graded_provenance.csv)
 - [`tables/bounty_graded_provenance_counts.csv`](tables/bounty_graded_provenance_counts.csv)
 - [`tables/bounty_graded_model_screen.csv`](tables/bounty_graded_model_screen.csv)
+- [`tables/bounty_graded_model_screen_by_row.csv`](tables/bounty_graded_model_screen_by_row.csv)
+- [`tables/bounty_graded_model_agreement.csv`](tables/bounty_graded_model_agreement.csv)
+- [`tables/bounty_graded_calibration_by_provenance.csv`](tables/bounty_graded_calibration_by_provenance.csv)
 - [`tables/bounty_graded_audit_summary.csv`](tables/bounty_graded_audit_summary.csv)

@@ -1,2 +1,2 @@
 model_a,model_b,compared,agree,agreement_pct
-claude:claude-sonnet-5,openai:glm-5.2,20,20,100.0
+claude:claude-sonnet-5,openai:glm-5.2,59,55,93.2

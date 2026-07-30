@@ -100,7 +100,14 @@ historical client-share classes.
 > maintainer-issued advisory. The figures below were measured on a hand-picked severe
 > subset (the six vulnerabilities they name), not on the graded population, and must
 > always be quoted with that population stated. Over all 60 rows the same validation
-> scores 6/60 exact, because 46 rows are not gradeable vulnerabilities. See
+> scores 6/60 exact, because 46 rows are not gradeable vulnerabilities.
+>
+> Split by provenance, the revised prompt is well calibrated where a real grade exists
+> and correctly rejects the rest: against published advisories it reaches **92.9%
+> within ±1 tier** (`claude-sonnet-5`, n=14) and **92.3%** (`glm-5.2`, n=13), versus
+> 6.7% and 2.2% against the keyword-heuristic rows. Exact-tier is lower than the old
+> 60% by design — the prompt now returns `share_dependent` instead of asserting a tier
+> that depends on deployment share. See
 > [`paper/bounty_graded_population_audit.md`](./paper/bounty_graded_population_audit.md).
 >
 > `severity_source` now distinguishes `bounty-graded` (advisory URL required) from

@@ -80,7 +80,8 @@ def load_model_screens(cache_path: Path) -> pd.DataFrame:
     """
     if not cache_path.exists():
         return pd.DataFrame(columns=["id", "model", "impact_type", "reachability",
-                                     "client_conditional_reach", "model_out_of_scope"])
+                                     "client_conditional_reach", "severity_final",
+                                     "model_out_of_scope"])
     cache = json.loads(cache_path.read_text())
     rows = []
     for key, entry in cache.items():
@@ -97,6 +98,7 @@ def load_model_screens(cache_path: Path) -> pd.DataFrame:
                 "impact_type": entry.get("impact_type", ""),
                 "reachability": entry.get("reachability", ""),
                 "client_conditional_reach": entry.get("client_conditional_reach", ""),
+                "severity_final": str(entry.get("severity_final") or ""),
                 "model_out_of_scope": bool(
                     entry.get("reachability") == "local_internal"
                     or entry.get("impact_type") in ("local_only", "none")
@@ -104,6 +106,50 @@ def load_model_screens(cache_path: Path) -> pd.DataFrame:
             }
         )
     return pd.DataFrame(rows)
+
+
+TIER_RANK = {"critical": 4, "high": 3, "medium": 2, "low": 1, "not-eligible": 0}
+
+
+def calibration_by_provenance(screens: pd.DataFrame) -> pd.DataFrame:
+    """Exact-tier and +/-1 agreement per model, split by what produced the severity.
+
+    A single pooled calibration figure over this population measures the collector's
+    keyword rule, not the estimator. Splitting it shows where the disagreement lives:
+    the estimator is being scored against tiers that no grader ever assigned.
+    """
+    if screens.empty or "severity_final" not in screens.columns:
+        return pd.DataFrame(
+            columns=["model", "provenance", "scored", "exact", "exact_pct",
+                     "within_1", "within_1_pct", "predicted_not_eligible"]
+        )
+    rows = []
+    for (model, prov), grp in screens.groupby(["model", "provenance"]):
+        scored = grp[grp["severity_final"].astype(str).str.len() > 0]
+        if scored.empty:
+            continue
+        pred = scored["severity_final"].str.lower().map(TIER_RANK)
+        true = scored["severity"].str.lower().map(TIER_RANK)
+        usable = pred.notna() & true.notna()
+        pred, true = pred[usable], true[usable]
+        exact = int((pred == true).sum())
+        within = int(((pred - true).abs() <= 1).sum())
+        total = int(usable.sum())
+        rows.append(
+            {
+                "model": model,
+                "provenance": prov,
+                "scored": total,
+                "exact": exact,
+                "exact_pct": round(100 * exact / total, 1) if total else 0.0,
+                "within_1": within,
+                "within_1_pct": round(100 * within / total, 1) if total else 0.0,
+                "predicted_not_eligible": int(
+                    (scored["severity_final"].str.lower() == "not-eligible").sum()
+                ),
+            }
+        )
+    return pd.DataFrame(rows).sort_values(["model", "provenance"])
 
 
 def model_agreement(screens: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -190,6 +236,7 @@ def main() -> int:
             columns=["model", "provenance", "model_out_of_scope", "records"]
         )
     per_row_screen, agreement = model_agreement(screens)
+    calibration = calibration_by_provenance(screens)
 
     def severe(frame: pd.DataFrame) -> int:
         return int(frame["severity"].isin(SEVERE).sum())
@@ -221,6 +268,10 @@ def main() -> int:
     counts.to_csv(args.out_dir / "bounty_graded_provenance_counts.csv", index=False)
     screen_table.to_csv(args.out_dir / "bounty_graded_model_screen.csv", index=False)
     summary.to_csv(args.out_dir / "bounty_graded_audit_summary.csv", index=False)
+    if not calibration.empty:
+        calibration.to_csv(
+            args.out_dir / "bounty_graded_calibration_by_provenance.csv", index=False
+        )
     if not agreement.empty:
         per_row_screen.to_csv(
             args.out_dir / "bounty_graded_model_screen_by_row.csv", index=False
@@ -246,6 +297,9 @@ def main() -> int:
     if not agreement.empty:
         print("\n=== pairwise model agreement on the eligibility screen ===")
         print(agreement.to_string(index=False))
+    if not calibration.empty:
+        print("\n=== calibration split by what produced the severity ===")
+        print(calibration.to_string(index=False))
     return 0
 
 

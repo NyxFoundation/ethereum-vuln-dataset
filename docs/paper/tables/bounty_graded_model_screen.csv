@@ -4,6 +4,7 @@ claude:claude-sonnet-5,cross_client_keyword_heuristic,True,41
 claude:claude-sonnet-5,published_advisory,False,13
 claude:claude-sonnet-5,published_advisory,True,1
 claude:claude-sonnet-5,repo_crawl_unattributed,True,1
-openai:glm-5.2,cross_client_keyword_heuristic,False,1
-openai:glm-5.2,cross_client_keyword_heuristic,True,6
+openai:glm-5.2,cross_client_keyword_heuristic,False,4
+openai:glm-5.2,cross_client_keyword_heuristic,True,41
 openai:glm-5.2,published_advisory,False,13
+openai:glm-5.2,repo_crawl_unattributed,True,1

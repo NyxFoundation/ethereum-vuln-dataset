@@ -175,6 +175,13 @@ Before using it, understand the boundaries.
   truth. Calibration reports ~60% exact and ~80% within one tier on the selected
   known-severe cases. The 326-row `confidence == "high"` subset still requires
   verification for consequential conclusions.
+- **`bounty-graded` is weaker than its name.** It was assigned by exclusion — any
+  rated row the dependency regex missed — so 45 of the 60 rows carry a tier produced
+  by a crawler keyword heuristic rather than by a grader. Only 14 have a
+  maintainer-issued advisory, and just 8 of the 18 apparent Critical/High records
+  survive. Use
+  [`docs/paper/bounty_graded_population_audit.md`](paper/bounty_graded_population_audit.md)
+  before treating any row in this population as ground truth.
 - **Recall is limited to "fixes that left traces."** Truly silent fixes — vague commit message + no advisory + no path clue — are invisible to crawlers. **But the traces that remain contain enough patterns.** 1,808 of 2,225 rows have `authority_tier != "C_candidate"`, an essential slice.
 - **`introduced_in_commit` is the fix commit's parent, not the true introduction.** True origin requires `git blame` walking. **But the pre-fix code state already provides enough clues to reproduce attack paths.**
 - **This is a corpus, not a benchmark.** No train/test split included. You must add temporal or per-client splits yourself and treat fork-shared commits and cross-implementation duplicates as leak risks. **But for exploration and audit planning, no benchmark is needed.**

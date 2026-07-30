@@ -144,15 +144,24 @@ column:
   dependency flag because the current heuristic also catches changelog/release
   rows; dependency scope requires manual review. Confirmed dependency CVEs carry
   CVSS and are outside the EF-bounty impact model.
+- **`bounty-graded` in this snapshot is not a published grade.** The label was
+  assigned to any rated row the dependency regex missed, so 45 of the 60 rows
+  inherited their tier from a crawler heuristic that rates every cross-client pull
+  request Medium, or High on a ten-keyword match. Only **14** rows carry a
+  maintainer-issued advisory, and the confirmed Critical/High sample is **8, not
+  18**. Later builds split the label into `bounty-graded` (advisory URL required)
+  and `collector-inferred`. Full trace:
+  [`docs/paper/bounty_graded_population_audit.md`](docs/paper/bounty_graded_population_audit.md).
 - **`severity_estimated` (optional LLM pass)** fills the gap by decomposing each
   fix into `impact_type` / `reachability` / `blast_radius` and mapping to the
-  bounty tier, calibrated against the graded rows (exact-tier ~60% / ±1 ~80% on
-  real severe bugs). It **never overwrites** the graded `severity`;
-  `severity_source` marks each row `bounty-graded` · `upstream-cvss` ·
-  `llm-estimated`. In the paper analysis, all 110 LLM-generated High labels are
-  conservatively treated as `tier-uncertain`; only 18 bounty-graded
-  Critical/High records are exact-tier evidence. Method, correction, and
-  calibration: [`docs/severity_labeling.md`](docs/severity_labeling.md).
+  bounty tier, calibrated against the graded rows (exact-tier ~60% / ±1 ~80%
+  measured on a hand-picked subset of six real severe bugs — not a population
+  figure; see the audit above). It **never overwrites** the graded `severity`;
+  `severity_source` marks each row `bounty-graded` · `collector-inferred` ·
+  `upstream-cvss` · `llm-estimated`. In the paper analysis, all 110 LLM-generated
+  High labels are conservatively treated as `tier-uncertain`; the exact-tier
+  evidence is the 8 advisory-confirmed Critical/High records. Method, correction,
+  and calibration: [`docs/severity_labeling.md`](docs/severity_labeling.md).
 
 ## Clients
 
