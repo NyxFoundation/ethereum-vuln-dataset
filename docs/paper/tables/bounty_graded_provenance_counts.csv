@@ -1,0 +1,8 @@
+provenance,severity,records
+cross_client_keyword_heuristic,High,8
+cross_client_keyword_heuristic,Medium,37
+published_advisory,Critical,2
+published_advisory,High,7
+published_advisory,Low,3
+published_advisory,Medium,2
+repo_crawl_unattributed,High,1

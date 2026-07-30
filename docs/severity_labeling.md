@@ -93,6 +93,19 @@ historical client-share classes.
 
 ## Calibration (validated against the bounty grades)
 
+> **The calibration population was wrong.** `severity_source = bounty-graded` was
+> assigned to any rated row the dependency regex missed, so 45 of the 60 "graded"
+> rows inherited a severity from `crawl_cross_client.py::_infer_severity` — Medium for
+> every cross-client PR, High on any of ten keywords. Only 14 rows have a
+> maintainer-issued advisory. The figures below were measured on a hand-picked severe
+> subset (the six vulnerabilities they name), not on the graded population, and must
+> always be quoted with that population stated. Over all 60 rows the same validation
+> scores 6/60 exact, because 46 rows are not gradeable vulnerabilities. See
+> [`paper/bounty_graded_population_audit.md`](./paper/bounty_graded_population_audit.md).
+>
+> `severity_source` now distinguishes `bounty-graded` (advisory URL required) from
+> `collector-inferred`, so `--validate` calibrates against published grades only.
+
 Run `estimate_severity.py --validate`. Key results and what they mean:
 
 - **On real severe client vulnerabilities** (RETURNDATA corruption, Consensus
@@ -159,7 +172,7 @@ enrichments. It **never overwrites** the real `severity`:
 | column | meaning |
 |---|---|
 | `severity_estimated` | the tier — the real grade where one exists, else the LLM estimate |
-| `severity_source` | `bounty-graded` \| `upstream-cvss` \| `llm-estimated` \| `unassessed`; only `bounty-graded` is the EF-bounty ground-truth slice |
+| `severity_source` | `bounty-graded` \| `collector-inferred` \| `upstream-cvss` \| `llm-estimated` \| `unassessed`. Only `bounty-graded` is ground truth, and it now *requires* a `/security/advisories/GHSA-…` URL. `collector-inferred` keeps a rated value whose rating came from a crawler heuristic. |
 | `impact_type` · `reachability` · `blast_radius` · `client_conditional_reach` | the decomposition (the reliable part) |
 | `severity_certainty` | `bounded` \| `share_dependent` \| `share_exempt` \| `out_of_scope` \| `below_lowest_threshold` \| `no_estimate` |
 | `severity_required_client_share` | for a `share_dependent` tier, the deployment share at which it holds |

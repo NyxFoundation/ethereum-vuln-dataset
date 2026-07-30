@@ -38,8 +38,21 @@ Among the 18 bounty-graded Critical/High records:
 - of the 15 records without a CWE, 14 (93.3%) still have both a root cause and
   a protocol label.
 
+**Corrected population.** Eight of those 18 records were never graded by anyone: they
+inherited a severity from a keyword heuristic, and a ninth is an upstream Go toolchain
+CVE. See [`bounty_graded_population_audit.md`](bounty_graded_population_audit.md).
+Restricted to the eight records backed by a maintainer-issued advisory:
+
+- 2/8 (25.0%) have any CWE (`CWE-190` and `CWE-439`);
+- 0/8 are members of MITRE's 2025 CWE Top 25;
+- 8/8 (100%) have a non-`other` root cause;
+- 8/8 (100%) have a non-`other` protocol/subsystem label.
+
+The direction is unchanged and the Ethereum-coordinate coverage is now complete rather
+than 94.4%, but n falls from 18 to 8.
+
 The zero Top-25 count is a descriptive result from a small sample, not proof
-that the Top 25 is irrelevant to Ethereum. With n=18, the paper should not make
+that the Top 25 is irrelevant to Ethereum. With n=8, the paper must not make
 a population-level coverage claim from this slice alone. It does show that a
 Top-25-only empirical design would omit every confirmed severe example in this
 snapshot.
@@ -98,8 +111,8 @@ would otherwise be uncategorized in a CWE-only analysis.
 ## 5. Defensible paper claim
 
 > CWE metadata is sparse and disclosure-biased in this corpus: only 396/2,225
-> records have any CWE, and none of the 18 confirmed Critical/High records maps
-> to the MITRE 2025 Top 25. Ethereum-specific root-cause and protocol-location
+> records have any CWE, and none of the 8 advisory-confirmed Critical/High records
+> maps to the MITRE 2025 Top 25. Ethereum-specific root-cause and protocol-location
 > axes provide both coordinates for 1,541/1,829 records lacking CWE, exposing
 > consensus divergence, gas accounting, and other protocol failure modes that a
 > CWE-only dataset view does not operationally capture.

@@ -1,5 +1,14 @@
 # RQ2: EF bug-bounty severity with an audited estimate layer
 
+> **Superseded counts.** This document treats the 60 `bounty-graded` rows as
+> published grades. They are not.
+> [`bounty_graded_population_audit.md`](bounty_graded_population_audit.md) traces
+> that label and finds only 14 rows backed by a maintainer-issued advisory; 45
+> inherited a severity from a ten-keyword heuristic over cross-client pull requests.
+> The confirmed Critical/High sample is **8, not 18**, and exact-tier inference has
+> **13** usable rows, not 60. Every "n=60", "n=1,612", and "18 confirmed" figure
+> below is the pre-audit value, kept so the correction is traceable.
+
 ## Question
 
 Can `severity_estimated` overcome the small number of published EF-bounty
@@ -58,6 +67,12 @@ The important result is negative but useful: estimated severity expands the
 eligibility and triage population, but it does **not** expand the
 paper-quality exact High sample. There are still only 18 confirmed
 Critical/High records, all bounty-graded.
+
+**Corrected.** Of those 18, eight came from the `cross_client` keyword heuristic and
+one is an upstream Go toolchain CVE. The confirmed severe sample is **8**; see
+[`bounty_graded_population_audit.md`](bounty_graded_population_audit.md). The
+negative result stands and strengthens: estimation did not expand a sample that was
+half the size it appeared to be.
 
 Consequently:
 

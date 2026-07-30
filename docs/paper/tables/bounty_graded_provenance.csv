@@ -1,0 +1,61 @@
+id,source_platform,contest,severity,provenance,advisory_id,upstream_toolchain_cve,title,source_url
+475682d10d661b75,consensus-specs,cross_client,High,cross_client_keyword_heuristic,,False,Ethereum 2.0 Networking Specification,https://github.com/ethereum/consensus-specs/pull/1328
+7482623489bc990c,lodestar,cross_client,High,cross_client_keyword_heuristic,,False,feat: eip-8025 optional execution proofs,https://github.com/ChainSafe/lodestar/pull/8918
+dc7e3fa111ce0e2a,lodestar,cross_client,High,cross_client_keyword_heuristic,,False,rename random to prevRandao as per the kiln v2 specs,https://github.com/ChainSafe/lodestar/pull/3787
+4f09bedbf1707694,lodestar,cross_client,High,cross_client_keyword_heuristic,,False,Implement Kintsugi specs :tea: (the Merge November sprint PR),https://github.com/ChainSafe/lodestar/pull/3418
+3f495d3767bd5a5f,lodestar,cross_client,High,cross_client_keyword_heuristic,,False,Run sim single node test with Geth catalyst to finality,https://github.com/ChainSafe/lodestar/pull/3287
+b89b66ccf953baca,nimbus,cross_client,High,cross_client_keyword_heuristic,,False,2 changes getting us closer to interop,https://github.com/status-im/nimbus-eth2/pull/918
+b1a6e88b2f095f12,reth,cross_client,High,cross_client_keyword_heuristic,,False,feat(trie): geth-compatible zero hashes for non-existent accounts in eth_getProof,https://github.com/paradigmxyz/reth/pull/24360
+f960a5728e79e59b,reth,cross_client,High,cross_client_keyword_heuristic,,False,feat: Check CL/Reth capability compatibility,https://github.com/paradigmxyz/reth/pull/20348
+d82b53a15591d4ee,erigon,cross_client,Medium,cross_client_keyword_heuristic,,False,"cmd/integration, execution/stagedsync: fix from-0 flow (env-prefix + reset-progress-delete)",https://github.com/erigontech/erigon/pull/21210
+11d178609806d192,erigon,cross_client,Medium,cross_client_keyword_heuristic,,False,Do not define ChaosMonkey flag twice in `integration state_stages`,https://github.com/erigontech/erigon/pull/18416
+e5a971c8037ace0b,erigon,cross_client,Medium,cross_client_keyword_heuristic,,False,qa-tests: enable RPC Integration Tests at latest block on PR,https://github.com/erigontech/erigon/pull/16964
+db7140d126418381,erigon,cross_client,Medium,cross_client_keyword_heuristic,,False,Added SSZ REST for Engine API,https://github.com/erigontech/erigon/pull/21203
+0d835c0f255d5538,erigon,cross_client,Medium,cross_client_keyword_heuristic,,False,cl: fix caplin interop with lighthouse vc on gnosis,https://github.com/erigontech/erigon/pull/12800
+bbb5342076f824ff,erigon,cross_client,Medium,cross_client_keyword_heuristic,,False,compatibility with geth - of stateDiff encoding,https://github.com/erigontech/erigon/pull/11362
+8511f131635d38f7,erigon,cross_client,Medium,cross_client_keyword_heuristic,,False,"Snapshots: geth compatibility, use --syncmode=snap flag",https://github.com/erigontech/erigon/pull/3808
+a11696bd3fed0e98,grandine,cross_client,Medium,cross_client_keyword_heuristic,,False,Fix nethermind integration memory leak,https://github.com/grandinetech/grandine/pull/707
+0df949d9de931321,grandine,cross_client,Medium,cross_client_keyword_heuristic,,False,Implement grandine-nethermind integration,https://github.com/grandinetech/grandine/pull/476
+ce53375ee1a6c3d4,lighthouse,cross_client,Medium,cross_client_keyword_heuristic,,False,Fix execution integration test CI failure,https://github.com/sigp/lighthouse/pull/9277
+327949dc1dbe940e,lighthouse,cross_client,Medium,cross_client_keyword_heuristic,,False,Fix execution engine integration tests with latest geth version,https://github.com/sigp/lighthouse/pull/6996
+068fecf2765f0271,lighthouse,cross_client,Medium,cross_client_keyword_heuristic,,False,Suppress RPC Error disconnect log,https://github.com/sigp/lighthouse/pull/5802
+15a905becebea648,lighthouse,cross_client,Medium,cross_client_keyword_heuristic,,False,Fix execution integration tests,https://github.com/sigp/lighthouse/pull/5647
+6d87a5520abe4ad2,lodestar,cross_client,Medium,cross_client_keyword_heuristic,,False,Shift nethermind merge-interop CI tests to docker based,https://github.com/ChainSafe/lodestar/pull/4654
+72c369295f9e58e2,lodestar,cross_client,Medium,cross_client_keyword_heuristic,,False,validator/test: restore nimbus interop configs,https://github.com/ChainSafe/lodestar/pull/4460
+4571ced2456d648d,lodestar,cross_client,Medium,cross_client_keyword_heuristic,,False,Mev/Builder api integration,https://github.com/ChainSafe/lodestar/pull/3969
+aa93fb8e0700f29a,lodestar,cross_client,Medium,cross_client_keyword_heuristic,,False,Enable using an engine endpoint for eth1 deposit/merge tracker,https://github.com/ChainSafe/lodestar/pull/3949
+57ff5427a6f6a108,lodestar,cross_client,Medium,cross_client_keyword_heuristic,,False,Ethereumjs script integration for kiln testnet,https://github.com/ChainSafe/lodestar/pull/3850
+77dd57a07fe1859c,lodestar,cross_client,Medium,cross_client_keyword_heuristic,,False,Configuring nethermind with jwtAuth in CI,https://github.com/ChainSafe/lodestar/pull/3827
+12d4419b272f31b5,lodestar,cross_client,Medium,cross_client_keyword_heuristic,,False,Implement Kiln spec (v1) execution apis 1.0.0-alpha.6,https://github.com/ChainSafe/lodestar/pull/3736
+74084892d5a752d6,lodestar,cross_client,Medium,cross_client_keyword_heuristic,,False,BN<>VC interop: Export the active preset to fill missing preset for spec api,https://github.com/ChainSafe/lodestar/pull/3574
+b6cefad111d80396,lodestar,cross_client,Medium,cross_client_keyword_heuristic,,False,"sim-merge: activate geth, commit ids as workflow env vars, simple txs scenario, dockerized geth based config for tests",https://github.com/ChainSafe/lodestar/pull/3460
+298f56095721e081,lodestar,cross_client,Medium,cross_client_keyword_heuristic,,False,Nethermind kintsugi interop  :tea:,https://github.com/ChainSafe/lodestar/pull/3436
+a215dbfba80d8d85,lodestar,cross_client,Medium,cross_client_keyword_heuristic,,False,fill the fields locally that might not be available in the interop spec config api,https://github.com/ChainSafe/lodestar/pull/3379
+e48f8281d1b32b8f,lodestar,cross_client,Medium,cross_client_keyword_heuristic,,False,publish block fix for validator interoperability with lighthouse beacon,https://github.com/ChainSafe/lodestar/pull/3376
+1d278fa09972ce70,lodestar,cross_client,Medium,cross_client_keyword_heuristic,,False,Add dockerized geth setup for amphora,https://github.com/ChainSafe/lodestar/pull/3317
+2166834347fcfa08,lodestar,cross_client,Medium,cross_client_keyword_heuristic,,False,Add merge block tracker logs,https://github.com/ChainSafe/lodestar/pull/3303
+bc4639f8ad50880b,lodestar,cross_client,Medium,cross_client_keyword_heuristic,,False,Fix terminal POW block interval,https://github.com/ChainSafe/lodestar/pull/3302
+e9a2fa742e2ffe4e,lodestar,cross_client,Medium,cross_client_keyword_heuristic,,False,Assert correct head in merge interop tests,https://github.com/ChainSafe/lodestar/pull/3298
+4f38e97e31467831,lodestar,cross_client,Medium,cross_client_keyword_heuristic,,False,PayloadId as string,https://github.com/ChainSafe/lodestar/pull/3292
+f0dbd67163d3be80,lodestar,cross_client,Medium,cross_client_keyword_heuristic,,False,Run geth merge interop in CI and query it,https://github.com/ChainSafe/lodestar/pull/3279
+5afea38073770d27,lodestar,cross_client,Medium,cross_client_keyword_heuristic,,False,Add Teku devnet coorparoo network,https://github.com/ChainSafe/lodestar/pull/2605
+aa769cb93837b859,lodestar,cross_client,Medium,cross_client_keyword_heuristic,,False,Add basic validator client CLI,https://github.com/ChainSafe/lodestar/pull/1093
+420c45198e2068b0,nethermind,cross_client,Medium,cross_client_keyword_heuristic,,False,Error codes and messages for Geth compatibility,https://github.com/NethermindEth/nethermind/pull/11335
+210be8c48c7e32d3,nethermind,cross_client,Medium,cross_client_keyword_heuristic,,False,Add debug_traceCallMany RPC method with Geth compatibility,https://github.com/NethermindEth/nethermind/pull/9333
+0dfc891d465ab355,nethermind,cross_client,Medium,cross_client_keyword_heuristic,,False,Restore `v` in tx signature for Geth compatibility,https://github.com/NethermindEth/nethermind/pull/5937
+427f665e6c3a2695,nimbus,cross_client,Medium,cross_client_keyword_heuristic,,False,Interop: Checkout and build prysm,https://github.com/status-im/nimbus-eth2/pull/445
+besu:ghsa-advisory:GHSA-4456-w38r-m53x,besu,ghsa-advisory,Critical,published_advisory,GHSA-4456-w38r-m53x,False,Gas allocation error in CALL operations in Besu EVM [GHSA-4456-w38r-m53x CVE-2022-36025],https://github.com/besu-eth/besu/security/advisories/GHSA-4456-w38r-m53x
+geth:ghsa-advisory:GHSA-m6gx-rhvj-fh52,geth,ghsa-advisory,Critical,published_advisory,GHSA-m6gx-rhvj-fh52,True,Denial of service due to Go CVE-2020-28362 [GHSA-m6gx-rhvj-fh52 CVE-2020-28362],https://github.com/ethereum/go-ethereum/security/advisories/GHSA-m6gx-rhvj-fh52
+besu:hyperledger-besu:GHSA-7pg2-p5vj-xp5h,besu,hyperledger-besu,High,published_advisory,GHSA-7pg2-p5vj-xp5h,False,"SHL, SHR, and SAR operations trigger native exception at key values",https://github.com/besu-eth/besu/security/advisories/GHSA-7pg2-p5vj-xp5h
+geth:ethereum-go-ethereum:GHSA-2gjw-fg97-vg3r,geth,ethereum-go-ethereum,High,published_advisory,GHSA-2gjw-fg97-vg3r,False,DoS via malicious p2p message,https://github.com/ethereum/go-ethereum/security/advisories/GHSA-2gjw-fg97-vg3r
+geth:ethereum-go-ethereum:GHSA-9856-9gg9-qcmq,geth,ethereum-go-ethereum,High,published_advisory,GHSA-9856-9gg9-qcmq,False,RETURNDATA corruption via datacopy,https://github.com/ethereum/go-ethereum/security/advisories/GHSA-9856-9gg9-qcmq
+geth:ethereum-go-ethereum:GHSA-xw37-57qp-9mm4,geth,ethereum-go-ethereum,High,published_advisory,GHSA-xw37-57qp-9mm4,False,Consensus flaw during block processing,https://github.com/ethereum/go-ethereum/security/advisories/GHSA-xw37-57qp-9mm4
+geth:ethereum-go-ethereum:GHSA-jm5c-rv3w-w83m,geth,ethereum-go-ethereum,High,published_advisory,GHSA-jm5c-rv3w-w83m,False,Denial of service via `MulMod`,https://github.com/ethereum/go-ethereum/security/advisories/GHSA-jm5c-rv3w-w83m
+geth:ethereum-go-ethereum:GHSA-69v6-xc2j-r2jf,geth,ethereum-go-ethereum,High,published_advisory,GHSA-69v6-xc2j-r2jf,False,Shallow copy in the 0x4 precompile could lead to EVM memory corruption,https://github.com/ethereum/go-ethereum/security/advisories/GHSA-69v6-xc2j-r2jf
+lighthouse:sigp-lighthouse:GHSA-wm9c-xvqq-5c28,lighthouse,sigp-lighthouse,High,published_advisory,GHSA-wm9c-xvqq-5c28,False,Incorrect processing of effective balances in Electra epoch processing,https://github.com/sigp/lighthouse/security/advisories/GHSA-wm9c-xvqq-5c28
+besu:hyperledger-besu:GHSA-qgfj-mjpc-7w3q,besu,hyperledger-besu,Low,published_advisory,GHSA-qgfj-mjpc-7w3q,False,Potential DoS in Besu HTTP JSON-RPC API,https://github.com/besu-eth/besu/security/advisories/GHSA-qgfj-mjpc-7w3q
+lodestar:chainsafe-lodestar:GHSA-m9c9-mc2h-9wjw,lodestar,chainsafe-lodestar,Low,published_advisory,GHSA-m9c9-mc2h-9wjw,False,Lodestar snappy checksum issue,https://github.com/ChainSafe/lodestar/security/advisories/GHSA-m9c9-mc2h-9wjw
+lodestar:chainsafe-lodestar:GHSA-53rv-hcvm-rpp9,lodestar,chainsafe-lodestar,Low,published_advisory,GHSA-53rv-hcvm-rpp9,False,Lodestar snappy decompression issue,https://github.com/ChainSafe/lodestar/security/advisories/GHSA-53rv-hcvm-rpp9
+geth:ethereum-go-ethereum:GHSA-59hh-656j-3p7v,geth,ethereum-go-ethereum,Medium,published_advisory,GHSA-59hh-656j-3p7v,False,DoS via malicious snap/1 request,https://github.com/ethereum/go-ethereum/security/advisories/GHSA-59hh-656j-3p7v
+geth:ethereum-go-ethereum:GHSA-r33q-22hv-j29q,geth,ethereum-go-ethereum,Medium,published_advisory,GHSA-r33q-22hv-j29q,False,LES Server DoS via GetProofsV2,https://github.com/ethereum/go-ethereum/security/advisories/GHSA-r33q-22hv-j29q
+ece24a10f23119be,lighthouse,sigp/lighthouse,High,repo_crawl_unattributed,,False,Improve validator monitor experience for high validator counts (#3728),https://github.com/sigp/lighthouse/commit/830efdb5c2723209030e83378b2d8e44f9a6b97f

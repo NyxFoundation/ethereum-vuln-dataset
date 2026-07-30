@@ -115,7 +115,15 @@ PROMPT_VERSION = "v2-client-conditional-reach"
 
 
 def cache_key(row_id: str) -> str:
-    return f"{row_id}@{PROMPT_VERSION}"
+    """Namespace a cache entry by row, prompt, and the model that answered.
+
+    The model belongs in the key: labels from two models are two annotators, and
+    pooling them silently would turn a measurable inter-model agreement into an
+    unattributable mixture. Keeping both lets the same row be compared across
+    models instead.
+    """
+    model = llm.ENGINE.get("model") or "default"
+    return f"{row_id}@{PROMPT_VERSION}@{llm.ENGINE.get('engine')}:{model}"
 DEF = """EF bug-bounty severity = network-scale impact reachable by a SINGLE network packet or on-chain transaction:
 - Critical: create/finalize infinite ETH; steal or burn ETH from all EOAs; take down the ENTIRE network with one tx; slash >50% of validators.
 - High: chain split affecting >33% of the network; bring down >33% with one tx; slash >33% of validators.
@@ -243,13 +251,36 @@ DEP_RE = re.compile(
     r"|golang\.org/x|rustsec|jsonparser|libp2p|discv5|openssl|zlib|\bcrate\b",
     re.IGNORECASE)
 
+UPSTREAM_TOOLCHAIN_RE = re.compile(
+    r"\bdue to (?:the )?(?:Go|Rust|Java|\.NET|Node|OpenSSL)\b"
+    r"|\bGo CVE-|\bgolang\b.*\bCVE-",
+    re.IGNORECASE)
+
 
 def is_dependency(r) -> bool:
     """Upstream dependency / tooling CVE — carries CVSS, not EF-bounty severity."""
     if DEP_RE.search(str(r.get("title") or "")):
         return True
+    # An advisory phrased as an impact ("Denial of service due to Go CVE-2020-28362")
+    # names no package and uses no update verb, so the regexes above miss it.
+    if UPSTREAM_TOOLCHAIN_RE.search(str(r.get("title") or "")):
+        return True
     return bool(re.search(r"CHANGELOG|/releases/|nvd\.nist\.gov|rustsec",
                           str(r.get("source_url") or "")))
+
+
+# A published GitHub security advisory is the only self-evidencing severity in this
+# corpus: the tier was set by the maintainers who issued it. Everything else in
+# `severity` is collector output — crawl_cross_client.py's `_infer_severity`, for
+# instance, returns Medium for every cross-client PR and High whenever a keyword such
+# as "consensus" or "attestation" appears, with no vulnerability determination at all.
+# Calling those rows `bounty-graded` promoted them to the paper's exact-tier ground
+# truth; see docs/paper/bounty_graded_population_audit.md.
+ADVISORY_URL_RE = re.compile(r"/security/advisories/GHSA-[0-9a-z-]+", re.IGNORECASE)
+
+
+def has_published_grade(r) -> bool:
+    return bool(ADVISORY_URL_RE.search(str(r.get("source_url") or "")))
 
 
 def classify(row, retries=1):
@@ -274,6 +305,8 @@ def classify(row, retries=1):
     o["severity_certainty"] = certainty
     o["severity_required_client_share"] = "" if required is None else f"{required:g}"
     o["prompt_version"] = PROMPT_VERSION
+    o["engine"] = str(llm.ENGINE.get("engine") or "")
+    o["model"] = str(llm.ENGINE.get("model") or "")
     return r["id"], o
 
 
@@ -329,7 +362,7 @@ def main():
     with ThreadPoolExecutor(max_workers=a.workers) as ex:
         for rid, o in ex.map(classify, rows):
             scache[cache_key(rid)] = o; done += 1
-            if done % 25 == 0:
+            if done % 10 == 0:
                 a.sev_cache.write_text(json.dumps(scache)); a.cache.write_text(json.dumps(dcache))
                 print(f"  [severity] {done}/{len(todo)}", file=sys.stderr)
     a.sev_cache.write_text(json.dumps(scache)); a.cache.write_text(json.dumps(dcache))
@@ -393,7 +426,7 @@ def main():
         if missing:
             print(f"[severity] WARNING: partial file — {len(missing)}/{len(target)} rows "
                   f"unassessed at {PROMPT_VERSION}", file=sys.stderr)
-        n_est = n_bg = n_dep = 0
+        n_est = n_bg = n_dep = n_coll = 0
         with a.out.open("w", newline="", encoding="utf-8") as fh:
             w = csv.writer(fh); w.writerow(["id", "severity_estimated", "severity_source",
                                             "impact_type", "reachability", "blast_radius",
@@ -402,8 +435,14 @@ def main():
             for r in d.to_dict("records"):
                 rid = r["id"]; g = str(r["severity"]).lower() in ("critical", "high", "medium", "low")
                 dpp = is_dependency(r); o = scache.get(cache_key(rid), {})
-                if g and not dpp:                    # real client bug, graded by the bounty
+                if g and not dpp and has_published_grade(r):
+                    # A maintainer-issued advisory set this tier: real ground truth.
                     src, est = "bounty-graded", r["severity"]; n_bg += 1
+                elif g and not dpp:
+                    # Rated, but the rating is collector output (keyword heuristics,
+                    # commit-subject regexes). Keep the value, refuse the ground-truth
+                    # label so downstream analysis cannot treat it as a published grade.
+                    src, est = "collector-inferred", r["severity"]; n_coll += 1
                 elif dpp:                            # upstream dependency CVE -> keep CVSS, out of scope
                     src, est = "upstream-cvss", (r["severity"] if g else "not-eligible"); n_dep += 1
                 elif o.get("severity_final"):        # client-code, LLM-estimated
@@ -415,7 +454,8 @@ def main():
                             o.get("severity_certainty", ""),
                             o.get("severity_required_client_share", ""),
                             str(o.get("why", ""))[:200]])
-        print(f"wrote {a.out} — bounty-graded {n_bg}, llm-estimated {n_est}, upstream-cvss {n_dep}")
+        print(f"wrote {a.out} — bounty-graded {n_bg}, collector-inferred {n_coll}, "
+              f"llm-estimated {n_est}, upstream-cvss {n_dep}")
 
 
 if __name__ == "__main__":

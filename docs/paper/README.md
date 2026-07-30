@@ -34,6 +34,10 @@ The working thesis is:
    restates the tier as deployment share × client-conditional reach, so the
    assessable factor comes from the fix and each record reports the deployment
    share its tier would require.
+   [`bounty_graded_population_audit.md`](bounty_graded_population_audit.md)
+   traces the `bounty-graded` label itself and finds that 45 of the 60 rows
+   inherited a severity from a keyword heuristic, reducing the confirmed
+   Critical/High sample from 18 to 8.
 5. [`cwe_context_comparison.md`](cwe_context_comparison.md) measures how much
    Ethereum root-cause and protocol-location context remains when generic CWE
    metadata is absent.
@@ -53,6 +57,7 @@ UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/severity_analysis.py
 UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/audit_chain_split_candidates.py
 UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/audit_liveness_candidates.py
 UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/client_conditional_severity.py
+UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/audit_bounty_graded_population.py
 UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/cwe_context_analysis.py
 git diff --exit-code docs/paper/tables
 ```

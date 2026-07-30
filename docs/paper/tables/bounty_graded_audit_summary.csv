@@ -1,0 +1,12 @@
+measure,value
+bounty_graded_rows,60
+published_advisory_rows,14
+cross_client_keyword_heuristic_rows,45
+repo_crawl_unattributed_rows,1
+severe_claimed_all_graded,18
+severe_from_published_advisory,9
+severe_from_published_advisory_excluding_upstream_toolchain,8
+severe_from_keyword_heuristic,8
+upstream_toolchain_cves_labelled_bounty_graded,1
+distinct_advisory_ids,14
+models_screening,2
