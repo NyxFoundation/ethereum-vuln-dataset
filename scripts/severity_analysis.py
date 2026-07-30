@@ -128,10 +128,54 @@ def main() -> int:
     parser.add_argument(
         "--output-dir", type=Path, default=Path("docs/paper/tables")
     )
+    parser.add_argument(
+        "--severity-csv",
+        type=Path,
+        default=None,
+        help=(
+            "optional re-estimation overlay joined by id. Supplies the columns the frozen "
+            "snapshot predates (severity_certainty, client_conditional_reach, "
+            "severity_required_client_share) so the certainty rules above can act. Without "
+            "it the blast_radius proxy applies and the checked-in tables are reproduced."
+        ),
+    )
+    parser.add_argument(
+        "--overlay-out-dir",
+        type=Path,
+        default=None,
+        help="write overlay-derived tables here instead of over the snapshot ones",
+    )
     args = parser.parse_args()
-    args.output_dir.mkdir(parents=True, exist_ok=True)
+    if args.severity_csv and not args.overlay_out_dir:
+        # An overlay changes every count, so it must not silently overwrite the tables the
+        # frozen snapshot generates and the paper cites.
+        raise SystemExit(
+            "--severity-csv changes every count; pass --overlay-out-dir to say where the "
+            "overlay tables go rather than overwriting the snapshot tables"
+        )
+    out_dir = args.overlay_out_dir or args.output_dir
+    out_dir.mkdir(parents=True, exist_ok=True)
 
     df = pd.read_parquet(args.input)
+    if args.severity_csv and args.severity_csv.exists():
+        overlay = pd.read_csv(args.severity_csv, dtype=str).drop_duplicates("id")
+        carry = [
+            c for c in ("severity_estimated", "severity_source", "impact_type",
+                        "blast_radius", "client_conditional_reach", "severity_certainty",
+                        "severity_required_client_share")
+            if c in overlay.columns
+        ]
+        before = len(df)
+        df = df.drop(columns=[c for c in carry if c in df.columns]).merge(
+            overlay[["id"] + carry], on="id", how="left"
+        )
+        assert len(df) == before, "overlay join must not change row count"
+        df["severity_estimated"] = df["severity_estimated"].map(
+            lambda x: str(x).capitalize() if pd.notna(x) and str(x) else x
+        )
+        covered = df["severity_certainty"].notna().sum() if "severity_certainty" in df else 0
+        print(f"overlay {args.severity_csv}: {covered}/{len(df)} rows carry a certainty")
+
     ef = apply_high_review(df[df["severity_source"].isin(EF_SOURCES)].copy())
     ef["original_bounty_eligible"] = ef["severity_estimated"].isin(ELIGIBLE_TIERS)
     ef["original_critical_or_high"] = ef["severity_estimated"].isin(SEVERE_TIERS)
@@ -201,7 +245,7 @@ def main() -> int:
     summary_frame["percent"] = summary_frame.apply(
         lambda row: pct(int(row["count"]), int(row["denominator"])), axis=1
     )
-    summary_frame.to_csv(args.output_dir / "ef_severity_population.csv", index=False)
+    summary_frame.to_csv(out_dir / "ef_severity_population.csv", index=False)
 
     tier_rows: list[dict] = []
     populations = {
@@ -231,7 +275,7 @@ def main() -> int:
                 }
             )
     pd.DataFrame(tier_rows).to_csv(
-        args.output_dir / "ef_severity_tier_counts.csv", index=False
+        out_dir / "ef_severity_tier_counts.csv", index=False
     )
 
     dimension_rows: list[dict] = []
@@ -256,7 +300,7 @@ def main() -> int:
                     }
                 )
     pd.DataFrame(dimension_rows).to_csv(
-        args.output_dir / "ef_severity_by_dimension.csv", index=False
+        out_dir / "ef_severity_by_dimension.csv", index=False
     )
 
     llm = ef[ef["severity_source"].eq("llm-estimated")].copy()
@@ -274,7 +318,7 @@ def main() -> int:
                 }
             )
     pd.DataFrame(decomposition_rows).to_csv(
-        args.output_dir / "ef_severity_high_decomposition.csv", index=False
+        out_dir / "ef_severity_high_decomposition.csv", index=False
     )
 
     client_rows: list[dict] = []
@@ -297,7 +341,7 @@ def main() -> int:
                 }
             )
     pd.DataFrame(client_rows).to_csv(
-        args.output_dir / "ef_severity_client_diagnostic.csv", index=False
+        out_dir / "ef_severity_client_diagnostic.csv", index=False
     )
 
     queue_columns = [
@@ -323,7 +367,7 @@ def main() -> int:
         queue_columns
     ].sort_values(
         ["severity_estimated", "severity_source", "source_platform", "id"]
-    ).to_csv(args.output_dir / "ef_severity_high_review_queue.csv", index=False)
+    ).to_csv(out_dir / "ef_severity_high_review_queue.csv", index=False)
 
     print(
         "EF severity analysis:",
