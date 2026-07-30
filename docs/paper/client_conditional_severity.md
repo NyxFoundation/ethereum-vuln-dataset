@@ -111,7 +111,13 @@ the most favourable assumption available to it.
 Measuring reach resolves 30 candidates without any source review: their assessed reach
 is `narrow_config` (23) or `operator_self_only` (7), so the product cannot reach 33%
 of the network at any share in the band. That is the payoff of the decomposition — a
-third of the queue is ruled out of High by arithmetic rather than by argument.
+substantial part of the queue is ruled out of High by arithmetic rather than by
+argument.
+
+These counts are one annotator's. §6b repeats the measurement with a second model and
+reports the intersection, **28 candidates excluded under both**, which is the figure a
+claim should cite; the columns above are the `glm-5.2` overlay that the checked-in
+tables are generated from.
 
 The 33 supported records are all Geth with `all_nodes` reach (18 `client_specific`,
 15 `spec_level`): at Geth's band, full client coverage clears 33% even at the bottom

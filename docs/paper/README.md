@@ -42,9 +42,10 @@ artifact contains. Stages 4c and 4d are where that is traced and repaired.
       restates the tier as deployment share × client-conditional reach, so the
       assessable factor comes from the fix and each record reports the deployment
       share its tier would require. A client-local defect cannot reach High for 8
-      of 11 clients at any reach; measuring reach rules 30 of the 110 candidates
-      out of High arithmetically. Scoring that measurement against source review
-      finds exclusions confirmed and full-coverage assessments over-permissive.
+      of 11 clients at any reach; measuring reach rules **28 of the 110** candidates
+      out of High arithmetically under both of two independent annotators. Scoring
+      that measurement finds exclusions confirmed by source review and
+      full-coverage assessments over-permissive.
    4. [`bounty_graded_population_audit.md`](bounty_graded_population_audit.md)
       traces the `bounty-graded` label itself: 45 of the 60 rows inherited a
       severity from a ten-keyword crawler heuristic, so the confirmed
