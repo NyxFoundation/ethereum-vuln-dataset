@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
@@ -144,7 +145,27 @@ def extract_json(text: str) -> dict:
                     if isinstance(candidate, dict) and "security_relevant" in candidate:
                         best = candidate
                     break
-    return best
+    if best:
+        return best
+    # Replies are sometimes cut off mid-object, which left 18% of a 3,000-commit run
+    # unclassified on the first pass. The fields are emitted in the order the prompt asks
+    # for them, so a truncated reply still carries the verdict and usually the class and
+    # disclosure; scrape what survived rather than discarding the call.
+    verdict = re.search(r'"security_relevant"\s*:\s*(true|false)', text)
+    if not verdict:
+        return {}
+    salvaged: dict = {
+        "security_relevant": verdict.group(1) == "true",
+        "truncated_reply": True,
+    }
+    for field in ("defect_class", "disclosure", "evidence", "why"):
+        found = re.search(rf'"{field}"\s*:\s*"((?:[^"\\]|\\.)*)"', text)
+        if found:
+            salvaged[field] = found.group(1)
+    number = re.search(r'"confidence"\s*:\s*([0-9.]+)', text)
+    if number:
+        salvaged["confidence"] = float(number.group(1))
+    return salvaged
 
 
 def classify(job, retries=1):

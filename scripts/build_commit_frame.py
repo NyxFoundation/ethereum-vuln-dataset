@@ -84,6 +84,21 @@ def main() -> int:
         raise SystemExit(f"no clones under {args.repo_dir}")
 
     frame = pd.concat(frames, ignore_index=True)
+
+    # Erigon forked from Geth and Prysm vendored parts of its history, so 10,423 commit
+    # objects (1.7% of distinct SHAs, 4.6% of rows) appear under more than one client.
+    # They are one change, not several, so the sampling population is distinct commits:
+    # leaving them duplicated would give a shared commit two or three chances of selection
+    # and silently over-weight early execution-layer history.
+    frame = frame.sort_values(["sha", "author_date", "client"])
+    frame["clients_sharing"] = frame.groupby("sha")["client"].transform("nunique")
+    frame["also_in"] = frame.groupby("sha")["client"].transform(lambda s: ";".join(sorted(set(s))))
+    duplicated = int((frame["clients_sharing"] > 1).sum())
+    frame = frame.drop_duplicates("sha", keep="first").reset_index(drop=True)
+    if duplicated:
+        print(f"[frame] {duplicated:,} rows shared across clients collapsed to "
+              f"{int((frame['clients_sharing'] > 1).sum()):,} distinct commits", flush=True)
+
     frame["year"] = frame["author_date"].str.slice(0, 4)
     # A handful of commits carry a broken author timestamp (Nethermind has one at the
     # Unix epoch), so year is kept as recorded and flagged rather than silently repaired.
