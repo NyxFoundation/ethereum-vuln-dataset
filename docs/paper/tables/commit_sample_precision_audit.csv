@@ -1,0 +1,19 @@
+client,subject,reviewer_verdict,reviewer_note
+lighthouse,Fix compare code,defensible,Negation bug in light-client sync-committee update selection; the quoted line is the flipped condition
+nimbus,Address issue #5362.,defensible,Fork-spec retrieval used for voluntary-exit signing; a wrong fork version invalidates signatures
+geth,eth/catalyst: rename catalyst -> Engine API in logs,over_called,"Subject and diff are a log rename; the model asserts a Warn became a panic, which the quoted line does not show"
+erigon,snapshots: fix indexing of recently merged range,defensible,Segment merge condition corrected; plausible state-consistency defect
+erigon,Fix/new eth filters (#4504),defensible,Removed default: cases in select statements caused goroutine busy-loops
+erigon,commit,defensible,"History prune skipped when CanPrune returned false, leaving unbounded growth"
+prysm,added tests,over_called,Subject is test addition; the quoted line is an ordinary db.Put error check
+besu,Fix bft duplicate prepares in round change,defensible,equals/hashCode added so duplicate BFT prepares deduplicate; consensus-relevant
+prysm,Calculate max epoch and churn for slashing once,ambiguous,Hoisting a computation out of a loop reads as optimisation; a semantic change is asserted but not shown
+lodestar,Update validator<>builder index conversion,defensible,Index conversion previously added/subtracted a flag blindly instead of testing it
+nethermind,Fix fast header may miss an retried batch,defensible,Non-atomic Contains-then-TryRemove replaced by atomic TryRemove; a real race window
+reth,test: reenable `test_state_root_task` test (#13911),over_called,A test re-enablement plus a thread-pool minimum; neither is a defect fix
+teku,review comments,ambiguous,503/502 responses no longer silently ignored; error handling rather than a security defect
+erigon,update,defensible,Response prefix written to the P2P stream before verifying the blob sidecar exists
+erigon,Fork Enablement: fix + test (#339),defensible,GetForkIdBlock could not distinguish 'not found' from block 0
+besu,cherry pick changes from besu PR 6054,ambiguous,"Removes EOF creation rules from Cancun; spec alignment, arguably not a defect fix"
+geth,Support C++ GetBlockHash by assuming empty = done,defensible,Empty hash list from a peer could hang the exchange
+erigon,save,defensible,sort.Search range excluded the last block number; off-by-one in resolution

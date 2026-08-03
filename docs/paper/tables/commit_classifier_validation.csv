@@ -1,0 +1,5 @@
+measure,hits,n,rate_pct,ci_low_pct,ci_high_pct
+recall_on_known_vulnerability_fixes,49,150,32.7,25.7,40.5
+positive_rate_on_random_commits,28,150,18.7,13.2,25.7
+lift_recall_over_random,,,1.75,,
+raw_sample_rate_pct_uncorrected,,2999,16.9,,

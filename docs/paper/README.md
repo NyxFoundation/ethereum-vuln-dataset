@@ -69,6 +69,13 @@ artifact contains. Stages 4c and 4d are where that is traced and repaired.
    ten co-location. Anchors are readable off only 7.8% of records; five ways of raising
    that by reading code were measured and all fail, because presence in a file is not
    aboutness.
+8. [`commit_population_estimate.md`](commit_population_estimate.md) tests whether a
+   probability sample can replace the keyword-found corpus and state a population rate.
+   The full 595,966-commit history is local, so data access was never the limit, but an
+   LLM commit screen recalls only 32.7% of externally labelled vulnerability fixes while
+   calling 18.7% of random commits positive. **The raw 16.9% sample rate is therefore an
+   artifact of the screen and is not reported.** The frame, sample and validation set are
+   checked in so a better screen can be compared against the same labels.
 
 ## Reproduce the checked-in tables
 
