@@ -117,6 +117,18 @@ recover low-disclosure fixes (full write-up:
   rate-limit-free from bare git clones by `collection/local_diffs.py`. This pass
   admitted **+453** silent fixes the deterministic gate had missed.
 
+**What this corpus does not yet do.** Every row reached the classifier because a
+keyword or an advisory found it first — there are no rows drawn from whole
+commit histories (`contest == "all-commits"` is empty), and the curated set
+covers 0.291% of the 595,966-commit history with a 7.3x per-client spread. The
+sister project [`wallet-vuln-dataset`](https://github.com/NyxFoundation/wallet-vuln-dataset)
+moved from this same position to reading histories end to end and measured what
+the keyword route costs: **81% of the fixes it recovered carry none of the
+crawler's search terms.** Closing that gap here is planned but blocked on the
+screen, which fails external validation (recall 32.7%, positive rate on random
+commits 18.7%). The sequence, the pass/fail bar and the measured token cost are
+in [`docs/TODO.md`](docs/TODO.md).
+
 ## Severity & scope — the bug-bounty model
 
 Severity here follows the **[Ethereum Foundation bug bounty](https://ethereum.org/en/bug-bounty/)**,
